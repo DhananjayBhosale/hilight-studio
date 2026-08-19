@@ -50,7 +50,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
-    implementation("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.core:core-ktx:1.19.0")
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
     testImplementation("junit:junit:4.13.2")
