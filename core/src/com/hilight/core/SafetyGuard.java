@@ -7,7 +7,7 @@ package com.hilight.core;
  */
 final class SafetyGuard {
 
-    static final long FRAME_MS = 33;
+    static final long FRAME_MS = 66;
     static final long DUTY_WINDOW_MS = 10 * 60_000;
     static final double MAX_DUTY = 0.5;
     static final long TAPER_AFTER_MS = 10_000;
@@ -25,6 +25,21 @@ final class SafetyGuard {
     private long litMsInWindow;
     private long continuousLitMs;
     private boolean resting;
+
+    /** The safety decision for one frame/effect interval. */
+    static final class Decision {
+        final double scale;
+        final boolean resting;
+        private final double quietScale;
+        private final double taper;
+
+        private Decision(double scale, boolean resting, double quietScale, double taper) {
+            this.scale = scale;
+            this.resting = resting;
+            this.quietScale = quietScale;
+            this.taper = taper;
+        }
+    }
 
     SafetyGuard() {
         this(FRAME_MS, DUTY_WINDOW_MS, MAX_DUTY, TAPER_AFTER_MS, TAPER_RAMP_MS, TAPER_FLOOR);
@@ -51,48 +66,77 @@ final class SafetyGuard {
     }
 
     int[] apply(int[] frame, long now, double dim) {
+        return apply(frame, observe(isLit(frame), now, dim));
+    }
+
+    /** Applies an already-observed decision without charging duty or taper a second time. */
+    int[] apply(int[] frame, Decision decision) {
+        if (!isLit(frame)) return frame;
+        if (decision.resting) return new int[]{0};
+        if (decision.scale >= 0.999) return frame;
+
+        int[] out = frame;
+        // Keep the historical two-stage rounding: quiet-hours dim first, then taper.
+        if (decision.quietScale < 0.999) {
+            out = new int[frame.length];
+            for (int i = 0; i < frame.length; i++) out[i] = Renderer.scale(frame[i], decision.quietScale);
+        }
+        if (decision.taper < 1.0) {
+            int[] tapered = new int[frame.length];
+            for (int i = 0; i < frame.length; i++) tapered[i] = Renderer.scale(out[i], decision.taper);
+            out = tapered;
+        }
+        return out;
+    }
+
+    Decision observe(boolean lit, long now, double dim) {
         if (windowStart == Long.MIN_VALUE || now - windowStart >= dutyWindowMs) {
             windowStart = now;
             litMsInWindow = 0;
             resting = false;
         }
 
-        if (!isLit(frame)) {
+        if (!lit) {
             continuousLitMs = 0;
-            return frame;
+            return new Decision(1.0, resting, 1.0, 1.0);
         }
 
-        if (dim < 0.999) {
-            int[] dimmed = new int[frame.length];
-            for (int i = 0; i < frame.length; i++) dimmed[i] = Renderer.scale(frame[i], dim);
-            frame = dimmed;
-        }
-
-        if (resting) return new int[]{0};
+        double quietScale = applyDim(dim);
+        if (resting) return new Decision(0.0, true, quietScale, 1.0);
 
         litMsInWindow += frameMs;
         continuousLitMs += frameMs;
-
         if (litMsInWindow > dutyWindowMs * maxDuty) {
             resting = true;
-            return new int[]{0};
+            return new Decision(0.0, true, quietScale, 1.0);
         }
 
-        if (continuousLitMs <= taperAfterMs) return frame;
-
-        double over = Math.min(1.0, (continuousLitMs - taperAfterMs) / (double) taperRampMs);
-        double scale = 1.0 - (1.0 - taperFloor) * over;
-        int[] out = new int[frame.length];
-        for (int i = 0; i < frame.length; i++) out[i] = Renderer.scale(frame[i], scale);
-        return out;
+        double taper = 1.0;
+        if (continuousLitMs > taperAfterMs) {
+            double over = Math.min(1.0, (continuousLitMs - taperAfterMs) / (double) taperRampMs);
+            taper = 1.0 - (1.0 - taperFloor) * over;
+        }
+        return new Decision(clamp01(quietScale * taper), false, quietScale, taper);
     }
 
-    boolean isResting() {
-        return resting;
-    }
+    boolean isResting() { return resting; }
 
     int dutyPercent() {
         return (int) (100.0 * litMsInWindow / (dutyWindowMs * maxDuty));
+    }
+
+    private static double clampDim(double dim) {
+        // NaN was treated as no dim by apply's old threshold check; retain that behavior.
+        return Double.isNaN(dim) ? 1.0 : Renderer.clamp01(dim);
+    }
+
+    private static double applyDim(double dim) {
+        // Preserve apply's no-allocation threshold: values at or above .999 were not dimmed.
+        return dim < 0.999 ? clampDim(dim) : 1.0;
+    }
+
+    private static double clamp01(double value) {
+        return value < 0 ? 0 : value > 1 ? 1 : value;
     }
 
     private static boolean isLit(int[] frame) {
