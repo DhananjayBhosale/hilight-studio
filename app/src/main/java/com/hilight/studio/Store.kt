@@ -262,13 +262,26 @@ class Store private constructor(private val app: Context) {
     }
 
     fun upsertRule(rule: AppRule) {
-        _rules.value = _rules.value.filterNot { it.pkg == rule.pkg && it.trigger == rule.trigger } + rule
+        val current = _rules.value
+        val existingIndex = current.indexOfFirst { it.id == rule.id }
+        val withoutOtherForeground = if (rule.trigger == Trigger.FOREGROUND) {
+            current.filter { it.id == rule.id || it.pkg != rule.pkg || it.trigger != Trigger.FOREGROUND }
+        } else {
+            current
+        }
+        _rules.value = if (existingIndex >= 0) {
+            withoutOtherForeground.toMutableList().also {
+                it[it.indexOfFirst { saved -> saved.id == rule.id }] = rule
+            }
+        } else {
+            withoutOtherForeground + rule
+        }
         saveRules()
         ForegroundWatcher.syncRunning(app, _rules.value, _enabled.value)
     }
 
     fun removeRule(rule: AppRule) {
-        _rules.value = _rules.value.filterNot { it.pkg == rule.pkg && it.trigger == rule.trigger }
+        _rules.value = _rules.value.filterNot { it.id == rule.id }
         saveRules()
         ForegroundWatcher.syncRunning(app, _rules.value, _enabled.value)
     }
@@ -321,12 +334,15 @@ class Store private constructor(private val app: Context) {
             }.getOrNull()
         } ?: emptyList()
 
-    /** A rule for this package if there is one, otherwise the catch-all. */
+    /** A rule for this package if there is one, otherwise the catch-all. Foreground stays singular. */
     fun ruleFor(pkg: String, trigger: Trigger): AppRule? {
         val enabled = _rules.value.filter { it.enabled && it.trigger == trigger }
         return enabled.firstOrNull { it.pkg == pkg }
             ?: enabled.firstOrNull { it.isCatchAll }
     }
+
+    fun notificationRuleFor(pkg: String, searchableText: String): AppRule? =
+        RuleMatcher.notificationRuleFor(_rules.value, pkg, searchableText)
 
     // ------------------------------------------------------------------ light output
 
