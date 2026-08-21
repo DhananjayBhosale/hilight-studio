@@ -78,7 +78,8 @@ fun AppRulesScreen(store: Store) {
         }
     }
 
-    rules.forEachIndexed { index, rule ->
+    rules.groupBy { it.pkg }.values.forEachIndexed { index, appRules ->
+        val app = appRules.first()
         // cards ease in rather than appearing, staggered down the list
         AnimatedVisibility(
             visible = true,
@@ -86,17 +87,16 @@ fun AppRulesScreen(store: Store) {
                 slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy)) { it / 6 } +
                 scaleIn(tween(240), initialScale = 0.97f),
         ) {
-            RuleCard(
-                rule = rule,
-                onToggle = { store.upsertRule(rule.copy(enabled = it)) },
-                onEdit = { editing = rule },
+            RuleGroupCard(
+                label = app.label,
+                rules = appRules,
+                onAdd = { editing = AppRule(pkg = app.pkg, label = app.label) },
+                onToggle = { rule, enabled -> store.upsertRule(rule.copy(enabled = enabled)) },
+                onEdit = { editing = it },
                 onTest = {
-                    // test what the rule will actually do, including how long it stays lit
-                    store.preview(
-                        rule.pattern, rule.color, rule.speedMs, rule.brightness, rule.durationMs,
-                    )
+                    store.preview(it.pattern, it.color, it.speedMs, it.brightness, it.durationMs)
                 },
-                onDelete = { store.removeRule(rule) },
+                onDelete = { store.removeRule(it) },
             )
         }
     }
@@ -125,65 +125,96 @@ fun AppRulesScreen(store: Store) {
 }
 
 @Composable
-private fun RuleCard(
-    rule: AppRule,
-    onToggle: (Boolean) -> Unit,
-    onEdit: () -> Unit,
-    onTest: () -> Unit,
-    onDelete: () -> Unit,
+private fun RuleGroupCard(
+    label: String,
+    rules: List<AppRule>,
+    onAdd: () -> Unit,
+    onToggle: (AppRule, Boolean) -> Unit,
+    onEdit: (AppRule) -> Unit,
+    onTest: (AppRule) -> Unit,
+    onDelete: (AppRule) -> Unit,
 ) {
     val haptics = LocalHapticFeedback.current
     PixelCard {
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Row(
-                Modifier.fillMaxWidth(0.72f),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                if (!rule.randomColor) {
-                    Box(
-                        Modifier
-                            .size(14.dp)
-                            .background(Color(rule.color), CircleShape)
+        SectionTitle(
+            label,
+            trailing = {
+                TextButton(onClick = onAdd) {
+                    Icon(Icons.Rounded.Add, contentDescription = null)
+                    Spacer(Modifier.width(4.dp))
+                    ButtonLabel("Add rule")
+                }
+            },
+        )
+        rules.forEach { rule ->
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text(rule.conditionLabel(), style = MaterialTheme.typography.bodyLarge)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (rule.randomColor) {
+                                Caption("Random colour")
+                            } else {
+                                Box(
+                                    Modifier
+                                        .size(11.dp)
+                                        .background(Color(rule.color), CircleShape)
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Caption("Colour")
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            Caption(
+                                rule.pattern.label + " · " +
+                                    if (rule.trigger == Trigger.NOTIFICATION) formatDuration(rule.durationMs)
+                                    else "until closed"
+                            )
+                        }
+                    }
+                    Switch(
+                        checked = rule.enabled,
+                        onCheckedChange = {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onToggle(rule, it)
+                        },
                     )
                 }
-                Column {
-                    Text(rule.label, style = MaterialTheme.typography.titleMedium)
-                    Caption(
-                        (if (rule.randomColor) "Random colour" else rule.pattern.label) + " · " +
-                            if (rule.trigger == Trigger.NOTIFICATION) "on notification" else "while open"
-                    )
+                LedStrip(
+                    rule.pattern,
+                    Ambient(
+                        pattern = rule.pattern,
+                        color = rule.color,
+                        speedMs = rule.speedMs,
+                        brightness = rule.brightness,
+                    ),
+                    active = rule.enabled,
+                    heightDp = 34,
+                )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    TextButton(onClick = { onEdit(rule) }, modifier = Modifier.weight(1f)) {
+                        ButtonLabel("Edit")
+                    }
+                    TextButton(onClick = { onTest(rule) }, modifier = Modifier.weight(1f)) {
+                        ButtonLabel("Test")
+                    }
+                    TextButton(onClick = { onDelete(rule) }, modifier = Modifier.weight(1f)) {
+                        ButtonLabel("Delete")
+                    }
                 }
             }
-            Switch(
-                checked = rule.enabled,
-                onCheckedChange = {
-                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onToggle(it)
-                },
-            )
-        }
-        LedStrip(
-            rule.pattern,
-            Ambient(
-                pattern = rule.pattern,
-                color = rule.color,
-                speedMs = rule.speedMs,
-                brightness = rule.brightness,
-            ),
-            active = rule.enabled,
-            heightDp = 34,
-        )
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            FilledTonalButton(onClick = onEdit, modifier = Modifier.weight(1f)) { ButtonLabel("Edit") }
-            FilledTonalButton(onClick = onTest, modifier = Modifier.weight(1f)) { ButtonLabel("Test") }
-            TextButton(onClick = onDelete, modifier = Modifier.weight(1f)) { ButtonLabel("Delete") }
         }
     }
+}
+
+fun AppRule.conditionLabel(): String = when (trigger) {
+    Trigger.FOREGROUND -> "While open"
+    Trigger.NOTIFICATION -> keyword.trim().takeIf { it.isNotEmpty() }
+        ?.let { "Notification contains \u201c$it\u201d" }
+        ?: "Any notification"
 }
 
 @Composable
@@ -315,6 +346,7 @@ private fun RuleEditorDialog(
                     label = { if (it == Trigger.NOTIFICATION) "On notification" else "While open" },
                     onSelect = { r = r.copy(trigger = it) },
                 )
+                Caption("Notification rules may be multiple; only one while-open rule is allowed.")
 
                 PatternCarousel(
                     selected = r.pattern,
@@ -331,7 +363,16 @@ private fun RuleEditorDialog(
                     OutlinedTextField(
                         value = r.keyword,
                         onValueChange = { r = r.copy(keyword = it) },
-                        label = { Text("Only if it mentions (optional)") },
+                        label = { Text("Notification contains (optional)") },
+                        supportingText = {
+                            Caption(
+                                if (r.keyword.isBlank()) {
+                                    "Leave blank to match any notification from ${r.label}."
+                                } else {
+                                    "Matches ${r.label} notifications containing this text."
+                                }
+                            )
+                        },
                         singleLine = true,
                         shape = MaterialTheme.shapes.medium,
                         modifier = Modifier.fillMaxWidth(),

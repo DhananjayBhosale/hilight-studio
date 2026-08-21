@@ -2,6 +2,7 @@ package com.hilight.studio
 
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.UUID
 
 /**
  * Patterns the renderer understands.
@@ -122,6 +123,8 @@ data class AppRule(
     val onlyWhenScreenOff: Boolean = false,
     /** only fire when the title or text contains this, case-insensitive; empty means anything */
     val keyword: String = "",
+    /** Stable identity used to update or remove one rule without relying on its package. */
+    val id: String = UUID.randomUUID().toString(),
 ) {
     /** The catch-all rule, which matches any app without one of its own. */
     val isCatchAll: Boolean get() = pkg == ANY_APP
@@ -139,6 +142,7 @@ data class AppRule(
         put("brightness", brightness.toDouble())
         put("onlyWhenScreenOff", onlyWhenScreenOff)
         put("keyword", keyword)
+        put("id", id)
     }
 
     companion object {
@@ -159,6 +163,7 @@ data class AppRule(
             brightness = o.optDouble("brightness", 1.0).toFloat(),
             onlyWhenScreenOff = o.optBoolean("onlyWhenScreenOff", false),
             keyword = o.optString("keyword", ""),
+            id = o.optString("id", "").trim().ifEmpty { UUID.randomUUID().toString() },
         )
     }
 }

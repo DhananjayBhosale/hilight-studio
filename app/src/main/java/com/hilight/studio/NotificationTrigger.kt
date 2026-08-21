@@ -13,14 +13,13 @@ class NotificationTrigger : NotificationListenerService() {
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         Log.d(TAG, "posted by ${sbn.packageName}")
         if (sbn.packageName == packageName && sbn.notification.channelId == "fg_watch") return
-        val rule = store.ruleFor(sbn.packageName, Trigger.NOTIFICATION) ?: return
+        val rule = store.notificationRuleFor(sbn.packageName, searchableText(sbn)) ?: return
         if (sbn.isOngoing) return                       // media/progress notifications repeat a lot
         if (rule.onlyWhenScreenOff && screenOn()) return
         if (store.respectDnd.value && inDoNotDisturb()) {
             Log.i(TAG, "suppressed by Do Not Disturb")
             return
         }
-        if (rule.keyword.isNotBlank() && !matchesKeyword(sbn, rule.keyword)) return
         Log.i(TAG, "alert for ${sbn.packageName} pattern=${rule.pattern.key}")
         store.fireAlert(rule)
     }
@@ -36,16 +35,15 @@ class NotificationTrigger : NotificationListenerService() {
                 it == INTERRUPTION_FILTER_NONE
         }
 
-    private fun matchesKeyword(sbn: StatusBarNotification, keyword: String): Boolean {
+    private fun searchableText(sbn: StatusBarNotification): String {
         val extras = sbn.notification.extras
-        val haystack = buildString {
+        return buildString {
             append(extras.getCharSequence(android.app.Notification.EXTRA_TITLE) ?: "")
             append(' ')
             append(extras.getCharSequence(android.app.Notification.EXTRA_TEXT) ?: "")
             append(' ')
             append(extras.getCharSequence(android.app.Notification.EXTRA_BIG_TEXT) ?: "")
         }
-        return haystack.contains(keyword.trim(), ignoreCase = true)
     }
 
     private fun screenOn(): Boolean =

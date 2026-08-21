@@ -193,8 +193,7 @@ fun LiveScreen(store: Store) {
                     Text(r.label, style = MaterialTheme.typography.bodyLarge)
                     Text(
                         (if (r.randomColor) "random" else r.pattern.label) +
-                            " · " +
-                            if (r.trigger == Trigger.NOTIFICATION) "notify" else "in app",
+                            " · " + r.conditionLabel(),
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (r.enabled) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.onSurfaceVariant,
