@@ -47,7 +47,14 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // material-icons-extended contains every Compose icon. R8 removes the thousands this
+            // app does not use, while resource shrinking drops their now-unreferenced resources.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
             // Public APKs use the permanent release certificate when signing material is present
             // and remain non-debuggable. The stable certificate enables future in-place updates;
             // Play Protect reputation checks are separate and are not guaranteed by signing alone.
