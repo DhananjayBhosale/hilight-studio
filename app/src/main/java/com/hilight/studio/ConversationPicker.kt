@@ -35,7 +35,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Contacts
 import androidx.compose.material.icons.rounded.Groups
-import androidx.compose.material.icons.rounded.Launch
+import androidx.compose.material.icons.automirrored.rounded.Launch
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.TextFields
@@ -238,7 +238,7 @@ fun RuleScopeDialog(
                 }
                 if (allowForeground) {
                     ScopeRow(
-                        icon = Icons.Rounded.Launch,
+                        icon = Icons.AutoMirrored.Rounded.Launch,
                         title = stringResource(R.string.rules_scope_foreground, appLabel),
                         subtitle = stringResource(R.string.rules_scope_foreground_hint),
                         onClick = { onPick(RuleScope.FOREGROUND) },

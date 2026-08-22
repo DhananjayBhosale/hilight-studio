@@ -28,7 +28,7 @@ import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
-import androidx.compose.material.icons.rounded.Launch
+import androidx.compose.material.icons.automirrored.rounded.Launch
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Person
@@ -435,7 +435,7 @@ private fun RuleGroupCard(
                     CompactRuleRow(
                         rule = rule,
                         title = stringResource(R.string.rules_match_while_open, appLabel),
-                        icon = Icons.Rounded.Launch,
+                        icon = Icons.AutoMirrored.Rounded.Launch,
                         lastMatchedMs = null,
                         onToggle = { onToggle(rule, it) },
                         onEdit = { onEdit(rule) },

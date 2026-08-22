@@ -324,7 +324,7 @@ class Store private constructor(private val app: Context) {
             rule.conversationKey.isNullOrBlank() &&
             !live?.conversationKey.isNullOrBlank()
         ) {
-            rule.copy(conversationKey = live?.conversationKey)
+            rule.copy(conversationKey = live.conversationKey)
         } else {
             rule
         }
