@@ -86,15 +86,20 @@ class NotificationTrigger : NotificationListenerService() {
             return
         }
 
-        if (rule.keyword.isNotBlank() && !matchesKeyword(info, rule.keyword)) return
-
         // How it matched, never what the message said and never who sent it. A conversation rule's
         // label is a contact's name, and CONTRIBUTING asks users to scrub personal data out of logs
         // they share — so the line says whether a chat rule or an app rule won, which is enough to
         // answer "why did that one fire and not my other one" without naming anybody.
-        val how = ConversationMatch.strength(rule, info)
-            ?: if (rule.isCatchAll) MatchStrength.CATCH_ALL else MatchStrength.APP
-        val scope = if (rule.isConversationRule) "chat" else "app"
+        val how = ConversationMatch.strength(rule, info) ?: when {
+            rule.keyword.isNotBlank() -> MatchStrength.TEXT
+            rule.isCatchAll -> MatchStrength.CATCH_ALL
+            else -> MatchStrength.APP
+        }
+        val scope = when {
+            rule.isConversationRule -> "chat"
+            rule.keyword.isNotBlank() -> "text"
+            else -> "app"
+        }
         Log.i(TAG, "alert for ${info.pkg} rule=$scope match=$how pattern=${rule.pattern.key}")
         store.fireAlert(rule)
         store.noteRuleFired(rule, info)
@@ -158,27 +163,6 @@ class NotificationTrigger : NotificationListenerService() {
                 it == INTERRUPTION_FILTER_ALARMS ||
                 it == INTERRUPTION_FILTER_NONE
         }
-
-    /**
-     * Matches the rule's keyword against what the peek already read.
-     *
-     * Deliberately not a second read of the notification's extras. That Bundle can carry a Parcelable
-     * this process cannot load, which is why every read of it in [NotificationPeek] is guarded — and
-     * touching it again here would put an unguarded read on the path of a rule that had already agreed
-     * to fire, so a throw would swallow the alert. The same strings, read once, safely.
-     */
-    private fun matchesKeyword(info: MessageInfo, keyword: String): Boolean {
-        val haystack = buildString {
-            append(info.title.orEmpty())
-            append(' ')
-            append(info.text.orEmpty())
-            append(' ')
-            append(info.sender.orEmpty())
-            append(' ')
-            append(info.conversationTitle.orEmpty())
-        }
-        return haystack.contains(keyword.trim(), ignoreCase = true)
-    }
 
     private fun screenOn(): Boolean =
         getSystemService(PowerManager::class.java)?.isInteractive ?: true

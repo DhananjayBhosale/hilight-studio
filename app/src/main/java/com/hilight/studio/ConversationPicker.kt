@@ -35,7 +35,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Contacts
 import androidx.compose.material.icons.rounded.Groups
+import androidx.compose.material.icons.automirrored.rounded.Launch
+import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.TextFields
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
@@ -76,8 +79,8 @@ import kotlinx.coroutines.withContext
  * notifications, which is exactly how a per-contact rule ends up never firing.
  */
 
-/** Which of the two shapes of rule the user is adding, chosen before the editor opens. */
-enum class RuleScope { WHOLE_APP, ONE_CHAT }
+/** What a new app rule should react to, chosen before the editor opens. */
+enum class RuleScope { WHOLE_APP, ONE_CHAT, TEXT, FOREGROUND }
 
 /**
  * Apps worth offering a per-chat rule for before any message from them has been seen.
@@ -189,34 +192,58 @@ fun ConversationBadge(text: String) {
 }
 
 /**
- * The step between picking an app and the rule editor: whole app, or one chat inside it.
- *
- * Only shown where a per-chat rule could actually work, so that the common case of "flash for this
- * app" stays a single tap.
+ * The step between picking an app and the editor. Conversation and text choices are hidden where
+ * they cannot sensibly apply, but the shape stays the same whether this came from "Add app" or the
+ * + Rule button inside an existing app group.
  */
 @Composable
-fun RuleScopeDialog(appLabel: String, onDismiss: () -> Unit, onPick: (RuleScope) -> Unit) {
+fun RuleScopeDialog(
+    appLabel: String,
+    allowChat: Boolean,
+    allowText: Boolean,
+    allowForeground: Boolean,
+    onDismiss: () -> Unit,
+    onPick: (RuleScope) -> Unit,
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = MaterialTheme.shapes.extraLarge,
         confirmButton = {
             TextButton(onClick = onDismiss) { ButtonLabel(stringResource(R.string.common_cancel)) }
         },
-        title = { Text(stringResource(R.string.chat_scope_title)) },
+        title = { Text(stringResource(R.string.chat_scope_title, appLabel)) },
         text = {
             Column {
                 ScopeRow(
-                    icon = Icons.Rounded.Apps,
-                    title = stringResource(R.string.chat_scope_whole_app, appLabel),
+                    icon = Icons.Rounded.Notifications,
+                    title = stringResource(R.string.chat_scope_whole_app),
                     subtitle = stringResource(R.string.chat_scope_whole_app_hint),
                     onClick = { onPick(RuleScope.WHOLE_APP) },
                 )
-                ScopeRow(
-                    icon = Icons.Rounded.Person,
-                    title = stringResource(R.string.chat_scope_one_chat),
-                    subtitle = stringResource(R.string.chat_scope_one_chat_hint),
-                    onClick = { onPick(RuleScope.ONE_CHAT) },
-                )
+                if (allowChat) {
+                    ScopeRow(
+                        icon = Icons.Rounded.Person,
+                        title = stringResource(R.string.chat_scope_one_chat),
+                        subtitle = stringResource(R.string.chat_scope_one_chat_hint),
+                        onClick = { onPick(RuleScope.ONE_CHAT) },
+                    )
+                }
+                if (allowText) {
+                    ScopeRow(
+                        icon = Icons.Rounded.TextFields,
+                        title = stringResource(R.string.rules_scope_text),
+                        subtitle = stringResource(R.string.rules_scope_text_hint),
+                        onClick = { onPick(RuleScope.TEXT) },
+                    )
+                }
+                if (allowForeground) {
+                    ScopeRow(
+                        icon = Icons.AutoMirrored.Rounded.Launch,
+                        title = stringResource(R.string.rules_scope_foreground, appLabel),
+                        subtitle = stringResource(R.string.rules_scope_foreground_hint),
+                        onClick = { onPick(RuleScope.FOREGROUND) },
+                    )
+                }
             }
         },
     )

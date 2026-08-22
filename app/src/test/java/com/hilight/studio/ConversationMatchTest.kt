@@ -77,6 +77,12 @@ class ConversationMatchTest {
         trigger: Trigger = Trigger.NOTIFICATION,
     ) = AppRule(pkg = pkg, label = pkg, enabled = enabled, trigger = trigger)
 
+    private fun textRule(
+        text: String,
+        pkg: String = WHATSAPP,
+        enabled: Boolean = true,
+    ) = AppRule(pkg = pkg, label = pkg, enabled = enabled, keyword = text)
+
     private fun catchAll(
         enabled: Boolean = true,
         trigger: Trigger = Trigger.NOTIFICATION,
@@ -336,9 +342,10 @@ class ConversationMatchTest {
     fun `the catch all only fires when nothing else matches`() {
         val any = catchAll()
         assertEquals(any.id, ConversationMatch.resolve(listOf(any), notif(pkg = TELEGRAM))?.id)
+        val telegram = appRule(TELEGRAM)
         assertEquals(
-            appRule(TELEGRAM).id,
-            ConversationMatch.resolve(listOf(any, appRule(TELEGRAM)), notif(pkg = TELEGRAM))?.id,
+            telegram.id,
+            ConversationMatch.resolve(listOf(any, telegram), notif(pkg = TELEGRAM))?.id,
         )
     }
 
@@ -351,6 +358,145 @@ class ConversationMatchTest {
             notif(sender = "Amit"),
         )
         assertEquals(whatsapp.id, picked?.id)
+    }
+
+    @Test
+    fun `an app text rule beats the plain app fallback`() {
+        val urgent = textRule("urgent")
+        val fallback = appRule()
+        assertEquals(
+            urgent.id,
+            ConversationMatch.resolve(
+                listOf(fallback, urgent),
+                notif(title = "Signal", text = "This is URGENT"),
+            )?.id,
+        )
+    }
+
+    @Test
+    fun `overlapping app text rules use saved order`() {
+        val urgent = textRule("urgent")
+        val invoice = textRule("invoice")
+        val message = notif(text = "Urgent invoice attached")
+        assertEquals(urgent.id, ConversationMatch.resolve(listOf(urgent, invoice), message)?.id)
+        assertEquals(invoice.id, ConversationMatch.resolve(listOf(invoice, urgent), message)?.id)
+    }
+
+    @Test
+    fun `a text rule that misses falls through to the app fallback`() {
+        val fallback = appRule()
+        assertEquals(
+            fallback.id,
+            ConversationMatch.resolve(
+                listOf(textRule("urgent"), fallback),
+                notif(text = "ordinary message"),
+            )?.id,
+        )
+    }
+
+    @Test
+    fun `an app text rule that misses does not leak through to Any app`() {
+        assertNull(
+            ConversationMatch.resolve(
+                listOf(textRule("urgent"), catchAll()),
+                notif(text = "ordinary message"),
+            )
+        )
+    }
+
+    @Test
+    fun `a conversation rule beats a generic text rule`() {
+        val bethany = convoRule(name = "Bethany")
+        val urgent = textRule("urgent")
+        assertEquals(
+            bethany.id,
+            ConversationMatch.resolve(
+                listOf(urgent, bethany),
+                notif(sender = "Bethany", text = "urgent"),
+            )?.id,
+        )
+    }
+
+    @Test
+    fun `a failed conversation text condition keeps looking`() {
+        val conditioned = convoRule(name = "Bethany").copy(keyword = "urgent")
+        val fallback = appRule()
+        assertEquals(
+            fallback.id,
+            ConversationMatch.resolve(
+                listOf(conditioned, fallback),
+                notif(sender = "Bethany", text = "hello"),
+            )?.id,
+        )
+    }
+
+    @Test
+    fun `a failed conversation condition can fall through to an app text rule`() {
+        val conditioned = convoRule(name = "Bethany").copy(keyword = "urgent")
+        val greeting = textRule("hello")
+        assertEquals(
+            greeting.id,
+            ConversationMatch.resolve(
+                listOf(conditioned, greeting),
+                notif(sender = "Bethany", text = "hello"),
+            )?.id,
+        )
+    }
+
+    @Test
+    fun `a plain conversation rule handles the chat when its conditioned sibling misses`() {
+        val conditioned = convoRule(name = "Bethany").copy(keyword = "urgent")
+        val plain = convoRule(name = "Bethany")
+        assertEquals(
+            plain.id,
+            ConversationMatch.resolve(
+                listOf(conditioned, plain),
+                notif(sender = "Bethany", text = "hello"),
+            )?.id,
+        )
+    }
+
+    @Test
+    fun `a conditioned conversation rule beats its plain conversation rule when both match`() {
+        val plain = convoRule(name = "Bethany")
+        val urgent = convoRule(name = "Bethany").copy(keyword = "urgent")
+        assertEquals(
+            urgent.id,
+            ConversationMatch.resolve(
+                listOf(plain, urgent),
+                notif(sender = "Bethany", text = "urgent"),
+            )?.id,
+        )
+    }
+
+    @Test
+    fun `a disabled text rule falls through`() {
+        val fallback = appRule()
+        assertEquals(
+            fallback.id,
+            ConversationMatch.resolve(
+                listOf(textRule("urgent", enabled = false), fallback),
+                notif(text = "urgent"),
+            )?.id,
+        )
+    }
+
+    @Test
+    fun `text matching trims the condition and ignores case`() {
+        val rule = textRule("  InVoice  ")
+        assertTrue(ConversationMatch.matchesText(notif(text = "new invoice"), rule.keyword))
+    }
+
+    @Test
+    fun `text matching searches every notification field HiLight already inspects`() {
+        assertTrue(ConversationMatch.matchesText(notif(title = "Security alert"), "security"))
+        assertTrue(ConversationMatch.matchesText(notif(sender = "Bethany"), "bethany"))
+        assertTrue(
+            ConversationMatch.matchesText(
+                notif(conversationTitle = "Family chat"),
+                "family chat",
+            )
+        )
     }
 
     @Test
@@ -410,12 +556,10 @@ class ConversationMatchTest {
         val fromTelegram = notif(pkg = TELEGRAM, sender = "Sujay")
         assertNull(ConversationMatch.resolve(listOf(sujayOnWhatsApp), fromTelegram))
         // and it does not stop Telegram's own rule from answering
+        val telegram = appRule(TELEGRAM)
         assertEquals(
-            appRule(TELEGRAM).id,
-            ConversationMatch.resolve(
-                listOf(sujayOnWhatsApp, appRule(TELEGRAM)),
-                fromTelegram,
-            )?.id,
+            telegram.id,
+            ConversationMatch.resolve(listOf(sujayOnWhatsApp, telegram), fromTelegram)?.id,
         )
     }
 
@@ -543,43 +687,27 @@ class ConversationMatchTest {
         assertTrue(described.contains("Sujay"))
     }
 
-    // ---------------------------------------------------------------- a rule healed under an editor
+    // ---------------------------------------------------------------- stable rule identity
 
     @Test
-    fun `a rule that gained a chat id is recognised as the one the editor is holding`() {
-        // The editor holds the snapshot it opened with. If a notification heals the rule meanwhile, the
-        // id it saves against no longer exists, and without recognising the move the edit is appended
-        // as a second row that the healed one out-matches for good.
-        val was = convoRule(name = "Sujay")
-        val healed = convoRule(name = "Sujay", key = "chat-9")
-        assertTrue(ConversationMatch.isHealOf(healed, was))
+    fun `editing match fields keeps the same saved rule id`() {
+        val rule = convoRule(name = "Sujay")
+        assertEquals(rule.id, rule.copy(keyword = "urgent", conversationKey = "chat-9").id)
     }
 
     @Test
-    fun `a heal is not confused with the user editing the rule themselves`() {
-        val was = convoRule(name = "Sujay")
-        // a different chat entirely
-        assertFalse(ConversationMatch.isHealOf(convoRule(name = "Priya", key = "chat-9"), was))
-        // the same chat in a different app
-        assertFalse(
-            ConversationMatch.isHealOf(convoRule(name = "Sujay", key = "chat-9", pkg = TELEGRAM), was)
-        )
-        // the trigger moved, which is the user's own edit
-        assertFalse(
-            ConversationMatch.isHealOf(
-                convoRule(name = "Sujay", key = "chat-9", trigger = Trigger.FOREGROUND),
-                was,
-            )
-        )
-        // nothing was learned, so nothing moved
-        assertFalse(ConversationMatch.isHealOf(convoRule(name = "Sujay"), was))
-        // a rule that already had a key cannot be healed again
-        assertFalse(
-            ConversationMatch.isHealOf(
-                convoRule(name = "Sujay", key = "chat-9"),
-                convoRule(name = "Sujay", key = "chat-1"),
-            )
-        )
+    fun `duplicating a rule gives it independent saved identity`() {
+        val rule = textRule("urgent")
+        assertTrue(rule.id != rule.copyAsNew().id)
+    }
+
+    @Test
+    fun `semantic duplicate detection is separate from saved identity`() {
+        val original = textRule("  Urgent ")
+        val duplicate = original.copyAsNew().copy(keyword = "urgent")
+        val different = original.copyAsNew().copy(keyword = "invoice")
+        assertTrue(ConversationMatch.sameTarget(original, duplicate))
+        assertFalse(ConversationMatch.sameTarget(original, different))
     }
 
     @Test

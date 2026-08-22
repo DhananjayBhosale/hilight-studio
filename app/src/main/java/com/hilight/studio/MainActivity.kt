@@ -34,6 +34,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -111,6 +113,7 @@ private fun App(store: Store) {
     val active by store.activeTransport.collectAsStateWithLifecycle()
     val haptics = LocalHapticFeedback.current
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     // Tied to the lifecycle, not just the composition: a plain LaunchedEffect keeps its coroutine
     // running once the activity stops, so this polled the helper over binder and file I/O every 1.5s
@@ -127,6 +130,7 @@ private fun App(store: Store) {
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             // single-line bar: the hero already carries the visual weight
             TopAppBar(
@@ -198,7 +202,7 @@ private fun App(store: Store) {
                 when (current) {
                     Tab.LIVE -> LiveScreen(store)
                     Tab.AMBIENT -> AmbientScreen(store)
-                    Tab.APPS -> AppRulesScreen(store)
+                    Tab.APPS -> AppRulesScreen(store, snackbarHostState)
                     Tab.SETUP -> SetupScreen(store)
                 }
                 Spacer(Modifier.height(28.dp))
