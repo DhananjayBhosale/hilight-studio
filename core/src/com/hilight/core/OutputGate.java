@@ -7,8 +7,8 @@ package com.hilight.core;
  * Pure and Android-free for the same reason as {@link SafetyGuard}: the rules that stop the array
  * being left lit are the part worth testing directly, and they are easy to get subtly wrong.
  *
- * The blank latch exists only to avoid pushing a blank frame every 33 ms once the array is already
- * dark — {@link LightsBackend#push} is a binder call with no dedup of its own. The latch therefore
+ * The blank latch exists only to avoid pushing a blank frame every render tick once the array is
+ * already dark — {@link LightsBackend#push} is a binder call with no dedup of its own. The latch therefore
  * has to describe the hardware, not the reason it went dark, which is why {@link #clearAlert()}
  * resets it: an alert leaves the LEDs lit, so one more blank frame is owed after it ends.
  */
@@ -66,6 +66,10 @@ final class OutputGate {
 
     long alertElapsed(long now) {
         return now - alertStart;
+    }
+
+    long alertRemainingMs(long now) {
+        return alertHeld ? Math.max(0, alertEnd - now) : 0;
     }
 
     long ambientRemainingMs(long now) {

@@ -17,8 +17,9 @@ public final class OutputGateTest {
 
         assertEquals(OutputGate.Layer.AMBIENT, gate.next(1_000));
         assertEquals(OutputGate.Layer.BLANK, gate.next(TIMEOUT + 1));
-        // the blank latch stops a binder push every frame once the array is already dark
-        assertEquals(OutputGate.Layer.IDLE, gate.next(TIMEOUT + 100));
+        // Engine must force black on BLANK, retain its session for this full drain interval,
+        // then release only when this following render tick observes IDLE.
+        assertEquals(OutputGate.Layer.IDLE, gate.next(TIMEOUT + 1 + Engine.FRAME_MS));
         assertTrue(gate.isAmbientHeld());
     }
 
@@ -35,9 +36,9 @@ public final class OutputGateTest {
         assertEquals(OutputGate.Layer.ALERT, gate.next(fired));
         assertEquals(OutputGate.Layer.ALERT, gate.next(fired + 9_999));
 
-        // and must hand the array back the moment it expires, not sit on the last lit frame
+        // and must hand the array back on the following render tick, not sit on the last lit frame
         assertEquals(OutputGate.Layer.BLANK, gate.next(fired + 10_000));
-        assertEquals(OutputGate.Layer.IDLE, gate.next(fired + 10_033));
+        assertEquals(OutputGate.Layer.IDLE, gate.next(fired + 10_000 + Engine.FRAME_MS));
     }
 
     @Test
@@ -54,7 +55,7 @@ public final class OutputGateTest {
         gate.clearAlert();
         assertFalse(gate.isAlertHeld());
         assertEquals(OutputGate.Layer.BLANK, gate.next(fired + 2_000));
-        assertEquals(OutputGate.Layer.IDLE, gate.next(fired + 2_033));
+        assertEquals(OutputGate.Layer.IDLE, gate.next(fired + 2_000 + Engine.FRAME_MS));
     }
 
     @Test
@@ -88,6 +89,17 @@ public final class OutputGateTest {
         gate.armAmbient(TIMEOUT + 100, TIMEOUT);
         assertFalse(gate.isAmbientHeld());
         assertEquals(OutputGate.Layer.AMBIENT, gate.next(TIMEOUT + 200));
+    }
+
+    @Test
+    public void alertRemainingReachesZeroAtExpiry() {
+        OutputGate gate = new OutputGate();
+        gate.startAlert(5_000, 10_000);
+
+        assertEquals(10_000, gate.alertRemainingMs(5_000));
+        assertEquals(2_500, gate.alertRemainingMs(12_500));
+        assertEquals(0, gate.alertRemainingMs(15_000));
+        assertEquals(0, gate.alertRemainingMs(16_000));
     }
 
     @Test
