@@ -1,15 +1,9 @@
 package com.hilight.studio
 
 import android.content.Intent
-import android.content.pm.ApplicationInfo
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -18,48 +12,66 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.ArrowDownward
+import androidx.compose.material.icons.rounded.ArrowUpward
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.Launch
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.TextFields
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
@@ -74,77 +86,113 @@ import kotlinx.coroutines.withContext
 fun ruleLabel(rule: AppRule): String =
     if (rule.isCatchAll) stringResource(R.string.rules_any_app) else rule.label
 
-private data class InstalledApp(val pkg: String, val label: String, val info: ApplicationInfo?)
+private data class InstalledApp(val pkg: String, val label: String)
+private data class EditorRequest(val rule: AppRule, val textRequired: Boolean = false)
+private data class ChatPickRequest(val app: InstalledApp, val template: AppRule? = null)
 
-/** "Show X for app Y" rules, plus the per-chat rules nested under the app they belong to. */
+/** One grouped card per app, with compact child rows for every rule inside it. */
 @Composable
-fun AppRulesScreen(store: Store) {
+fun AppRulesScreen(store: Store, snackbarHostState: SnackbarHostState) {
     val rules by store.rules.collectAsStateWithLifecycle()
     val conversations by store.conversations.collectAsStateWithLifecycle()
     val lastMatch by store.lastMatch.collectAsStateWithLifecycle()
-    var picking by remember { mutableStateOf(false) }
+    var pickingApp by remember { mutableStateOf(false) }
     var scoping by remember { mutableStateOf<InstalledApp?>(null) }
-    var pickingChatIn by remember { mutableStateOf<InstalledApp?>(null) }
-    var editing by remember { mutableStateOf<AppRule?>(null) }
+    var pickingChat by remember { mutableStateOf<ChatPickRequest?>(null) }
+    var editing by remember { mutableStateOf<EditorRequest?>(null) }
+    var collapsed by remember { mutableStateOf(emptySet<String>()) }
+    val scope = rememberCoroutineScope()
+    val deletedMessage = stringResource(R.string.rules_deleted)
+    val undoLabel = stringResource(R.string.rules_undo)
+
+    val addRuleFor: (InstalledApp) -> Unit = { app ->
+        if (app.pkg == AppRule.ANY_APP) {
+            val existing = rules.firstOrNull {
+                it.isCatchAll && it.trigger == Trigger.NOTIFICATION &&
+                    !it.isConversationRule && it.keyword.isBlank()
+            }
+            editing = EditorRequest(existing ?: AppRule(app.pkg, app.label))
+        } else {
+            scoping = app
+        }
+    }
 
     PixelCard(tone = 2) {
         SectionTitle(stringResource(R.string.rules_section_title))
         Caption(stringResource(R.string.rules_intro_apps))
         Caption(stringResource(R.string.rules_intro_messaging))
-        Button(onClick = { picking = true }, modifier = Modifier.fillMaxWidth()) {
+        Button(onClick = { pickingApp = true }, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Rounded.Add, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            ButtonLabel(stringResource(R.string.rules_add))
+            ButtonLabel(stringResource(R.string.rules_add_app))
         }
     }
 
-    // An app's own rule and the per-chat rules under it have to sit together, or a colour for one
-    // contact reads as an unrelated app halfway down the list. Grouping by package keeps the apps in
-    // the order they were added — groupBy preserves that — and the plain rule leads its own group.
-    val ordered = remember(rules) {
-        rules.groupBy { it.pkg }.values.flatMap { group ->
-            group.sortedWith(
-                compareBy<AppRule>({ it.isConversationRule }, { it.conversationName ?: "" })
-            )
-        }
-    }
-
-    ordered.forEachIndexed { index, rule ->
-        key(rule.id) {
-            // cards ease in rather than appearing, staggered down the list
-            AnimatedVisibility(
-                visible = true,
-                enter = fadeIn(tween(220, delayMillis = index * 40)) +
-                    slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy)) { it / 6 } +
-                    scaleIn(tween(240), initialScale = 0.97f),
-            ) {
-                RuleCard(
-                    rule = rule,
-                    chat = knownConversation(rule, conversations),
-                    lastMatchedMs = lastMatch[rule.id],
-                    onToggle = { store.upsertRule(rule.copy(enabled = it)) },
-                    onEdit = { editing = rule },
-                    onTest = {
-                        // test what the rule will actually do, including how long it stays lit
-                        store.preview(
-                            rule.pattern, rule.color, rule.speedMs, rule.brightness, rule.durationMs,
-                        )
-                    },
-                    onDelete = { store.removeRule(rule) },
+    val groups = remember(rules) { rules.groupBy { it.pkg }.values.toList() }
+    groups.forEach { group ->
+        val pkg = group.first().pkg
+        RuleGroupCard(
+            rules = group,
+            conversations = conversations,
+            lastMatch = lastMatch,
+            expanded = pkg !in collapsed,
+            onToggleExpanded = {
+                collapsed = if (pkg in collapsed) collapsed - pkg else collapsed + pkg
+            },
+            onAddRule = addRuleFor,
+            onToggle = { rule, enabled -> store.upsertRule(rule.copy(enabled = enabled)) },
+            onEdit = { rule ->
+                editing = EditorRequest(
+                    rule,
+                    textRequired = rule.trigger == Trigger.NOTIFICATION &&
+                        !rule.isConversationRule && rule.keyword.isNotBlank(),
                 )
-            }
-        }
+            },
+            onTest = { rule ->
+                store.preview(
+                    rule.pattern, rule.color, rule.speedMs, rule.brightness, rule.durationMs,
+                )
+            },
+            onDuplicate = { rule ->
+                val copy = rule.copyAsNew()
+                if (rule.isConversationRule) {
+                    pickingChat = ChatPickRequest(
+                        app = InstalledApp(rule.pkg, rule.label),
+                        template = copy.copy(
+                            conversationKey = null,
+                            conversationName = null,
+                            conversationIsGroup = false,
+                        ),
+                    )
+                } else {
+                    editing = EditorRequest(copy, textRequired = rule.keyword.isNotBlank())
+                }
+            },
+            onMoveText = store::moveTextRule,
+            onDelete = { rule ->
+                val index = rules.indexOfFirst { it.id == rule.id }
+                store.removeRule(rule)
+                scope.launch {
+                    if (
+                        snackbarHostState.showSnackbar(
+                            message = deletedMessage,
+                            actionLabel = undoLabel,
+                            withDismissAction = true,
+                        ) == SnackbarResult.ActionPerformed && index >= 0
+                    ) {
+                        store.restoreRule(rule, index)
+                    }
+                }
+            },
+        )
     }
 
-    if (picking) {
+    if (pickingApp) {
         AppPickerDialog(
-            onDismiss = { picking = false },
+            onDismiss = { pickingApp = false },
             onPick = { app ->
-                picking = false
-                // The scope step only appears where a per-chat rule could actually fire, so the
-                // ordinary "flash for this app" rule still costs one tap for everything else.
-                if (offersConversations(store, app)) scoping = app
-                else editing = AppRule(pkg = app.pkg, label = app.label)
+                pickingApp = false
+                addRuleFor(app)
             },
         )
     }
@@ -152,55 +200,84 @@ fun AppRulesScreen(store: Store) {
     scoping?.let { app ->
         RuleScopeDialog(
             appLabel = app.label,
+            allowChat = offersConversations(store, app),
+            allowText = app.pkg != AppRule.ANY_APP,
+            allowForeground = app.pkg != AppRule.ANY_APP,
             onDismiss = { scoping = null },
             onPick = { scope ->
                 scoping = null
                 when (scope) {
-                    RuleScope.WHOLE_APP -> editing = AppRule(pkg = app.pkg, label = app.label)
-                    RuleScope.ONE_CHAT -> pickingChatIn = app
+                    RuleScope.WHOLE_APP -> {
+                        val existing = rules.firstOrNull {
+                            it.pkg == app.pkg && it.trigger == Trigger.NOTIFICATION &&
+                                !it.isConversationRule && it.keyword.isBlank()
+                        }
+                        editing = EditorRequest(existing ?: AppRule(app.pkg, app.label))
+                    }
+                    RuleScope.ONE_CHAT -> pickingChat = ChatPickRequest(app)
+                    RuleScope.TEXT -> editing = EditorRequest(
+                        AppRule(pkg = app.pkg, label = app.label),
+                        textRequired = true,
+                    )
+                    RuleScope.FOREGROUND -> {
+                        val existing = rules.firstOrNull {
+                            it.pkg == app.pkg && it.trigger == Trigger.FOREGROUND &&
+                                !it.isConversationRule
+                        }
+                        editing = EditorRequest(
+                            existing ?: AppRule(
+                                pkg = app.pkg,
+                                label = app.label,
+                                trigger = Trigger.FOREGROUND,
+                            )
+                        )
+                    }
                 }
             },
         )
     }
 
-    pickingChatIn?.let { app ->
+    pickingChat?.let { request ->
         ConversationPickerDialog(
             store = store,
-            pkg = app.pkg,
-            appLabel = app.label,
-            onDismiss = { pickingChatIn = null },
+            pkg = request.app.pkg,
+            appLabel = request.app.label,
+            onDismiss = { pickingChat = null },
             onPicked = { ref ->
-                pickingChatIn = null
-                // The label stays the app's own and the chat travels beside it: the card shows the
-                // app as an overline above the chat, and the matcher needs the two kept apart.
-                val fresh = AppRule(
-                    pkg = app.pkg,
-                    label = app.label,
+                pickingChat = null
+                val base = request.template ?: AppRule(
+                    pkg = request.app.pkg,
+                    label = request.app.label,
+                )
+                val fresh = base.copy(
+                    trigger = Trigger.NOTIFICATION,
                     conversationKey = ref.key,
                     conversationName = ref.name,
                     conversationIsGroup = ref.isGroup,
                 )
-                // A chat that already has a rule opens that rule instead of a blank one. Both share
-                // an id, so saving the blank one would overwrite the colour already chosen for them.
-                editing = rules.firstOrNull { it.id == fresh.id } ?: fresh
+                val existing = rules.firstOrNull {
+                    it.id != fresh.id && ConversationMatch.sameTarget(it, fresh)
+                }
+                editing = EditorRequest(existing ?: fresh)
             },
         )
     }
 
-    editing?.let { rule ->
+    editing?.let { request ->
+        val recentPeeks by store.recentPeeks.collectAsStateWithLifecycle()
+        val rule = request.rule
         RuleEditorDialog(
             rule = rule,
-            // The whole rule set travels into the editor because rule identity is derived from
-            // fields the editor can change, so only the list can say whether the rule being saved
-            // is about to land on top of a different one.
             existing = rules,
+            textRequired = request.textRequired,
+            recentPeeks = recentPeeks,
             chatIsGroup = rule.conversationIsGroup ||
                 knownConversation(rule, conversations)?.isGroup == true,
             onDismiss = { editing = null },
-            onSave = {
-                // The rule being edited is handed over as well: changing the trigger moves it to a
-                // different id, and without the old one the edit would leave a duplicate behind.
-                store.upsertRule(it, replacing = rule)
+            onSave = { saved ->
+                val isNew = rules.none { it.id == rule.id }
+                store.upsertRule(saved.copy(keyword = saved.keyword.trim()), replacing = rule)
+                if (isNew) collapsed = collapsed - saved.pkg
                 editing = null
             },
             onTest = { store.preview(it.pattern, it.color, it.speedMs, it.brightness, it.durationMs) },
@@ -208,117 +285,261 @@ fun AppRulesScreen(store: Store) {
     }
 }
 
-/**
- * Should picking [app] offer the extra "one contact or chat" step?
- *
- * Never for the catch-all: a conversation rule is only ever resolved within one package, so one
- * attached to the "any app" sentinel could not match anything and would look broken instead.
- */
+/** Whether this app should offer the existing contact/chat picker. */
 private fun offersConversations(store: Store, app: InstalledApp): Boolean =
     app.pkg != AppRule.ANY_APP &&
         (store.conversationsFor(app.pkg).isNotEmpty() || MessagingApps.looksLikeMessaging(app.pkg))
 
-/**
- * One rule.
- *
- * [chat] is the conversation this rule names as HiLight last saw it, which is where the group badge
- * comes from — the rule itself stores only what the matcher needs. [lastMatchedMs] is null when the
- * rule has never fired, and saying so plainly matters: a per-contact rule that silently matches
- * nothing looks identical to one that works until the day you need it.
- */
 @Composable
-private fun RuleCard(
+private fun RuleGroupCard(
+    rules: List<AppRule>,
+    conversations: List<ConversationRef>,
+    lastMatch: Map<String, Long>,
+    expanded: Boolean,
+    onToggleExpanded: () -> Unit,
+    onAddRule: (InstalledApp) -> Unit,
+    onToggle: (AppRule, Boolean) -> Unit,
+    onEdit: (AppRule) -> Unit,
+    onTest: (AppRule) -> Unit,
+    onDuplicate: (AppRule) -> Unit,
+    onMoveText: (AppRule, Int) -> Unit,
+    onDelete: (AppRule) -> Unit,
+) {
+    val first = rules.first()
+    val appLabel = ruleLabel(first)
+    val app = InstalledApp(first.pkg, first.label)
+    val notificationRules = rules.filter { it.trigger == Trigger.NOTIFICATION }
+    val chats = notificationRules
+        .filter { it.isConversationRule }
+        .sortedWith(
+            compareBy<AppRule>(
+                { it.conversationName?.lowercase().orEmpty() },
+                { it.keyword.isBlank() },
+            )
+        )
+    val textRules = notificationRules.filter { !it.isConversationRule && it.keyword.isNotBlank() }
+    val fallback = notificationRules.firstOrNull { !it.isConversationRule && it.keyword.isBlank() }
+    val foreground = rules.firstOrNull { it.trigger == Trigger.FOREGROUND && !it.isConversationRule }
+    val hasSpecificNotificationRules = chats.isNotEmpty() || textRules.isNotEmpty()
+    val enabledCount = rules.count { it.enabled }
+
+    PixelCard(tone = 1) {
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            AppIcon(app)
+            Column(
+                Modifier
+                    .weight(1f)
+                    .clickable(onClick = onToggleExpanded),
+            ) {
+                Text(
+                    appLabel,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Caption(
+                    pluralStringResource(
+                        R.plurals.rules_group_status,
+                        rules.size,
+                        rules.size,
+                        enabledCount,
+                    )
+                )
+            }
+            TextButton(onClick = { onAddRule(InstalledApp(first.pkg, appLabel)) }) {
+                Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(4.dp))
+                ButtonLabel(stringResource(R.string.rules_add_short))
+            }
+            IconButton(onClick = onToggleExpanded) {
+                Icon(
+                    if (expanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
+                    contentDescription = stringResource(
+                        if (expanded) R.string.rules_collapse else R.string.rules_expand,
+                    ),
+                )
+            }
+        }
+
+        AnimatedVisibility(visible = expanded, enter = fadeIn(), exit = fadeOut()) {
+            Column {
+                var shown = false
+                chats.forEach { rule ->
+                    if (shown) RuleDivider()
+                    CompactRuleRow(
+                        rule = rule,
+                        title = conversationRuleTitle(rule),
+                        icon = Icons.Rounded.Person,
+                        chat = knownConversation(rule, conversations),
+                        lastMatchedMs = lastMatch[rule.id],
+                        onToggle = { onToggle(rule, it) },
+                        onEdit = { onEdit(rule) },
+                        onTest = { onTest(rule) },
+                        onDuplicate = { onDuplicate(rule) },
+                        onDelete = { onDelete(rule) },
+                    )
+                    shown = true
+                }
+
+                if (textRules.isNotEmpty()) {
+                    if (shown) RuleDivider()
+                    if (textRules.size > 1) {
+                        Caption(stringResource(R.string.rules_text_priority_hint))
+                    }
+                    textRules.forEachIndexed { index, rule ->
+                        if (index > 0) RuleDivider()
+                        CompactRuleRow(
+                            rule = rule,
+                            title = stringResource(R.string.rules_match_contains, rule.keyword.trim()),
+                            icon = Icons.Rounded.TextFields,
+                            lastMatchedMs = lastMatch[rule.id],
+                            canMoveEarlier = index > 0,
+                            canMoveLater = index < textRules.lastIndex,
+                            onToggle = { onToggle(rule, it) },
+                            onEdit = { onEdit(rule) },
+                            onTest = { onTest(rule) },
+                            onDuplicate = { onDuplicate(rule) },
+                            onMoveEarlier = { onMoveText(rule, -1) },
+                            onMoveLater = { onMoveText(rule, 1) },
+                            onDelete = { onDelete(rule) },
+                        )
+                    }
+                    shown = true
+                }
+
+                fallback?.let { rule ->
+                    if (shown) FallbackDivider()
+                    CompactRuleRow(
+                        rule = rule,
+                        title = when {
+                            rule.isCatchAll -> stringResource(R.string.rules_match_any_app)
+                            hasSpecificNotificationRules -> stringResource(R.string.rules_default)
+                            else -> stringResource(R.string.rules_match_all_notifications)
+                        },
+                        icon = Icons.Rounded.Notifications,
+                        lastMatchedMs = lastMatch[rule.id],
+                        onToggle = { onToggle(rule, it) },
+                        onEdit = { onEdit(rule) },
+                        onTest = { onTest(rule) },
+                        onDelete = { onDelete(rule) },
+                    )
+                    shown = true
+                }
+
+                foreground?.let { rule ->
+                    if (shown) RuleDivider()
+                    CompactRuleRow(
+                        rule = rule,
+                        title = stringResource(R.string.rules_match_while_open, appLabel),
+                        icon = Icons.Rounded.Launch,
+                        lastMatchedMs = null,
+                        onToggle = { onToggle(rule, it) },
+                        onEdit = { onEdit(rule) },
+                        onTest = { onTest(rule) },
+                        onDelete = { onDelete(rule) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun conversationRuleTitle(rule: AppRule): String {
+    val name = rule.conversationName ?: ruleLabel(rule)
+    return if (rule.keyword.isBlank()) name
+    else stringResource(R.string.rules_match_contact_text, name, rule.keyword.trim())
+}
+
+@Composable
+private fun RuleDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(vertical = 2.dp),
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
+    )
+}
+
+@Composable
+private fun FallbackDivider() {
+    Row(
+        Modifier.padding(top = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        HorizontalDivider(Modifier.weight(1f))
+        Text(
+            stringResource(R.string.rules_all_other_notifications),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        HorizontalDivider(Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun CompactRuleRow(
     rule: AppRule,
-    chat: ConversationRef?,
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    chat: ConversationRef? = null,
     lastMatchedMs: Long?,
+    canMoveEarlier: Boolean = false,
+    canMoveLater: Boolean = false,
     onToggle: (Boolean) -> Unit,
     onEdit: () -> Unit,
     onTest: () -> Unit,
+    onDuplicate: (() -> Unit)? = null,
+    onMoveEarlier: (() -> Unit)? = null,
+    onMoveLater: (() -> Unit)? = null,
     onDelete: () -> Unit,
 ) {
     val haptics = LocalHapticFeedback.current
-    val perChat = rule.isConversationRule
-    // A per-chat rule is inset and a shade darker than the cards around it, so it reads as hanging
-    // off the app above rather than as another app of its own.
-    PixelCard(
-        modifier = if (perChat) Modifier.padding(start = 14.dp) else Modifier,
-        tone = if (perChat) 0 else 1,
+    var menuOpen by remember { mutableStateOf(false) }
+    val dim = if (rule.enabled) 1f else 0.58f
+
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Row(
             Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp).alpha(dim),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             Row(
-                Modifier.fillMaxWidth(0.72f),
+                Modifier
+                    .weight(1f)
+                    .alpha(dim)
+                    .clip(MaterialTheme.shapes.small)
+                    .clickable(onClick = onEdit)
+                    .padding(vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(7.dp),
             ) {
-                if (!rule.randomColor) {
-                    Box(
-                        Modifier
-                            .size(14.dp)
-                            .background(Color(rule.color), CircleShape)
-                    )
-                }
-                Column {
-                    if (perChat) {
-                        Caption(ruleLabel(rule))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Text(
-                                rule.conversationName ?: ruleLabel(rule),
-                                style = MaterialTheme.typography.titleMedium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f, fill = false),
-                            )
-                            // The rule's own field is consulted alongside the learned chat because
-                            // the learned list is not a reliable source for this: it is capped at
-                            // ConversationRef.MAX_REMEMBERED, the user can clear it from the setup
-                            // screen, and a rule made through the contact picker was never in it at
-                            // all. Reading only the list made the badge vanish in all three cases,
-                            // which is exactly what conversationIsGroup was added to prevent.
-                            when {
-                                chat?.isGroup == true || rule.conversationIsGroup ->
-                                    ConversationBadge(stringResource(R.string.chat_badge_group))
-
-                                rule.includeGroups ->
-                                    ConversationBadge(stringResource(R.string.rules_badge_groups_too))
-                            }
-                        }
-                    } else {
-                        Text(ruleLabel(rule), style = MaterialTheme.typography.titleMedium)
-                    }
-                    // One format string rather than three fragments joined with a separator: the
-                    // order of "what it looks like" and "when it fires" is not the same in every
-                    // language, and neither is the punctuation between them.
-                    Caption(
-                        stringResource(
-                            R.string.rules_card_summary,
-                            if (rule.randomColor) stringResource(R.string.rules_random_colour)
-                            else stringResource(rule.pattern.labelRes),
-                            if (rule.trigger == Trigger.NOTIFICATION)
-                                stringResource(R.string.rules_trigger_notification_short)
-                            else stringResource(R.string.rules_trigger_foreground_short),
-                        )
-                    )
-                    if (rule.trigger == Trigger.NOTIFICATION) {
-                        // "Matched", not "fired": the match is recorded even when a guard — quiet
-                        // hours, the battery floor, the master switch — swallowed the flash, and
-                        // "your rule matched but quiet hours ate it" is the more useful answer.
-                        Caption(
-                            if (lastMatchedMs != null) {
-                                stringResource(
-                                    R.string.rules_last_matched, relativeAgo(lastMatchedMs),
-                                )
-                            } else {
-                                stringResource(R.string.rules_not_matched_yet)
-                            }
-                        )
-                    }
+                Text(
+                    title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                when {
+                    chat?.isGroup == true || rule.conversationIsGroup ->
+                        ConversationBadge(stringResource(R.string.chat_badge_group))
+                    rule.includeGroups ->
+                        ConversationBadge(stringResource(R.string.rules_badge_groups_too))
                 }
             }
             Switch(
@@ -328,7 +549,117 @@ private fun RuleCard(
                     onToggle(it)
                 },
             )
+            Box {
+                IconButton(onClick = { menuOpen = true }) {
+                    Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.rules_more))
+                }
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.common_edit)) },
+                        onClick = {
+                            menuOpen = false
+                            onEdit()
+                        },
+                    )
+                    onDuplicate?.let { duplicate ->
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.rules_duplicate)) },
+                            onClick = {
+                                menuOpen = false
+                                duplicate()
+                            },
+                        )
+                    }
+                    if (canMoveEarlier && onMoveEarlier != null) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.rules_move_earlier)) },
+                            leadingIcon = { Icon(Icons.Rounded.ArrowUpward, contentDescription = null) },
+                            onClick = {
+                                menuOpen = false
+                                onMoveEarlier()
+                            },
+                        )
+                    }
+                    if (canMoveLater && onMoveLater != null) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.rules_move_later)) },
+                            leadingIcon = { Icon(Icons.Rounded.ArrowDownward, contentDescription = null) },
+                            onClick = {
+                                menuOpen = false
+                                onMoveLater()
+                            },
+                        )
+                    }
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.common_delete)) },
+                        onClick = {
+                            menuOpen = false
+                            onDelete()
+                        },
+                    )
+                }
+            }
         }
+
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .alpha(dim),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            MiniRulePreview(rule = rule, onTest = onTest)
+            Column(
+                Modifier
+                    .weight(1f)
+                    .clickable(onClick = onEdit),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                val pattern = stringResource(rule.pattern.labelRes)
+                Caption(
+                    if (rule.randomColor) {
+                        stringResource(
+                            R.string.rules_visual_summary_random,
+                            pattern,
+                            formatDuration(rule.durationMs),
+                            (rule.brightness * 100).toInt(),
+                        )
+                    } else {
+                        stringResource(
+                            R.string.rules_visual_summary,
+                            pattern,
+                            formatDuration(rule.durationMs),
+                            (rule.brightness * 100).toInt(),
+                        )
+                    }
+                )
+                if (rule.trigger == Trigger.NOTIFICATION) {
+                    Caption(
+                        if (lastMatchedMs != null) {
+                            stringResource(R.string.rules_last_matched, relativeAgo(lastMatchedMs))
+                        } else {
+                            stringResource(R.string.rules_not_matched_yet)
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MiniRulePreview(rule: AppRule, onTest: () -> Unit) {
+    Row(
+        Modifier
+            .width(124.dp)
+            .heightIn(min = 48.dp)
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+            .clickable(onClick = onTest)
+            .padding(horizontal = 7.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
         LedStrip(
             rule.pattern,
             Ambient(
@@ -337,20 +668,17 @@ private fun RuleCard(
                 speedMs = rule.speedMs,
                 brightness = rule.brightness,
             ),
-            active = rule.enabled,
-            heightDp = 34,
+            modifier = Modifier.width(88.dp),
+            active = true,
+            animate = rule.enabled,
+            heightDp = 24,
         )
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            FilledTonalButton(onClick = onEdit, modifier = Modifier.weight(1f)) {
-                ButtonLabel(stringResource(R.string.common_edit))
-            }
-            FilledTonalButton(onClick = onTest, modifier = Modifier.weight(1f)) {
-                ButtonLabel(stringResource(R.string.common_test))
-            }
-            TextButton(onClick = onDelete, modifier = Modifier.weight(1f)) {
-                ButtonLabel(stringResource(R.string.common_delete))
-            }
-        }
+        Icon(
+            Icons.Rounded.PlayArrow,
+            contentDescription = stringResource(R.string.rules_test_preview),
+            modifier = Modifier.size(17.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -365,7 +693,7 @@ private fun AppPickerDialog(onDismiss: () -> Unit, onPick: (InstalledApp) -> Uni
             pm.queryIntentActivities(launchable, 0)
                 .mapNotNull { ri ->
                     val ai = ri.activityInfo?.applicationInfo ?: return@mapNotNull null
-                    InstalledApp(ai.packageName, pm.getApplicationLabel(ai).toString(), ai)
+                    InstalledApp(ai.packageName, pm.getApplicationLabel(ai).toString())
                 }
                 .distinctBy { it.pkg }
                 .sortedBy { it.label.lowercase() }
@@ -400,7 +728,7 @@ private fun AppPickerDialog(onDismiss: () -> Unit, onPick: (InstalledApp) -> Uni
                             Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    onPick(InstalledApp(AppRule.ANY_APP, anyAppLabel, null))
+                                    onPick(InstalledApp(AppRule.ANY_APP, anyAppLabel))
                                 }
                                 .padding(vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically,
@@ -436,12 +764,17 @@ private fun AppPickerDialog(onDismiss: () -> Unit, onPick: (InstalledApp) -> Uni
 
 @Composable
 private fun AppIcon(app: InstalledApp) {
+    if (app.pkg == AppRule.ANY_APP) {
+        Box(Modifier.size(32.dp), contentAlignment = Alignment.Center) {
+            Icon(Icons.Rounded.Apps, contentDescription = null)
+        }
+        return
+    }
     val ctx = LocalContext.current
     val bmp by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, app.pkg) {
-        val info = app.info ?: return@produceState
         value = withContext(Dispatchers.IO) {
             runCatching {
-                ctx.packageManager.getApplicationIcon(info).toBitmap(80, 80).asImageBitmap()
+                ctx.packageManager.getApplicationIcon(app.pkg).toBitmap(80, 80).asImageBitmap()
             }.getOrNull()
         }
     }
@@ -450,59 +783,46 @@ private fun AppIcon(app: InstalledApp) {
     }
 }
 
-/**
- * The rule editor.
- *
- * [chatIsGroup] says whether the conversation this rule names is itself a group, which decides
- * whether the "also in groups" toggle means anything: a rule naming a group already fires for
- * everything said in it, so the toggle would be a control that does nothing.
- *
- * [existing] is every saved rule, needed because [AppRule.id] is built out of the package, the
- * trigger and the conversation — two of which this dialog can change. Saving is id-keyed, so an edit
- * that walks onto another rule's id replaces it, and only the full list can see that coming.
- */
+/** The existing rule editor, with matching scope fixed by the Add Rule flow above it. */
 @Composable
 private fun RuleEditorDialog(
     rule: AppRule,
     existing: List<AppRule>,
+    textRequired: Boolean,
+    recentPeeks: List<MessageInfo>,
     chatIsGroup: Boolean,
     onDismiss: () -> Unit,
     onSave: (AppRule) -> Unit,
     onTest: (AppRule) -> Unit,
 ) {
     var r by remember { mutableStateOf(rule) }
-
-    /*
-     * Whether saving would land on a rule other than the one being edited.
-     *
-     * Compared against [rule] by value rather than by id: the id is precisely what is moving, so an
-     * id test cannot tell "this is still me" from "this is somebody else". Anything in the list that
-     * shares the destination id and is not the rule this dialog opened on is a rule about to be
-     * overwritten — the trigger having been switched to one the app already has, a cleared chat id
-     * colliding with a name-matched rule, or a blank rule opened for an app that already has one.
-     */
-    val replacesAnother = remember(r.id, rule, existing) {
-        existing.any { it.id == r.id && it != rule }
+    val cleaned = r.copy(keyword = r.keyword.trim())
+    val duplicateTarget = existing.any {
+        it.id != rule.id && ConversationMatch.sameTarget(it, cleaned)
     }
+    val keywordMissing = textRequired && r.keyword.isBlank()
+    val canSave = !keywordMissing && !duplicateTarget
 
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = MaterialTheme.shapes.extraLarge,
         title = {
             Text(
-                if (r.isConversationRule) {
-                    stringResource(
+                when {
+                    r.isConversationRule -> stringResource(
                         R.string.rules_editor_title_chat,
                         ruleLabel(r),
                         r.conversationName.orEmpty(),
                     )
-                } else {
-                    ruleLabel(r)
+                    textRequired -> stringResource(R.string.rules_editor_title_text, ruleLabel(r))
+                    else -> ruleLabel(r)
                 }
             )
         },
         confirmButton = {
-            Button(onClick = { onSave(r) }) { ButtonLabel(stringResource(R.string.common_save)) }
+            Button(onClick = { onSave(cleaned) }, enabled = canSave) {
+                ButtonLabel(stringResource(R.string.common_save))
+            }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { ButtonLabel(stringResource(R.string.common_cancel)) }
@@ -525,27 +845,69 @@ private fun RuleEditorDialog(
                     heightDp = 38,
                 )
 
-                if (r.isConversationRule) {
-                    // A per-chat rule is resolved from a posted notification, so "while open" has
-                    // nothing to read a sender out of. Offering it here would only let the user
-                    // build a rule that can never match.
-                    Caption(stringResource(R.string.rules_per_chat_notifications_only))
-                    ConversationMatchNote(
-                        edited = r,
-                        stored = rule,
-                        onForgetKey = { r = r.copy(conversationKey = null) },
-                    )
-                } else {
-                    // Both labels are read before the selector rather than inside its label lambda,
-                    // which is a plain function and so cannot reach a resource itself.
-                    val onNotification = stringResource(R.string.rules_trigger_notification)
-                    val whileOpen = stringResource(R.string.rules_trigger_foreground)
-                    SegmentedSelector(
-                        options = listOf(Trigger.NOTIFICATION, Trigger.FOREGROUND),
-                        selected = r.trigger,
-                        label = { if (it == Trigger.NOTIFICATION) onNotification else whileOpen },
-                        onSelect = { r = r.copy(trigger = it) },
-                    )
+                Caption(stringResource(R.string.rules_match_section))
+                when {
+                    r.isConversationRule -> {
+                        Text(
+                            r.conversationName.orEmpty(),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                        ConversationMatchNote(
+                            edited = r,
+                            stored = rule,
+                            onForgetKey = { r = r.copy(conversationKey = null) },
+                        )
+                        OutlinedTextField(
+                            value = r.keyword,
+                            onValueChange = { r = r.copy(keyword = it) },
+                            label = { Text(stringResource(R.string.rules_keyword_label)) },
+                            singleLine = true,
+                            shape = MaterialTheme.shapes.medium,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    textRequired -> {
+                        OutlinedTextField(
+                            value = r.keyword,
+                            onValueChange = { r = r.copy(keyword = it) },
+                            label = { Text(stringResource(R.string.rules_text_condition_label)) },
+                            supportingText = {
+                                Text(stringResource(R.string.rules_text_condition_hint))
+                            },
+                            isError = keywordMissing,
+                            singleLine = true,
+                            shape = MaterialTheme.shapes.medium,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        if (r.keyword.isNotBlank()) {
+                            val appPeeks = recentPeeks.filter {
+                                it.pkg == r.pkg && !it.isGroupSummary && !it.isOngoing
+                            }
+                            val searchable = appPeeks.filter { info ->
+                                listOf(info.title, info.text, info.sender, info.conversationTitle)
+                                    .any { !it.isNullOrBlank() }
+                            }
+                            val matches = searchable.count {
+                                ConversationMatch.matchesText(it, r.keyword)
+                            }
+                            Caption(
+                                when {
+                                    appPeeks.isEmpty() ->
+                                        stringResource(R.string.rules_text_check_no_recent)
+                                    searchable.isEmpty() ->
+                                        stringResource(R.string.rules_text_check_private)
+                                    matches > 0 ->
+                                        pluralStringResource(R.plurals.rules_text_check_matches, matches, matches)
+                                    else -> stringResource(R.string.rules_text_check_none)
+                                }
+                            )
+                        }
+                    }
+                    r.trigger == Trigger.FOREGROUND ->
+                        Caption(stringResource(R.string.rules_editor_foreground_match, ruleLabel(r)))
+                    r.isCatchAll -> Caption(stringResource(R.string.rules_editor_any_app_match))
+                    else ->
+                        Caption(stringResource(R.string.rules_editor_all_notifications_match, ruleLabel(r)))
                 }
 
                 PatternCarousel(
@@ -568,20 +930,10 @@ private fun RuleEditorDialog(
                         } else {
                             ToggleRow(
                                 stringResource(R.string.rules_include_groups), r.includeGroups,
-                            ) {
-                                r = r.copy(includeGroups = it)
-                            }
+                            ) { r = r.copy(includeGroups = it) }
                             Caption(stringResource(R.string.rules_include_groups_hint))
                         }
                     }
-                    OutlinedTextField(
-                        value = r.keyword,
-                        onValueChange = { r = r.copy(keyword = it) },
-                        label = { Text(stringResource(R.string.rules_keyword_label)) },
-                        singleLine = true,
-                        shape = MaterialTheme.shapes.medium,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
                     GatedDurationSlider(
                         label = stringResource(R.string.rules_show_for),
                         valueMs = r.durationMs,
@@ -597,9 +949,7 @@ private fun RuleEditorDialog(
                     )
                     ToggleRow(
                         stringResource(R.string.rules_only_screen_off), r.onlyWhenScreenOff,
-                    ) {
-                        r = r.copy(onlyWhenScreenOff = it)
-                    }
+                    ) { r = r.copy(onlyWhenScreenOff = it) }
                 }
                 if (r.pattern.usesSpeed) {
                     PixelSlider(
@@ -619,11 +969,8 @@ private fun RuleEditorDialog(
                     ButtonLabel(stringResource(R.string.rules_test_on_leds))
                 }
 
-                // Last in the column, so it is the final thing read before Save. The save is not
-                // blocked: replacing a rule is sometimes exactly what the user means, and there is
-                // no way to keep both while they share an id. Only the silence was the problem.
-                if (replacesAnother) {
-                    Caption(stringResource(R.string.rules_replace_warning))
+                if (duplicateTarget) {
+                    Caption(stringResource(R.string.rules_duplicate_warning))
                 }
             }
         },

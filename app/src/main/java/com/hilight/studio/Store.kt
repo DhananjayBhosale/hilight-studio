@@ -311,62 +311,44 @@ class Store private constructor(private val app: Context) {
         pushCurrent()
     }
 
-    /**
-     * Adds [rule], replacing whatever already occupies its [AppRule.id] slot.
-     *
-     * Identity used to be package plus trigger, which allowed exactly one rule per app. It is now the
-     * rule id, so an app can carry a rule per conversation alongside a plain one for everything else.
-     * Rules saved before conversations existed have no name or key, so their id is "pkg|TRIGGER|" —
-     * the same one-per-app-and-trigger slot they already had, which is why nothing needs migrating.
-     *
-     * [replacing] is for the editor changing which chat a rule is about: that moves the rule to a
-     * different id, and without the old id to drop the edit would leave the original behind as a
-     * second rule the user never asked for.
-     */
+    /** Adds or updates one stable rule. Foreground remains singular per package. */
     fun upsertRule(rule: AppRule, replacing: AppRule? = null) {
-        var incoming = rule
-        // The editor holds a snapshot taken when it opened, and a rule can move slots underneath it: a
-        // notification arriving while the dialog is open heals a name-only rule to a stable chat id,
-        // which is part of that rule's id. Saving then looks for an id that no longer exists, and the
-        // edit would be appended as a second row for the same chat — one the matcher would always beat
-        // with the healed row's stronger key match, so the user's edit would never fire again and
-        // nothing would say why. Catch that one signature and treat it as the same rule.
-        val healed = replacing
-            ?.takeIf { it.id != rule.id || _rules.value.none { live -> live.id == it.id } }
-            ?.let { was -> _rules.value.firstOrNull { live -> ConversationMatch.isHealOf(live, was) } }
-        if (healed != null) {
-            Log.i(TAG, "rule for ${healed.pkg} gained a chat id while its editor was open")
-            // Unless this edit deliberately dropped the id — the "re-learn this chat" action — keep
-            // what the heal learned rather than sending the rule back to matching on the name.
-            if (incoming.conversationKey.isNullOrBlank() && replacing.conversationKey.isNullOrBlank()) {
-                incoming = incoming.copy(conversationKey = healed.conversationKey)
-            }
-        }
-        val stale = setOfNotNull(replacing?.id, incoming.id, healed?.id)
-        // An edit that changes the trigger moves the rule to a different slot, and that slot may
-        // already belong to a rule the user wrote earlier. One rule per slot is the whole point of the
-        // id, so the older one does get replaced — but it should not happen unremarked. The editor
-        // warns before saving; this is the trace for when it happened anyway.
-        if (replacing != null && replacing.id != incoming.id &&
-            _rules.value.any { it.id == incoming.id }
+        val current = _rules.value
+        val oldId = replacing?.id ?: rule.id
+        val live = current.firstOrNull { it.id == oldId }
+        // A notification can learn a stable chat id while its editor is open. Preserve that newly
+        // learned id unless the user explicitly opened a keyed rule and chose "re-learn this chat".
+        val incoming = if (
+            replacing != null &&
+            replacing.conversationKey.isNullOrBlank() &&
+            rule.conversationKey.isNullOrBlank() &&
+            !live?.conversationKey.isNullOrBlank()
         ) {
-            Log.w(TAG, "edit replaced an existing rule for ${incoming.pkg} at ${incoming.trigger}")
+            rule.copy(conversationKey = live?.conversationKey)
+        } else {
+            rule
         }
-        // Rewriting the slot where it stands, rather than dropping it and appending, keeps an edited
-        // card where the user left it instead of sending it to the bottom of the list.
-        val out = ArrayList<AppRule>(_rules.value.size + 1)
+        val out = ArrayList<AppRule>(current.size + 1)
         var placed = false
-        for (existing in _rules.value) {
-            if (existing.id in stale) {
-                if (!placed) {
+
+        for (existing in current) {
+            val sameRule = existing.id == oldId || existing.id == incoming.id
+            val displacedForeground = incoming.trigger == Trigger.FOREGROUND &&
+                existing.pkg == incoming.pkg &&
+                existing.trigger == Trigger.FOREGROUND &&
+                !sameRule
+
+            when {
+                sameRule && !placed -> {
                     out += incoming
                     placed = true
                 }
-            } else {
-                out += existing
+                sameRule || displacedForeground -> Unit
+                else -> out += existing
             }
         }
         if (!placed) out += incoming
+
         _rules.value = out
         saveRules()
         ForegroundWatcher.syncRunning(app, _rules.value, _enabled.value)
@@ -376,6 +358,38 @@ class Store private constructor(private val app: Context) {
         _rules.value = _rules.value.filterNot { it.id == rule.id }
         saveRules()
         ForegroundWatcher.syncRunning(app, _rules.value, _enabled.value)
+    }
+
+    /** Restores a just-deleted rule at its old position, preserving text-rule priority. */
+    fun restoreRule(rule: AppRule, index: Int) {
+        if (_rules.value.any { it.id == rule.id || ConversationMatch.sameTarget(it, rule) }) return
+        val restored = _rules.value.toMutableList()
+        restored.add(index.coerceIn(0, restored.size), rule)
+        _rules.value = restored
+        saveRules()
+        ForegroundWatcher.syncRunning(app, _rules.value, _enabled.value)
+    }
+
+    /** Moves one app-wide text rule relative to the other text rules for the same app. */
+    fun moveTextRule(rule: AppRule, delta: Int) {
+        if (delta == 0 || rule.isConversationRule || rule.keyword.isBlank()) return
+        val current = _rules.value.toMutableList()
+        val peers = current.withIndex().filter { (_, saved) ->
+            saved.pkg == rule.pkg &&
+                saved.trigger == Trigger.NOTIFICATION &&
+                !saved.isConversationRule &&
+                saved.keyword.isNotBlank()
+        }
+        val peerIndex = peers.indexOfFirst { it.value.id == rule.id }
+        if (peerIndex < 0) return
+        val targetPeer = (peerIndex + delta).takeIf { it in peers.indices } ?: return
+        val from = peers[peerIndex].index
+        val to = peers[targetPeer].index
+        val swap = current[from]
+        current[from] = current[to]
+        current[to] = swap
+        _rules.value = current
+        saveRules()
     }
 
     fun savePreset(name: String) {
@@ -539,9 +553,8 @@ class Store private constructor(private val app: Context) {
             // from. The price is that a few non-chat notifications from such apps are remembered too.
             //
             // Some apps set a shortcutId and leave it empty. A blank key is worse than no key at all:
-            // it compares equal to every other blank one, and carried into a rule it would leave
-            // AppRule.id looking exactly like a plain per-app rule. Cleaned once here, at the edge, so
-            // that nothing downstream — including the rule the user is about to create — has to know.
+            // it compares equal to every other blank one, so clean it once at the edge and let the
+            // normal name fallback handle that conversation everywhere downstream.
             val ref = info.toRef()?.let { r -> r.copy(key = r.key?.takeIf { it.isNotBlank() }) }
                 ?: return@onMain
             captureLearned(ref)
@@ -582,37 +595,17 @@ class Store private constructor(private val app: Context) {
     }
 
     /**
-     * Fills in a name-matched rule's [AppRule.conversationKey] from the notification that just fired it.
-     *
-     * A rule created from a name — the contact picker, or an app that posted no shortcutId the first
-     * time it was seen — matches on text, so renaming the contact or the group silently kills it. But a
-     * notification that both matched the rule and carries a shortcutId is proof of which chat the user
-     * meant, so the id is written back and from then on the rule matches on identity: renames stop
-     * mattering, and so does the app deciding to decorate its titles differently.
-     *
-     * Filling the key changes [AppRule.id], which is the rule's storage slot, so the row is rewritten
-     * where it stands. Removing the old id and then adding the new one would hold both for an instant
-     * and could leave behind a duplicate the user has no way to tell apart. The "last fired" entry
-     * moves across in the same step, or [saveRules] would prune it as belonging to a rule that no
-     * longer exists.
+     * Fills in a name-matched rule's [AppRule.conversationKey] from the notification that matched it.
+     * Stable rule ids mean learning the chat id no longer moves the rule to another storage slot.
      */
     private fun healKey(rule: AppRule, info: MessageInfo): AppRule {
         val key = info.shortcutId
         if (key.isNullOrBlank()) return rule
         if (!rule.isConversationRule || !rule.conversationKey.isNullOrBlank()) return rule
-        val healed = rule.copy(conversationKey = key)
-        // The rule may have been edited or deleted while the alert was still in flight; a slot that is
-        // no longer there must not be recreated from a stale copy.
         if (_rules.value.none { it.id == rule.id }) return rule
-        // Something already owning the healed id means the user has both a keyed and a named rule for
-        // the same chat — the named one only got to fire because the keyed one is switched off.
-        // Healing would collapse two rules into one slot and lose one the user wrote by hand, so the
-        // named rule is left matching on text.
-        if (_rules.value.any { it.id == healed.id }) return rule
-        // Two people really can be saved under the same name, and until one of them has a key there is
-        // nothing to tell their chats apart. Healing on the first of them to write would quietly narrow
-        // the rule to that one person for good, while the card kept showing healthy matches from them —
-        // so an ambiguous name is left matching on text, which is what the user actually asked for.
+
+        // Two people really can be saved under the same name. Until one already has a stable id,
+        // narrowing the name-only rule to whichever one spoke first would be surprising.
         val ambiguous = _conversations.value.count { seen ->
             seen.pkg == rule.pkg &&
                 ConversationMatch.normalise(seen.name) ==
@@ -623,11 +616,10 @@ class Store private constructor(private val app: Context) {
             Log.i(TAG, "not healing ${rule.pkg}: more than one known chat answers to that name")
             return rule
         }
+
+        val healed = rule.copy(conversationKey = key)
         Log.i(TAG, "learned a stable chat id for a ${rule.pkg} rule; renames can no longer break it")
         _rules.value = _rules.value.map { if (it.id == rule.id) healed else it }
-        _lastMatch.value[rule.id]?.let {
-            _lastMatch.value = _lastMatch.value - rule.id + (healed.id to it)
-        }
         saveRules()
         return healed
     }
@@ -1067,13 +1059,7 @@ class Store private constructor(private val app: Context) {
         return o.toString()
     }
 
-    /**
-     * Forgets when rules that no longer exist last fired.
-     *
-     * Rule ids carry a conversation name in them, so without this the map would keep a row for every
-     * chat rule the user ever deleted, forever, and the name of every contact they ever changed their
-     * mind about.
-     */
+    /** Forgets match-history entries belonging to rules that no longer exist. */
     private fun pruneLastMatch() {
         val live = _rules.value.mapTo(HashSet()) { it.id }
         val kept = _lastMatch.value.filterKeys { it in live }

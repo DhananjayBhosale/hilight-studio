@@ -3,6 +3,7 @@ package com.hilight.studio
 import androidx.annotation.StringRes
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.UUID
 
 /**
  * Patterns the renderer understands.
@@ -163,6 +164,8 @@ data class AppRule(
      * for a rule that already names a group.
      */
     val conversationIsGroup: Boolean = false,
+    /** Stable saved identity. Matching fields may change without turning the rule into a new row. */
+    val id: String = UUID.randomUUID().toString(),
 ) {
     /** The catch-all rule, which matches any app without one of its own. */
     val isCatchAll: Boolean get() = pkg == ANY_APP
@@ -171,13 +174,8 @@ data class AppRule(
     val isConversationRule: Boolean
         get() = !conversationKey.isNullOrBlank() || !conversationName.isNullOrBlank()
 
-    /**
-     * Identity for storage.
-     *
-     * Package plus trigger used to be enough, but an app can now hold several rules — one per
-     * conversation, plus a plain one for everything else — so the conversation has to be part of it.
-     */
-    val id: String get() = "$pkg|${trigger.name}|${conversationKey ?: conversationName ?: ""}"
+    /** Copies the configuration while giving a duplicated rule its own saved identity. */
+    fun copyAsNew(): AppRule = copy(id = UUID.randomUUID().toString())
 
     fun toPrefsJson(): JSONObject = JSONObject().apply {
         put("pkg", pkg)
@@ -196,31 +194,42 @@ data class AppRule(
         conversationName?.let { put("conversationName", it) }
         put("includeGroups", includeGroups)
         put("conversationIsGroup", conversationIsGroup)
+        put("id", id)
     }
 
     companion object {
         /** Package sentinel for the catch-all rule. */
         const val ANY_APP = "*"
 
-        fun fromJson(o: JSONObject) = AppRule(
-            pkg = o.getString("pkg"),
-            label = o.optString("label", o.getString("pkg")),
-            enabled = o.optBoolean("enabled", true),
-            trigger = runCatching { Trigger.valueOf(o.optString("trigger", "NOTIFICATION")) }
-                .getOrDefault(Trigger.NOTIFICATION),
-            pattern = Pattern.of(o.optString("pattern", "pulse")),
-            randomColor = o.optBoolean("randomColor", false),
-            color = o.optLong("color", 0xFF00E676L).toInt(),
-            durationMs = o.optInt("durationMs", 10_000),
-            speedMs = o.optInt("speedMs", 800),
-            brightness = o.optDouble("brightness", 1.0).toFloat(),
-            onlyWhenScreenOff = o.optBoolean("onlyWhenScreenOff", false),
-            keyword = o.optString("keyword", ""),
-            conversationKey = o.optString("conversationKey", "").takeIf { it.isNotEmpty() },
-            conversationName = o.optString("conversationName", "").takeIf { it.isNotEmpty() },
-            includeGroups = o.optBoolean("includeGroups", false),
-            conversationIsGroup = o.optBoolean("conversationIsGroup", false),
-        )
+        fun fromJson(o: JSONObject): AppRule {
+            val pkg = o.getString("pkg")
+            val trigger = runCatching { Trigger.valueOf(o.optString("trigger", "NOTIFICATION")) }
+                .getOrDefault(Trigger.NOTIFICATION)
+            val conversationKey = o.optString("conversationKey", "").takeIf { it.isNotEmpty() }
+            val conversationName = o.optString("conversationName", "").takeIf { it.isNotEmpty() }
+            // Preserve the old derived id on first load so last-match history and edits migrate
+            // without a separate schema pass. Once saved, the id is persisted and never changes.
+            val legacyId = "$pkg|${trigger.name}|${conversationKey ?: conversationName ?: ""}"
+            return AppRule(
+                pkg = pkg,
+                label = o.optString("label", o.getString("pkg")),
+                enabled = o.optBoolean("enabled", true),
+                trigger = trigger,
+                pattern = Pattern.of(o.optString("pattern", "pulse")),
+                randomColor = o.optBoolean("randomColor", false),
+                color = o.optLong("color", 0xFF00E676L).toInt(),
+                durationMs = o.optInt("durationMs", 10_000),
+                speedMs = o.optInt("speedMs", 800),
+                brightness = o.optDouble("brightness", 1.0).toFloat(),
+                onlyWhenScreenOff = o.optBoolean("onlyWhenScreenOff", false),
+                keyword = o.optString("keyword", ""),
+                conversationKey = conversationKey,
+                conversationName = conversationName,
+                includeGroups = o.optBoolean("includeGroups", false),
+                conversationIsGroup = o.optBoolean("conversationIsGroup", false),
+                id = o.optString("id", "").trim().ifEmpty { legacyId },
+            )
+        }
     }
 }
 

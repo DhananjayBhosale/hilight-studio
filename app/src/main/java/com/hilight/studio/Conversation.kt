@@ -158,11 +158,13 @@ data class MessageInfo(
 /** How a rule matched, best first. Also the tie-breaker when several rules could fire. */
 enum class MatchStrength(val score: Int) {
     /** the rule's stored shortcutId equalled the notification's */
-    KEY(4),
+    KEY(5),
     /** normalised names were equal */
-    NAME(3),
+    NAME(4),
     /** the notification's title contained the rule's name — Discord's "Sujay (#general, Server)" */
-    CONTAINS(2),
+    CONTAINS(3),
+    /** an app-wide notification-text rule */
+    TEXT(2),
     /** a plain per-app rule, no conversation involved */
     APP(1),
     /** the catch-all rule */
@@ -251,12 +253,32 @@ object ConversationMatch {
         return !rule.conversationKey.isNullOrBlank() || normalise(rule.conversationName).isNotEmpty()
     }
 
+    /** Whether two saved rules describe the same trigger target, independent of their light look. */
+    fun sameTarget(a: AppRule, b: AppRule): Boolean {
+        if (a.pkg != b.pkg || a.trigger != b.trigger) return false
+        if (a.isConversationRule != b.isConversationRule) return false
+        if (a.trigger == Trigger.FOREGROUND) return !a.isConversationRule
+
+        if (a.isConversationRule) {
+            val aKey = a.conversationKey?.takeIf { it.isNotBlank() }
+            val bKey = b.conversationKey?.takeIf { it.isNotBlank() }
+            val sameChat = if (aKey != null && bKey != null) {
+                aKey == bKey
+            } else {
+                val aName = normalise(a.conversationName)
+                aName.isNotEmpty() && aName == normalise(b.conversationName)
+            }
+            if (!sameChat) return false
+        }
+        return a.keyword.trim().equals(b.keyword.trim(), ignoreCase = true)
+    }
+
     /**
      * The rule that should fire for [info], most specific first.
      *
-     * Order: a conversation rule for this app, then a plain rule for this app, then the catch-all.
-     * Without this ladder a "WhatsApp" rule would shadow every per-contact rule under it, since the
-     * old lookup simply took the first rule whose package matched.
+     * Order: a conversation rule, an app-wide text rule, the app fallback, then the catch-all.
+     * Text rules are checked in saved order, so overlapping phrases have a visible deterministic
+     * priority while the conversation matcher keeps its existing specificity ladder.
      */
     fun resolve(rules: List<AppRule>, info: MessageInfo): AppRule? = resolveWith(rules, info)?.first
 
@@ -276,19 +298,51 @@ object ConversationMatch {
         val best = candidates
             .filter { it.isConversationRule && (it.pkg == info.pkg || it.isCatchAll) }
             .mapNotNull { rule ->
-                strength(rule, info)?.let { s -> Triple(rule, s, if (rule.pkg == info.pkg) 1 else 0) }
+                if (!matchesText(info, rule.keyword)) return@mapNotNull null
+                strength(rule, info)?.let { s -> rule to s }
             }
-            .maxWithOrNull(compareBy({ it.second.score }, { it.third }))
+            .maxWithOrNull(
+                compareBy<Pair<AppRule, MatchStrength>>(
+                    { it.second.score },
+                    { if (it.first.pkg == info.pkg) 1 else 0 },
+                    { if (it.first.keyword.isNotBlank()) 1 else 0 },
+                )
+            )
         if (best != null) return best.first to best.second
 
-        candidates.firstOrNull { it.pkg == info.pkg && !it.isConversationRule }
+        val appRules = candidates.filter { it.pkg == info.pkg && !it.isConversationRule }
+        appRules.firstOrNull { it.keyword.isNotBlank() && matchesText(info, it.keyword) }
+            ?.let { return it to MatchStrength.TEXT }
+        appRules.firstOrNull { it.keyword.isBlank() }
             ?.let { return it to MatchStrength.APP }
+        // An enabled app-wide rule means this app owns its notification behavior. If all of its text
+        // rules miss and it has no local fallback, preserve upstream's behavior and do nothing rather
+        // than unexpectedly falling through to the global Any app rule.
+        if (appRules.isNotEmpty()) return null
 
-        // Note that a catch-all rule still fires for everything this app's conversation rules did not
-        // match. That is intended — the catch-all is the "everything else" colour — but it does make a
-        // per-chat rule look as though it fires for everyone until the catch-all is turned off.
-        return candidates.firstOrNull { it.isCatchAll && !it.isConversationRule }
+        // Keep the existing catch-all semantics: it is considered after this app's own rules. Older
+        // installs could already have a keyword on Any app, so continue honoring that even though the
+        // new creation UI intentionally keeps global rules simple.
+        val catchAll = candidates.filter { it.isCatchAll && !it.isConversationRule }
+        catchAll.firstOrNull { it.keyword.isNotBlank() && matchesText(info, it.keyword) }
+            ?.let { return it to MatchStrength.TEXT }
+        return catchAll.firstOrNull { it.keyword.isBlank() }
             ?.let { it to MatchStrength.CATCH_ALL }
+    }
+
+    fun matchesText(info: MessageInfo, rawKeyword: String): Boolean {
+        val keyword = rawKeyword.trim()
+        if (keyword.isEmpty()) return true
+        val haystack = buildString {
+            append(info.title.orEmpty())
+            append(' ')
+            append(info.text.orEmpty())
+            append(' ')
+            append(info.sender.orEmpty())
+            append(' ')
+            append(info.conversationTitle.orEmpty())
+        }
+        return haystack.contains(keyword, ignoreCase = true)
     }
 
     /**
@@ -303,22 +357,6 @@ object ConversationMatch {
         val stamp = if (info.messageStampMs > 0) info.messageStampMs else info.postTimeMs
         return stamp > lastStampMs
     }
-
-    /**
-     * Is this the same rule as [was], moved by a heal rather than by the user?
-     *
-     * The one signature that counts: same app, same trigger, the same chat name, and a chat id where
-     * [was] had none. That is what learning a stable id does to a rule, and it changes the rule's id —
-     * which is its storage slot — so an editor holding the old snapshot would otherwise save it back as
-     * a second, permanently shadowed row. Deliberately narrow: anything else is the user's own edit.
-     */
-    fun isHealOf(candidate: AppRule, was: AppRule): Boolean =
-        candidate.pkg == was.pkg &&
-            candidate.trigger == was.trigger &&
-            was.conversationKey.isNullOrBlank() &&
-            !candidate.conversationKey.isNullOrBlank() &&
-            normalise(candidate.conversationName).isNotEmpty() &&
-            normalise(candidate.conversationName) == normalise(was.conversationName)
 
     /** The stamp to remember for [info] once it has been handled. */
     fun stampOf(info: MessageInfo): Long =

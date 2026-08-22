@@ -29,24 +29,20 @@
     <!-- The screen itself -->
     <!-- "Per-app rules" -->
     <string name="rules_section_title">アプリ別ルール</string>
-    <!-- "Choose an app, then what HiLight does when it notifies you — or while it is open." -->
-    <string name="rules_intro_apps">アプリを選び、そのアプリから通知が届いたとき、またはアプリ表示中に HiLight が何をするかを設定します。</string>
-    <!-- "Messaging apps go one step further: a colour for a single contact or chat." -->
-    <string name="rules_intro_messaging">メッセージアプリではもう一歩進んで、特定の連絡先やチャットだけに色を設定できます。</string>
-    <!-- "Add app rule" -->
-    <string name="rules_add">アプリ別ルールを追加</string>
+    <!-- "Keep every light rule for an app together, then add as many specific notification rules as you need." -->
+    <string name="rules_intro_apps">アプリごとにすべてのライト設定をまとめ、必要なだけ個別の通知ルールを追加できます。</string>
+    <!-- "Contacts and chats keep their existing matching, and text rules can match any word or phrase Android exposes." -->
+    <string name="rules_intro_messaging">連絡先やチャットの既存の判定はそのまま使え、Android が公開する単語やフレーズでも通知を判定できます。</string>
+    <!-- "Add app" -->
+    <string name="rules_add_app">アプリを追加</string>
+    <string name="rules_add_short">ルール</string>
+    <string name="rules_collapse">ルールを折りたたむ</string>
+    <string name="rules_expand">ルールを展開</string>
+    <plurals name="rules_group_status">
+        <item quantity="other">%1$d 件のルール · %2$d 件有効</item>
+    </plurals>
 
-    <!-- One rule card. The summary line is "pattern · when it fires". The short trigger phrases are
-         lower case in English and capitalised in the editor's selector; Japanese has no case, so the
-         short pair is simply the shorter rendering of the same two words. -->
-    <!-- "%1$s · %2$s" -->
-    <string name="rules_card_summary">%1$s · %2$s</string>
-    <!-- "Random colour" — the same wording as pattern_random, which the summary line sits beside -->
-    <string name="rules_random_colour">ランダムな色</string>
-    <!-- "on notification" -->
-    <string name="rules_trigger_notification_short">通知時</string>
-    <!-- "while open" -->
-    <string name="rules_trigger_foreground_short">表示中</string>
+    <!-- Compact rows: what the rule matches, what the LEDs do, and when it last matched. -->
 
     <!-- "Matched", not "fired": 一致 is the rule recognising the notification, and it is recorded even
          when a guard swallowed the light. %1$s is a relative stamp from the chat_ago_* forms below. -->
@@ -54,6 +50,21 @@
     <string name="rules_last_matched">最終一致 %1$s</string>
     <!-- "Not matched yet" -->
     <string name="rules_not_matched_yet">まだ一致なし</string>
+    <string name="rules_text_priority_hint">通知テキスト · 最初に一致したルールを使用</string>
+    <string name="rules_match_contains">「%1$s」を含む</string>
+    <string name="rules_match_contact_text">%1$s · 「%2$s」を含む</string>
+    <string name="rules_match_any_app">個別ルールのないアプリ</string>
+    <string name="rules_default">デフォルト</string>
+    <string name="rules_match_all_notifications">すべての通知</string>
+    <string name="rules_all_other_notifications">その他すべての通知</string>
+    <string name="rules_match_while_open">%1$s の表示中</string>
+    <string name="rules_visual_summary">%1$s · %2$s · %3$d%%</string>
+    <string name="rules_visual_summary_random">ランダムな色 · %1$s · %2$s · %3$d%%</string>
+    <string name="rules_test_preview">このパターンをテスト</string>
+    <string name="rules_more">その他のルール操作</string>
+    <string name="rules_duplicate">複製</string>
+    <string name="rules_move_earlier">優先順位を上げる</string>
+    <string name="rules_move_later">優先順位を下げる</string>
 
     <!-- Said of a rule that also covers what the person says in groups, beside their own chat. A pill,
          so it is the shortest faithful rendering. -->
@@ -74,12 +85,22 @@
     <!-- The editor. %1$s is the app, %2$s the chat. The › is punctuation and stays. -->
     <!-- "%1$s › %2$s" -->
     <string name="rules_editor_title_chat">%1$s › %2$s</string>
+    <string name="rules_editor_title_text">%1$s › 通知テキスト</string>
+    <string name="rules_match_section">一致条件</string>
+    <string name="rules_text_condition_label">通知に含まれる文字</string>
+    <string name="rules_text_condition_hint">Android が公開するタイトル、送信者またはチャット名、通知本文を確認します。大文字と小文字は区別しません。</string>
+    <string name="rules_text_check_no_recent">確認できるこのアプリの最近の通知はまだありません。</string>
+    <string name="rules_text_check_private">最近の通知では、検索できるタイトル、送信者、チャット名、メッセージ本文が公開されていませんでした。</string>
+    <plurals name="rules_text_check_matches">
+        <item quantity="other">最近の通知 %1$d 件に一致します。</item>
+    </plurals>
+    <string name="rules_text_check_none">最近の通知にはこの文字列と一致するものがありません。</string>
+    <string name="rules_editor_foreground_match">%1$s が画面に表示されている間に一致します。</string>
+    <string name="rules_editor_all_notifications_match">%1$s の通知のうち、より具体的なルールに一致しなかったものに適用します。</string>
+    <string name="rules_editor_any_app_match">有効なアプリ全体ルールがないアプリの通知に一致します。</string>
     <!-- "Per-chat rules fire on notifications." -->
-    <string name="rules_per_chat_notifications_only">連絡先別ルールは通知時に発動します。</string>
     <!-- "On notification" -->
-    <string name="rules_trigger_notification">通知時</string>
     <!-- "While open" — the same wording setup_usage_body quotes as 「アプリ表示中」ルール -->
-    <string name="rules_trigger_foreground">アプリ表示中</string>
     <!-- "Random colour each time" -->
     <string name="rules_random_colour_each_time">毎回ランダムな色</string>
     <!-- "This chat is a group, so anything posted in it fires the rule." -->
@@ -121,7 +142,7 @@
     <!-- Last thing read before Save, when the edit would land on top of another rule -->
     <!-- "An existing rule for this app already covers that, and saving will replace its settings with
          these." -->
-    <string name="rules_replace_warning">このアプリには同じ対象の既存のルールがすでにあり、保存するとその設定がこの内容に置き換わります。</string>
+    <string name="rules_duplicate_warning">同じ通知に一致するルールがすでにあります。保存する前に一致条件を変更してください。</string>
 
     <!--
         What a per-chat rule matches on, and the repair for a chat id that has gone stale.
@@ -146,15 +167,19 @@
 
     <!-- Whole app or one chat, asked before the editor opens. %1$s is the app. -->
     <!-- "What should this rule cover?" -->
-    <string name="chat_scope_title">このルールは何を対象にしますか</string>
+    <string name="chat_scope_title">%1$s にルールを追加</string>
     <!-- "All notifications from %1$s" -->
-    <string name="chat_scope_whole_app">%1$s のすべての通知</string>
+    <string name="chat_scope_whole_app">すべての通知</string>
     <!-- "Any chat, any sender." -->
-    <string name="chat_scope_whole_app_hint">すべてのチャット、すべての送信者が対象です。</string>
+    <string name="chat_scope_whole_app_hint">より具体的なルールに一致しなかった通知のフォールバックとして使います。</string>
     <!-- "One contact or chat" -->
     <string name="chat_scope_one_chat">特定の連絡先またはチャット</string>
     <!-- "A colour for them alone, chosen from the chats HiLight has seen." -->
-    <string name="chat_scope_one_chat_hint">その相手だけに色を設定します。HiLight が検出したチャットから選べます。</string>
+    <string name="chat_scope_one_chat_hint">特定の相手や会話に専用のライトを設定します。</string>
+    <string name="rules_scope_text">通知に特定の文字を含む</string>
+    <string name="rules_scope_text_hint">「urgent」「invoice」や人の名前など、単語やフレーズで一致させます。</string>
+    <string name="rules_scope_foreground">%1$s の表示中</string>
+    <string name="rules_scope_foreground_hint">アプリが画面に表示されている間、エフェクトを表示します。</string>
 
     <!-- The chat picker. %1$s is the app throughout. "Seen" is 検出した rather than 見た, and stays
          distinct from the setup screen's 記憶した, which is what the list does with them afterwards. -->
@@ -260,5 +285,7 @@
         <item quantity="other">%1$d日前</item>
     </plurals>
 
+    <string name="rules_deleted">ルールを削除しました</string>
+    <string name="rules_undo">元に戻す</string>
 </resources>
 

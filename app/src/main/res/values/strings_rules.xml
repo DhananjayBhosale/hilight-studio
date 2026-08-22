@@ -17,23 +17,38 @@
 
     <!-- The screen itself -->
     <string name="rules_section_title">Per-app rules</string>
-    <string name="rules_intro_apps">Choose an app, then what HiLight does when it notifies you — or while it is open.</string>
-    <string name="rules_intro_messaging">Messaging apps go one step further: a colour for a single contact or chat.</string>
-    <string name="rules_add">Add app rule</string>
+    <string name="rules_intro_apps">Keep every light rule for an app together, then add as many specific notification rules as you need.</string>
+    <string name="rules_intro_messaging">Contacts and chats keep their existing matching, and text rules can match any word or phrase Android exposes.</string>
+    <string name="rules_add_app">Add app</string>
+    <string name="rules_add_short">Rule</string>
+    <string name="rules_collapse">Collapse rules</string>
+    <string name="rules_expand">Expand rules</string>
+    <plurals name="rules_group_status">
+        <item quantity="one">%1$d rule · %2$d enabled</item>
+        <item quantity="other">%1$d rules · %2$d enabled</item>
+    </plurals>
 
-    <!-- One rule card. The summary line is "pattern · when it fires": %1$s is a pattern name from
-         strings_common.xml or rules_random_colour, %2$s one of the two trigger phrases below. Those
-         phrases are lower case here and capitalised in the editor's selector, so they are separate
-         strings rather than one reused in both places. -->
-    <string name="rules_card_summary">%1$s · %2$s</string>
-    <string name="rules_random_colour">Random colour</string>
-    <string name="rules_trigger_notification_short">on notification</string>
-    <string name="rules_trigger_foreground_short">while open</string>
+    <!-- Compact rows: what the rule matches, what the LEDs do, and when it last matched. -->
 
     <!-- "Matched", not "fired": a rule matches even when a guard swallowed the flash. %1$s is a
          relative stamp from the chat_ago_* forms at the bottom of this file. -->
     <string name="rules_last_matched">Last matched %1$s</string>
     <string name="rules_not_matched_yet">Not matched yet</string>
+    <string name="rules_text_priority_hint">Notification text · first match wins</string>
+    <string name="rules_match_contains">Contains “%1$s”</string>
+    <string name="rules_match_contact_text">%1$s · contains “%2$s”</string>
+    <string name="rules_match_any_app">Apps without their own rule</string>
+    <string name="rules_default">Default</string>
+    <string name="rules_match_all_notifications">All notifications</string>
+    <string name="rules_all_other_notifications">All other notifications</string>
+    <string name="rules_match_while_open">While %1$s is open</string>
+    <string name="rules_visual_summary">%1$s · %2$s · %3$d%%</string>
+    <string name="rules_visual_summary_random">Random colour · %1$s · %2$s · %3$d%%</string>
+    <string name="rules_test_preview">Test this pattern</string>
+    <string name="rules_more">More rule actions</string>
+    <string name="rules_duplicate">Duplicate</string>
+    <string name="rules_move_earlier">Move earlier</string>
+    <string name="rules_move_later">Move later</string>
 
     <!-- Said of a rule that also covers what the person says in groups, beside their own chat -->
     <string name="rules_badge_groups_too">Groups too</string>
@@ -46,9 +61,20 @@
 
     <!-- The editor. %1$s is the app, %2$s the chat, for a rule about one conversation. -->
     <string name="rules_editor_title_chat">%1$s › %2$s</string>
-    <string name="rules_per_chat_notifications_only">Per-chat rules fire on notifications.</string>
-    <string name="rules_trigger_notification">On notification</string>
-    <string name="rules_trigger_foreground">While open</string>
+    <string name="rules_editor_title_text">%1$s › Notification text</string>
+    <string name="rules_match_section">MATCH</string>
+    <string name="rules_text_condition_label">Notification contains</string>
+    <string name="rules_text_condition_hint">Checks the title, sender or chat name, and notification text Android makes available. Matching ignores capitalization.</string>
+    <string name="rules_text_check_no_recent">No recent notifications from this app to check yet.</string>
+    <string name="rules_text_check_private">Recent notifications did not expose searchable title, sender, chat, or message text.</string>
+    <plurals name="rules_text_check_matches">
+        <item quantity="one">Matches %1$d recent notification.</item>
+        <item quantity="other">Matches %1$d recent notifications.</item>
+    </plurals>
+    <string name="rules_text_check_none">No recent notifications matched this text.</string>
+    <string name="rules_editor_foreground_match">Matches while %1$s is on screen.</string>
+    <string name="rules_editor_all_notifications_match">Matches notifications from %1$s that no more specific rule handled.</string>
+    <string name="rules_editor_any_app_match">Matches notifications from apps without an enabled app-wide rule of their own.</string>
     <string name="rules_random_colour_each_time">Random colour each time</string>
     <string name="rules_chat_is_group">This chat is a group, so anything posted in it fires the rule.</string>
     <string name="rules_include_groups">Also when they post in a group</string>
@@ -67,8 +93,8 @@
     <string name="rules_duration_warn_second_title">Are you sure?</string>
     <string name="rules_duration_warn_second_body">A busy app can fire often, so the LEDs may end up lit most of the time. You can turn this back down at any time.</string>
 
-    <!-- Last thing read before Save, when the edit would land on top of another rule -->
-    <string name="rules_replace_warning">An existing rule for this app already covers that, and saving will replace its settings with these.</string>
+    <!-- Last thing read before Save when another rule already has the same match target. -->
+    <string name="rules_duplicate_warning">Another rule already matches the same notifications. Change the match before saving.</string>
 
     <!-- What a per-chat rule matches on, and the repair for a chat id that has gone stale. %1$s in
          rules_match_by_name is the app whose chat could be renamed. -->
@@ -79,11 +105,15 @@
     <string name="rules_relearn_hint">Forgets the stored chat id and matches on the name instead, taking up the new id the next time that chat messages — the repair for an id changed by a reinstall or a restored backup.</string>
 
     <!-- Whole app or one chat, asked before the editor opens. %1$s is the app. -->
-    <string name="chat_scope_title">What should this rule cover?</string>
-    <string name="chat_scope_whole_app">All notifications from %1$s</string>
-    <string name="chat_scope_whole_app_hint">Any chat, any sender.</string>
+    <string name="chat_scope_title">Add rule to %1$s</string>
+    <string name="chat_scope_whole_app">All notifications</string>
+    <string name="chat_scope_whole_app_hint">Use this as the fallback when no more specific rule matches.</string>
     <string name="chat_scope_one_chat">One contact or chat</string>
-    <string name="chat_scope_one_chat_hint">A colour for them alone, chosen from the chats HiLight has seen.</string>
+    <string name="chat_scope_one_chat_hint">Give one person or conversation its own light.</string>
+    <string name="rules_scope_text">Notification contains text</string>
+    <string name="rules_scope_text_hint">Match a word or phrase such as “urgent”, “invoice”, or a person’s name.</string>
+    <string name="rules_scope_foreground">While %1$s is open</string>
+    <string name="rules_scope_foreground_hint">Show an effect while the app is on screen.</string>
 
     <!-- The chat picker. %1$s is the app throughout. -->
     <string name="chat_picker_title">Choose a chat</string>
@@ -159,4 +189,6 @@
         <item quantity="other">%1$d days ago</item>
     </plurals>
 
+    <string name="rules_deleted">Rule deleted</string>
+    <string name="rules_undo">Undo</string>
 </resources>

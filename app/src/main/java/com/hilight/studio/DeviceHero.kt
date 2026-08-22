@@ -405,11 +405,26 @@ private fun DrawScope.drawSpill(colors: IntArray, left: Float, top: Float, phone
  * screen matches what the LEDs are doing.
  */
 @Composable
-fun rememberLedFrame(pattern: Pattern, cfg: Ambient, active: Boolean = true): IntArray {
+fun rememberLedFrame(
+    pattern: Pattern,
+    cfg: Ambient,
+    active: Boolean = true,
+    animate: Boolean = true,
+): IntArray {
     val dark = IntArray(LED_COUNT) { 0xFF000000.toInt() }
-    val frame by produceState(dark, pattern, cfg, active) {
+    val frame by produceState(dark, pattern, cfg, active, animate) {
         if (!active) {
             value = dark
+            return@produceState
+        }
+        if (!animate) {
+            val t = when (pattern) {
+                Pattern.BREATHE -> cfg.speedMs / 2L
+                Pattern.PULSE -> (cfg.speedMs * 0.12f).toLong()
+                Pattern.RANDOM -> cfg.randomIntervalMs.toLong()
+                else -> cfg.speedMs / 3L
+            }
+            value = Renderer.frame(pattern, t, cfg)
             return@produceState
         }
         val start = System.currentTimeMillis()
@@ -428,9 +443,10 @@ fun LedStrip(
     cfg: Ambient,
     modifier: Modifier = Modifier,
     active: Boolean = true,
+    animate: Boolean = true,
     heightDp: Int = 40,
 ) {
-    val frame = rememberLedFrame(pattern, cfg, active)
+    val frame = rememberLedFrame(pattern, cfg, active, animate)
     val patternName = stringResource(pattern.labelRes)
     val label = if (active) stringResource(R.string.hero_strip_preview, patternName)
     else stringResource(R.string.hero_strip_off, patternName)
