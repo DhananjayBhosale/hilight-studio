@@ -81,6 +81,9 @@ data class InstalledApp(val pkg: String, val label: String, val info: Applicatio
 fun AppRulesScreen(store: Store) {
     val rules by store.rules.collectAsStateWithLifecycle()
     val privacyRules by store.privacyRules.collectAsStateWithLifecycle()
+    val chargingRule by store.chargingRule.collectAsStateWithLifecycle()
+    val batteryPct by store.batteryLevel.collectAsStateWithLifecycle()
+    var editingCharging by remember { mutableStateOf(false) }
     val conversations by store.conversations.collectAsStateWithLifecycle()
     val lastMatch by store.lastMatch.collectAsStateWithLifecycle()
     var picking by remember { mutableStateOf(false) }
@@ -151,6 +154,14 @@ fun AppRulesScreen(store: Store) {
         onEdit = { editingPrivacy = it },
         onTest = { store.preview(it.pattern, it.color, it.speedMs, it.brightness, it.lightMs) },
         onDelete = store::removePrivacyRule,
+    )
+
+    ChargingRuleSection(
+        rule = chargingRule,
+        batteryPct = batteryPct,
+        onToggle = { store.setChargingRule(chargingRule.copy(enabled = it)) },
+        onEdit = { editingCharging = true },
+        onTest = { store.previewCharging(chargingRule) },
     )
 
     if (picking) {
@@ -270,6 +281,19 @@ fun AppRulesScreen(store: Store) {
                 editingPrivacy = null
             },
             onTest = { store.preview(it.pattern, it.color, it.speedMs, it.brightness, it.lightMs) },
+        )
+    }
+
+    if (editingCharging) {
+        ChargingRuleEditorDialog(
+            rule = chargingRule,
+            batteryPct = batteryPct,
+            onDismiss = { editingCharging = false },
+            onSave = {
+                store.setChargingRule(it)
+                editingCharging = false
+            },
+            onTest = { store.previewCharging(it) },
         )
     }
 }
@@ -617,7 +641,7 @@ private fun RuleEditorDialog(
 
                 PatternCarousel(
                     selected = r.pattern,
-                    options = Pattern.entries.filter { it != Pattern.OFF && it != Pattern.CUSTOM },
+                    options = Pattern.selectable.filter { it != Pattern.OFF && it != Pattern.CUSTOM },
                     onSelect = { r = r.copy(pattern = it) },
                 )
 

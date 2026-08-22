@@ -67,7 +67,7 @@ fun AmbientScreen(store: Store) {
         LedStrip(ambient.pattern, ambient, active = enabled, heightDp = 46)
         PatternCarousel(
             selected = ambient.pattern,
-            options = Pattern.entries,
+            options = Pattern.selectable,
             onSelect = { store.setAmbient(ambient.copy(pattern = it)) },
         )
         if (!enabled) {
@@ -376,11 +376,34 @@ fun PatternCarousel(
     selected: Pattern,
     options: List<Pattern>,
     onSelect: (Pattern) -> Unit,
+) = ChipCarousel(
+    selected = selected,
+    options = options,
+    key = { it.key },
+    label = { stringResource(it.labelRes) },
+    onSelect = onSelect,
+)
+
+/**
+ * Scrolling chip picker whose selection animates in colour and size.
+ *
+ * [selected] may be null when nothing on offer matches — the charging gauge's presets, once the user
+ * has tweaked a colour by hand. [leading] draws something before the label inside each chip, such as
+ * a miniature of the look the chip stands for.
+ */
+@Composable
+fun <T> ChipCarousel(
+    selected: T?,
+    options: List<T>,
+    key: (T) -> Any,
+    label: @Composable (T) -> String,
+    onSelect: (T) -> Unit,
+    leading: (@Composable (T) -> Unit)? = null,
 ) {
     val haptics = LocalHapticFeedback.current
     val listState = rememberLazyListState()
 
-    // keep the current pattern on screen, including when it is restored from settings
+    // keep the current choice on screen, including when it is restored from settings
     LaunchedEffect(selected, options) {
         val index = options.indexOf(selected)
         if (index >= 0) listState.animateScrollToItem(index, scrollOffset = -120)
@@ -391,7 +414,7 @@ fun PatternCarousel(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        items(options, key = { it.key }) { p ->
+        items(options, key = key) { p ->
             val isSelected = p == selected
             val bg by animateColorAsState(
                 if (isSelected) MaterialTheme.colorScheme.primary
@@ -408,7 +431,7 @@ fun PatternCarousel(
                 spring(dampingRatio = 0.4f, stiffness = Spring.StiffnessMedium),
                 label = "chipScale",
             )
-            Box(
+            Row(
                 Modifier
                     .scale(scale)
                     .background(bg, CircleShape)
@@ -416,16 +439,20 @@ fun PatternCarousel(
                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                         onSelect(p)
                     }
-                    .padding(horizontal = 18.dp, vertical = 11.dp),
+                    .padding(horizontal = if (leading == null) 18.dp else 14.dp, vertical = 11.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text(stringResource(p.labelRes), style = MaterialTheme.typography.labelLarge, color = fg)
+                leading?.invoke(p)
+                Text(label(p), style = MaterialTheme.typography.labelLarge, color = fg)
             }
         }
     }
 }
 
+/** One of the eight LEDs as a tappable colour dot; shared with the charging gauge's per-LED editor. */
 @Composable
-private fun LedSwatch(
+fun LedSwatch(
     color: Int,
     selected: Boolean,
     modifier: Modifier = Modifier,

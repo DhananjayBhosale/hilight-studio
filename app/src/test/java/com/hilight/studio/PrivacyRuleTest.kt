@@ -53,7 +53,8 @@ class PrivacyRuleTest {
 
     @Test
     fun `every offered look and arbitrary colours reach preferences and renderer`() {
-        val expected = Pattern.entries.filter { it != Pattern.OFF && it != Pattern.CUSTOM }
+        // internal patterns such as the charging gauge need an input no rule can supply
+        val expected = Pattern.entries.filter { it != Pattern.OFF && it != Pattern.CUSTOM && !it.internal }
         assertEquals(expected, PrivacyRule.selectablePatterns)
         assertTrue(PrivacyRule.selectablePatterns.containsAll(
             listOf(
@@ -69,6 +70,7 @@ class PrivacyRuleTest {
         ))
         assertFalse(PrivacyRule.selectablePatterns.contains(Pattern.OFF))
         assertFalse(PrivacyRule.selectablePatterns.contains(Pattern.CUSTOM))
+        assertFalse(PrivacyRule.selectablePatterns.contains(Pattern.BATTERY))
 
         PrivacyRule.selectablePatterns.forEach { pattern ->
             val original = PrivacyRule.default(PrivacyActivity.MICROPHONE).copy(

@@ -4,6 +4,16 @@ All notable changes to HiLight Studio are documented here.
 
 ## [Unreleased]
 
+- Added a **charging gauge**. When the charger goes in, and again when the battery is full, the
+  eight LEDs fill up to the battery level with the last one dimmed to its share. The colour can
+  follow the level (red through amber to green), be one colour, or be set per LED, with eleven
+  ready-made presets; every second LED is dimmed by default so the lit ones can be counted through
+  the shared diffuser; the LEDs can come on all at once or, by default, one by one — counting up to
+  the level, holding, and counting again — with the last lit LED blinking three times once the level
+  is reached; and the gauge can repeat at an interval while the charger stays in. It fires
+  as an ordinary finite alert, so the one-minute cap, the duty-cycle guard, quiet hours and Battery
+  Saver all apply unchanged.
+
 ## [1.0.6-experimental] - 2026-08-23
 
 - Added a manual **Check for updates** action under Setup. It includes experimental GitHub
