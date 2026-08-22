@@ -29,6 +29,27 @@ public final class Renderer {
     static final int TIP_BLINKS = 3;
     static final long TIP_BLINK_MS = 300;
 
+    /** The solid ring a full battery settles to, and the level that counts as full. */
+    static final int FULL_COLOR = 0xFF00E676;
+    static final double FULL_LEVEL = 0.999;
+
+    /** How many of [n] LEDs a gauge at [level] involves, counting a partly-lit boundary LED. */
+    public static int gaugeLitLeds(double level, int n) {
+        return (int) Math.ceil(clamp01(level) * n - 1e-9);
+    }
+
+    /**
+     * One full one-by-one cycle of the gauge in ms: the count, the tip blink if any, the hold and
+     * the dark gap before the next count. The app sizes a gauge showing from this so that it ends
+     * exactly after a whole number of cycles, which is why this is the renderer's own arithmetic
+     * rather than a copy of it.
+     */
+    public static long gaugeCycleMs(int litLeds, long speedMs, boolean blinkTip) {
+        long speed = Math.max(60, speedMs);
+        long blink = blinkTip ? 2L * TIP_BLINKS * TIP_BLINK_MS : 0;
+        return litLeds * speed + Math.max(STEP_HOLD_MIN_MS, 3 * speed) + blink + speed;
+    }
+
     /**
      * Whether the tip LED is in an off beat of its blink: [sinceMs] into a blink run of [totalMs],
      * the on and off beats each last TIP_BLINK_MS, starting on, and it holds lit once the run is over.
@@ -172,20 +193,33 @@ public final class Renderer {
                 // "blinkTip" makes the last lit LED blink TIP_BLINKS times once the gauge has reached
                 // its level — straight away for "all", after the count for "step" — and then hold,
                 // so the eye is drawn to where the level actually is.
+                //
+                // "fullGreen": a full battery has nothing to count, so once the level is reached
+                // (after one count in "step" mode, at once in "all") every LED goes solid in
+                // "fullColor" (FULL_COLOR unless the rule says otherwise) — no dimming, no blink, no
+                // repeat — and stays there for the rest of the showing.
                 double level = clamp01(cfg.optDouble("level", 0));
                 boolean byLevel = cfg.optBoolean("byLevel", false);
                 double oddScale = clamp01(cfg.optDouble("oddScale", 1.0));
                 boolean blinkTip = cfg.optBoolean("blinkTip", false);
+                boolean fullGreen = cfg.optBoolean("fullGreen", false) && level >= FULL_LEVEL;
+                int fullColor = (int) (cfg.optLong("fullColor", FULL_COLOR & 0xFFFFFFFFL) | 0xFF000000L);
                 long blinkMs = blinkTip ? 2L * TIP_BLINKS * TIP_BLINK_MS : 0;
                 double target = level * n;
-                int lit = (int) Math.ceil(target - 1e-9);
+                int lit = gaugeLitLeds(level, n);
                 double shown = target;
                 boolean tipOff = false;
-                if ("step".equals(cfg.optString("fill", "all"))) {
+                boolean stepwise = "step".equals(cfg.optString("fill", "all"));
+                if (fullGreen && (!stepwise || t >= lit * speed)) {
+                    for (int i = 0; i < n; i++) out[i] = fullColor;
+                    if (bright < 1.0) for (int i = 0; i < n; i++) out[i] = scale(out[i], bright);
+                    return out;
+                }
+                if (stepwise) {
                     long count = lit * speed;
-                    long hold = Math.max(STEP_HOLD_MIN_MS, 3 * speed) + blinkMs;
-                    long cycle = count + hold + speed;
-                    long phase = t % cycle;
+                    long cycle = gaugeCycleMs(lit, speed, blinkTip);
+                    long hold = cycle - count - speed;
+                    long phase = fullGreen ? t : t % cycle;    // a full battery counts only once
                     if (phase < count) {
                         long idx = phase / speed;
                         shown = Math.min(target, idx + (phase % speed) / (double) speed);

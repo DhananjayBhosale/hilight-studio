@@ -112,6 +112,10 @@ data class Ambient(
     val fillStepwise: Boolean = false,
     /** gauge only: blink the last lit LED a few times once the level is reached */
     val blinkTip: Boolean = false,
+    /** gauge only: a full battery settles to a solid ring instead of counting again */
+    val fullGreen: Boolean = false,
+    /** gauge only: the colour of that ring */
+    val fullColor: Int = ChargingRule.DEFAULT_FULL_COLOR,
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("mode", pattern.key)
@@ -132,6 +136,8 @@ data class Ambient(
                 put("oddScale", oddLedScale.toDouble())
                 put("fill", if (fillStepwise) ChargingFill.STEP.key else ChargingFill.ALL.key)
                 put("blinkTip", blinkTip)
+                put("fullGreen", fullGreen)
+                put("fullColor", fullColor.toUInt().toLong())
             }
             Pattern.GRADIENT -> put(
                 "colors",
@@ -456,7 +462,8 @@ enum class ChargingPreset(
      * is visible; the by-level preset is shown part-way up, because all-green would hide what it does.
      */
     fun previewLook(): Ambient =
-        applyTo(ChargingRule(fill = ChargingFill.ALL, blinkTip = false))   // still: chips do not animate
+        // still, and never the solid full ring, so the chip shows the preset's own colours
+        applyTo(ChargingRule(fill = ChargingFill.ALL, blinkTip = false, fullGreen = false))
             .previewLook(if (colorMode == ChargingColorMode.LEVEL) 0.6f else 1f)
 
     companion object {
@@ -494,6 +501,12 @@ data class ChargingRule(
     val stepMs: Int = DEFAULT_STEP_MS,
     /** blink the last lit LED a few times once the level is reached, so the eye finds it */
     val blinkTip: Boolean = true,
+    /** at 100%, count once and then settle to a solid ring rather than counting again */
+    val fullGreen: Boolean = true,
+    /** the colour of that ring; green unless changed */
+    val fullColor: Int = DEFAULT_FULL_COLOR,
+    /** in one-by-one mode, how many complete counts a showing plays before it ends */
+    val plays: Int = DEFAULT_PLAYS,
     val brightness: Float = 1f,
     val onlyWhenScreenOff: Boolean = false,
     /** show the gauge again this often while the charger stays connected; 0 is off */
@@ -509,6 +522,26 @@ data class ChargingRule(
     /** The factor the renderer applies to every second LED. */
     val oddLedScale: Float get() = if (alternate) alternateLevel.coerceIn(0f, MAX_ALTERNATE_LEVEL) else 1f
 
+    /**
+     * How long one showing lasts at [levelPct].
+     *
+     * A static gauge — all at once, or the solid ring of a full battery once its single count is
+     * done — holds for [durationMs]. A counting gauge instead plays [plays] whole cycles and ends the
+     * moment the last hold is over, so it is never cut off mid-count and never shows the dark gap
+     * that precedes a count that is not coming. The cycle length is the renderer's own arithmetic.
+     * Everything stays under the rule ceiling, which the renderer clamps to anyway.
+     */
+    fun showingMs(levelPct: Int): Int {
+        if (fill == ChargingFill.ALL) return durationMs
+        val lit = com.hilight.core.Renderer.gaugeLitLeds(levelPct / 100.0, LED_COUNT)
+        val ms = if (fullGreen && levelPct >= 100) {
+            lit.toLong() * stepMs + durationMs
+        } else {
+            plays * com.hilight.core.Renderer.gaugeCycleMs(lit, stepMs.toLong(), blinkTip) - stepMs
+        }
+        return ms.coerceIn(MIN_DURATION_MS.toLong(), Limits.RULE_MAX_MS.toLong()).toInt()
+    }
+
     /** The on-screen form of this rule at [level] (0..1), for the card, the editor and the hero. */
     fun previewLook(level: Float): Ambient = Ambient(
         pattern = Pattern.BATTERY,
@@ -521,6 +554,8 @@ data class ChargingRule(
         oddLedScale = oddLedScale,
         fillStepwise = fill == ChargingFill.STEP,
         blinkTip = blinkTip,
+        fullGreen = fullGreen,
+        fullColor = fullColor,
     )
 
     fun toPrefsJson(): JSONObject = JSONObject().apply {
@@ -534,6 +569,9 @@ data class ChargingRule(
         put("fill", fill.key)
         put("stepMs", stepMs)
         put("blinkTip", blinkTip)
+        put("fullGreen", fullGreen)
+        put("fullColor", fullColor.toUInt().toLong())
+        put("plays", plays)
         put("brightness", brightness.toDouble())
         put("onlyWhenScreenOff", onlyWhenScreenOff)
         put("repeatEveryMin", repeatEveryMin)
@@ -548,6 +586,10 @@ data class ChargingRule(
         const val MIN_STEP_MS = 150
         const val MAX_STEP_MS = 1_000
         const val MAX_REPEAT_MIN = 30
+        const val DEFAULT_PLAYS = 2
+        const val MAX_PLAYS = 3
+        /** The app's green, which is also what the renderer falls back to. */
+        const val DEFAULT_FULL_COLOR = 0xFF00E676.toInt()
         const val DEFAULT_ALTERNATE_LEVEL = 0.25f
         /** Above this the dimmed LEDs stop reading as dimmed, so the slider ends here. */
         const val MAX_ALTERNATE_LEVEL = 0.6f
@@ -572,6 +614,9 @@ data class ChargingRule(
                 fill = ChargingFill.of(o.optString("fill", defaults.fill.key)),
                 stepMs = o.optInt("stepMs", DEFAULT_STEP_MS).coerceIn(MIN_STEP_MS, MAX_STEP_MS),
                 blinkTip = o.optBoolean("blinkTip", defaults.blinkTip),
+                fullGreen = o.optBoolean("fullGreen", defaults.fullGreen),
+                fullColor = o.optLong("fullColor", DEFAULT_FULL_COLOR.toUInt().toLong()).toInt(),
+                plays = o.optInt("plays", DEFAULT_PLAYS).coerceIn(1, MAX_PLAYS),
                 brightness = o.optDouble("brightness", 1.0).toFloat().coerceIn(0.05f, 1f),
                 onlyWhenScreenOff = o.optBoolean("onlyWhenScreenOff", false),
                 repeatEveryMin = o.optInt("repeatEveryMin", 0).coerceIn(0, MAX_REPEAT_MIN),

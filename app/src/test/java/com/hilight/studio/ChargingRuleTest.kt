@@ -33,6 +33,9 @@ class ChargingRuleTest {
             fill = ChargingFill.ALL,
             stepMs = 900,
             blinkTip = false,
+            fullGreen = false,
+            fullColor = 0xFF2979FF.toInt(),
+            plays = 3,
             brightness = 0.6f,
             onlyWhenScreenOff = true,
             repeatEveryMin = 5,
@@ -68,6 +71,7 @@ class ChargingRuleTest {
             put("fill", "wobble")
             put("brightness", 9.0)
             put("repeatEveryMin", 999)
+            put("plays", 99)
             put("colorMode", "plaid")
             put("perLed", org.json.JSONArray().put(1L).put(2L))
         }
@@ -78,6 +82,7 @@ class ChargingRuleTest {
         assertEquals(ChargingFill.STEP, loaded.fill)
         assertEquals(1f, loaded.brightness)
         assertEquals(ChargingRule.MAX_REPEAT_MIN, loaded.repeatEveryMin)
+        assertEquals(ChargingRule.MAX_PLAYS, loaded.plays)
         assertEquals(ChargingColorMode.LEVEL, loaded.colorMode)
         assertEquals(ChargingRule.redToGreen(), loaded.perLed)
     }
@@ -115,16 +120,68 @@ class ChargingRuleTest {
     }
 
     @Test
+    fun `a counting gauge lasts exactly its plays and never a trailing gap`() {
+        // default rule: 400 ms steps, tip blink on, two plays. At 50% four LEDs are lit, so one
+        // cycle is 1600 count + 1200 hold + 1800 blink + 400 gap = 5000 ms
+        val rule = ChargingRule()
+        assertEquals(2 * 5000 - 400, rule.showingMs(50))
+        assertEquals(3 * 5000 - 400, rule.copy(plays = 3).showingMs(50))
+        // without the blink the hold alone remains: 1600 + 1200 + 400 = 3200 per cycle
+        assertEquals(2 * 3200 - 400, rule.copy(blinkTip = false).showingMs(50))
+        // a partly-lit boundary LED still counts as a step: 73% is 5.84 LEDs, six steps
+        assertEquals(2 * (6 * 400 + 1200 + 1800 + 400) - 400, rule.showingMs(73))
+    }
+
+    @Test
+    fun `a full battery counts once and then holds for the show-for time`() {
+        val rule = ChargingRule(durationMs = 5_000)
+        assertEquals(8 * 400 + 5_000, rule.showingMs(100))
+        // without the solid ring a full battery just plays its counts like any other level
+        val counting = rule.copy(fullGreen = false)
+        assertEquals(2 * (8 * 400 + 1200 + 1800 + 400) - 400, counting.showingMs(100))
+    }
+
+    @Test
+    fun `a static gauge simply shows for its duration`() {
+        val rule = ChargingRule(fill = ChargingFill.ALL, durationMs = 6_000)
+        assertEquals(6_000, rule.showingMs(50))
+        assertEquals(6_000, rule.showingMs(100))
+    }
+
+    @Test
+    fun `a showing never exceeds the rule ceiling`() {
+        val slow = ChargingRule(stepMs = ChargingRule.MAX_STEP_MS, plays = ChargingRule.MAX_PLAYS, fullGreen = false)
+        assertTrue(slow.showingMs(100) <= Limits.RULE_MAX_MS)
+        assertTrue(slow.showingMs(100) >= ChargingRule.MIN_DURATION_MS)
+        // the cycle the app sizes from is the renderer's own
+        assertEquals(
+            8 * 1000 + 3000 + 1800 + 1000,
+            com.hilight.core.Renderer.gaugeCycleMs(8, 1000, true),
+        )
+    }
+
+    @Test
     fun `the gauge alert carries the level and the colour mode`() {
         val perLed = ChargingRule(colorMode = ChargingColorMode.PER_LED)
         val json = Bridge.chargingAlertJson(7, perLed, 0.73f)
 
         assertEquals("battery", json.getString("pattern"))
         assertEquals("charging", json.getString("source"))
+        // the showing is sized from the animation at that level unless told otherwise
+        assertEquals(perLed.showingMs(73), json.getInt("durationMs"))
+        assertEquals(4_321, Bridge.chargingAlertJson(7, perLed, 0.73f, 4_321).getInt("durationMs"))
         assertEquals("step", json.getString("fill"))
         assertEquals(ChargingRule.DEFAULT_STEP_MS, json.getInt("speedMs"))
         assertTrue(json.getBoolean("blinkTip"))
+        assertTrue(json.getBoolean("fullGreen"))
+        assertEquals(ChargingRule.DEFAULT_FULL_COLOR.toUInt().toLong(), json.getLong("fullColor"))
         assertTrue(ChargingRule().previewLook(1f).blinkTip)
+        assertTrue(ChargingRule().previewLook(1f).fullGreen)
+        assertEquals(ChargingRule.DEFAULT_FULL_COLOR, ChargingRule().previewLook(1f).fullColor)
+        val blue = perLed.copy(fullColor = 0xFF2979FF.toInt())
+        assertEquals(0xFF2979FFL, Bridge.chargingAlertJson(12, blue, 1f).getLong("fullColor"))
+        assertEquals(0xFF2979FF.toInt(), blue.previewLook(1f).fullColor)
+        assertFalse(Bridge.chargingAlertJson(11, perLed.copy(fullGreen = false), 1f).getBoolean("fullGreen"))
         assertFalse(Bridge.chargingAlertJson(10, perLed.copy(blinkTip = false), 1f).getBoolean("blinkTip"))
         assertEquals("all", Bridge.chargingAlertJson(9, perLed.copy(fill = ChargingFill.ALL), 1f).getString("fill"))
         assertEquals(0.73, json.getDouble("level"), 1e-6)

@@ -27,6 +27,9 @@ object Renderer {
     private fun tipBlinkOff(sinceMs: Long, totalMs: Long): Boolean =
         sinceMs < totalMs && (sinceMs / TIP_BLINK_MS) % 2 == 1L
 
+    /** The level that counts as full; the helper's FULL_LEVEL. */
+    private const val FULL_LEVEL = 0.999
+
     fun frame(pattern: Pattern, tMs: Long, cfg: Ambient, colorOverride: Int? = null): IntArray {
         val n = LED_COUNT
         val out = IntArray(n)
@@ -102,13 +105,20 @@ object Renderer {
                 val target = level * n
                 val lit = kotlin.math.ceil(target - 1e-9).toLong()
                 val blinkMs = if (cfg.blinkTip) 2L * TIP_BLINKS * TIP_BLINK_MS else 0L
+                val fullGreen = cfg.fullGreen && level >= FULL_LEVEL
+                if (fullGreen && (!cfg.fillStepwise || t >= lit * speed)) {
+                    for (i in 0 until n) out[i] = cfg.fullColor
+                    val b = cfg.brightness.toDouble()
+                    if (b < 1.0) for (i in 0 until n) out[i] = scale(out[i], b)
+                    return out
+                }
                 var shown = target
                 var tipOff = false
                 if (cfg.fillStepwise) {
                     val count = lit * speed
                     val hold = max(STEP_HOLD_MIN_MS, 3 * speed) + blinkMs
                     val cycle = count + hold + speed
-                    val phase = t % cycle
+                    val phase = if (fullGreen) t else t % cycle
                     if (phase < count) {
                         shown = minOf(target, (phase / speed) + (phase % speed) / speed.toDouble())
                     } else if (phase >= count + hold) {

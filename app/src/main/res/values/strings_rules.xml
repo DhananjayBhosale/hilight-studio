@@ -224,7 +224,13 @@
     <string name="charging_fill_all">All at once</string>
     <string name="charging_fill_step">One by one</string>
     <string name="charging_step_time">Time per LED</string>
+    <string name="charging_plays">Plays</string>
+    <string name="charging_plays_value">%1$d×</string>
     <string name="charging_blink_tip">Blink the last LED</string>
+    <string name="charging_full_green">Solid colour when full</string>
+    <string name="charging_full_colour">Colour when full</string>
+    <string name="charging_showing_length">At the level now, one showing lasts about %1$s.</string>
+    <string name="charging_show_for_hint">Used when the LEDs come on all at once, and for the solid green ring when full. One by one lasts as long as its plays take instead.</string>
     <string name="charging_alternate">Alternate LEDs</string>
     <string name="charging_alternate_level">Every second LED at</string>
     <string name="charging_alternate_off">Off</string>

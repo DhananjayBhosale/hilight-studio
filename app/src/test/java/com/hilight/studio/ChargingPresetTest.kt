@@ -79,6 +79,7 @@ class ChargingPresetTest {
         ChargingPreset.entries.forEach {
             assertEquals(it.name, false, it.previewLook().fillStepwise)
             assertEquals(it.name, false, it.previewLook().blinkTip)
+            assertEquals(it.name, false, it.previewLook().fullGreen)
         }
         // the rule itself keeps its counting mode when a preset is applied
         assertEquals(ChargingFill.STEP, ChargingPreset.OCEAN.applyTo(ChargingRule()).fill)

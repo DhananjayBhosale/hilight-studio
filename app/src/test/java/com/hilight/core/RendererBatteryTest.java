@@ -151,6 +151,90 @@ public final class RendererBatteryTest {
         assertArrayEquals(new int[LEDS], frame(cfg, 8_500));
     }
 
+    private static int[] fullRing() {
+        int[] ring = new int[LEDS];
+        java.util.Arrays.fill(ring, Renderer.FULL_COLOR);
+        return ring;
+    }
+
+    @Test
+    public void aFullBatteryCountsOnceThenSettlesToSolidGreen() throws Exception {
+        JSONObject cfg = stepGauge(1.0);
+        cfg.put("fullGreen", true);
+        cfg.put("blinkTip", true);
+        cfg.put("oddScale", 0.25);
+
+        // counting as usual: LED 2 easing in during the third second, LED 1 dimmed as every second
+        int[] counting = frame(cfg, 2_500);
+        assertEquals(WHITE, counting[0]);
+        assertEquals(Renderer.scale(WHITE, 0.25), counting[1]);
+        assertEquals(partial(0.5), counting[2]);
+        assertEquals(0, counting[3]);
+        assertEquals(0, counting[7]);
+
+        // the moment the eighth LED is in: every LED solid green, no dimming, no blink
+        assertArrayEquals(fullRing(), frame(cfg, 8_000));
+        assertArrayEquals(fullRing(), frame(cfg, 8_450));
+        // and it stays — no gap, no second count, however long the gauge shows
+        assertArrayEquals(fullRing(), frame(cfg, 12_000));
+        assertArrayEquals(fullRing(), frame(cfg, 60_000));
+    }
+
+    @Test
+    public void aFullBatteryShownAllAtOnceIsSolidGreenFromTheStart() throws Exception {
+        JSONObject cfg = gauge(1.0, false);
+        cfg.put("fullGreen", true);
+        cfg.put("blinkTip", true);
+        cfg.put("oddScale", 0.0);
+        assertArrayEquals(fullRing(), frame(cfg, 0));
+        assertArrayEquals(fullRing(), frame(cfg, 450));     // where the tip would have blinked off
+        assertArrayEquals(fullRing(), frame(cfg, SETTLED));
+    }
+
+    @Test
+    public void theFullRingTakesTheColourItIsGiven() throws Exception {
+        JSONObject cfg = gauge(1.0, false);
+        cfg.put("fullGreen", true);
+        cfg.put("fullColor", 0xFF2979FFL);
+        int[] ring = new int[LEDS];
+        java.util.Arrays.fill(ring, 0xFF2979FF);
+        assertArrayEquals(ring, frame(cfg, SETTLED));
+
+        // an opaque alpha is forced, as for every other colour the renderer reads
+        cfg.put("fullColor", 0x00123456L);
+        assertEquals(0xFF123456, frame(cfg, SETTLED)[0]);
+    }
+
+    @Test
+    public void solidGreenRespectsBrightnessAndOnlyAppliesWhenFull() throws Exception {
+        JSONObject dim = gauge(1.0, false);
+        dim.put("fullGreen", true);
+        dim.put("brightness", 0.5);
+        assertEquals(Renderer.scale(Renderer.FULL_COLOR, 0.5), frame(dim, SETTLED)[0]);
+
+        // 99% is not full: the gauge keeps its own colours and keeps counting
+        JSONObject nearly = stepGauge(0.99);
+        nearly.put("fullGreen", true);
+        assertArrayEquals(frame(stepGauge(0.99), 5_500), frame(nearly, 5_500));
+        assertArrayEquals(new int[LEDS], frame(nearly, 11_500));   // the gap of the 12 s cycle
+    }
+
+    @Test
+    public void theCycleTheAppSizesFromMatchesTheTimeline() throws Exception {
+        // 62% with the blink: the renderer restarts its count exactly one cycle later
+        JSONObject cfg = stepGauge(0.62);
+        cfg.put("blinkTip", true);
+        int lit = Renderer.gaugeLitLeds(0.62, LEDS);
+        long cycle = Renderer.gaugeCycleMs(lit, 1000, true);
+        assertEquals(5, lit);
+        assertEquals(10_800, cycle);
+        assertArrayEquals(frame(cfg, 500), frame(cfg, cycle + 500));
+        assertArrayEquals(frame(cfg, 5_450), frame(cfg, cycle + 5_450));
+        // the last frame before the gap is the held gauge; the gap itself is dark
+        assertEquals(partial(0.62 * LEDS - 4), frame(cfg, cycle - 1_001)[4]);
+        assertArrayEquals(new int[LEDS], frame(cfg, cycle - 500));
+    }
+
     @Test
     public void anEmptyBatteryCountsNothing() throws Exception {
         for (long t : new long[]{0, 700, 3_000, 12_345}) {

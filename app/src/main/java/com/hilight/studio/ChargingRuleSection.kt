@@ -77,7 +77,7 @@ fun ChargingRuleSection(
                         stringResource(R.string.charging_rule_title),
                         style = MaterialTheme.typography.titleMedium,
                     )
-                    Caption(chargingSummary(rule))
+                    Caption(chargingSummary(rule, batteryPct))
                 }
             }
             Switch(checked = rule.enabled, onCheckedChange = onToggle)
@@ -100,16 +100,21 @@ fun ChargingRuleSection(
     }
 }
 
-/** "On plug-in · When full · 8 s", plus the repeat interval when one is set. */
+/**
+ * "On plug-in · When full · 13 s", plus the repeat interval when one is set. The length is what a
+ * showing would take at the level right now, since a counting gauge lasts as long as its counts.
+ */
 @Composable
-private fun chargingSummary(rule: ChargingRule): String {
+private fun chargingSummary(rule: ChargingRule, batteryPct: Int): String {
     // resolved unconditionally so the composable call count does not depend on the rule
     val plugIn = stringResource(R.string.charging_trigger_plug_in)
     val full = stringResource(R.string.charging_trigger_full)
     val moments = listOfNotNull(plugIn.takeIf { rule.onPlugIn }, full.takeIf { rule.onFull })
     val moment = if (moments.isEmpty()) stringResource(R.string.charging_no_triggers)
     else moments.joinToString(" · ")
-    val base = stringResource(R.string.charging_card_summary, moment, formatDuration(rule.durationMs))
+    val base = stringResource(
+        R.string.charging_card_summary, moment, formatDuration(rule.showingMs(batteryPct)),
+    )
     val repeat = stringResource(
         R.string.charging_repeat_summary,
         stringResource(R.string.duration_minutes, rule.repeatEveryMin),
@@ -253,9 +258,25 @@ fun ChargingRuleEditorDialog(
                                 ChargingRule.MIN_STEP_MS.toFloat()..ChargingRule.MAX_STEP_MS.toFloat(),
                                 { edited = edited.copy(stepMs = it.toInt()) },
                             ) { formatDuration(it.toInt()) }
+                            PixelSlider(
+                                stringResource(R.string.charging_plays),
+                                edited.plays.toFloat(),
+                                1f..ChargingRule.MAX_PLAYS.toFloat(),
+                                { edited = edited.copy(plays = it.toInt()) },
+                            ) { stringResource(R.string.charging_plays_value, it.toInt()) }
                         }
                         ToggleRow(stringResource(R.string.charging_blink_tip), edited.blinkTip) {
                             edited = edited.copy(blinkTip = it)
+                        }
+                        ToggleRow(stringResource(R.string.charging_full_green), edited.fullGreen) {
+                            edited = edited.copy(fullGreen = it)
+                        }
+                        if (edited.fullGreen) {
+                            ColorPicker(
+                                edited.fullColor,
+                                { edited = edited.copy(fullColor = it) },
+                                stringResource(R.string.charging_full_colour),
+                            )
                         }
                         ToggleRow(stringResource(R.string.charging_alternate), edited.alternate) {
                             edited = edited.copy(alternate = it)
@@ -271,6 +292,12 @@ fun ChargingRuleEditorDialog(
                             }
                         }
                         Caption(stringResource(R.string.charging_readability_hint))
+                        Caption(
+                            stringResource(
+                                R.string.charging_showing_length,
+                                formatDuration(edited.showingMs(batteryPct)),
+                            )
+                        )
                     }
 
                     PixelCard {
@@ -288,6 +315,7 @@ fun ChargingRuleEditorDialog(
                                 stringResource(R.string.charging_duration_warn_second_body),
                             onChange = { edited = edited.copy(durationMs = it) },
                         )
+                        Caption(stringResource(R.string.charging_show_for_hint))
                         PixelSlider(
                             stringResource(R.string.rules_brightness),
                             edited.brightness, 0.05f..1f,

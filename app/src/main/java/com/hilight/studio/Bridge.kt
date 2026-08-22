@@ -6,6 +6,7 @@ import android.util.Log
 import org.json.JSONObject
 import org.json.JSONArray
 import java.io.File
+import kotlin.math.roundToInt
 
 /**
  * File channel used by the ADB transport.
@@ -152,14 +153,24 @@ object Bridge {
         put("randomSmooth", true)
     }
 
-    /** The charging gauge as an alert: the rule's look plus the level it should draw, 0..1. */
-    fun chargingAlertJson(id: Long, rule: ChargingRule, level: Float): JSONObject = JSONObject().apply {
+    /**
+     * The charging gauge as an alert: the rule's look plus the level it should draw, 0..1, shown for
+     * [durationMs] — by default as long as the rule's animation takes at that level.
+     */
+    fun chargingAlertJson(
+        id: Long,
+        rule: ChargingRule,
+        level: Float,
+        durationMs: Int = rule.showingMs((level * 100).roundToInt()),
+    ): JSONObject = JSONObject().apply {
         put("id", id)
         put("pattern", Pattern.BATTERY.key)
-        put("durationMs", rule.durationMs)
+        put("durationMs", durationMs)
         put("speedMs", rule.stepMs)
         put("fill", rule.fill.key)
         put("blinkTip", rule.blinkTip)
+        put("fullGreen", rule.fullGreen)
+        put("fullColor", rule.fullColor.toUInt().toLong())
         put("brightness", rule.brightness.toDouble())
         put("source", AlertSource.CHARGING.key)
         put("level", level.coerceIn(0f, 1f).toDouble())

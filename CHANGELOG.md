@@ -9,8 +9,10 @@ All notable changes to HiLight Studio are documented here.
   follow the level (red through amber to green), be one colour, or be set per LED, with eleven
   ready-made presets; every second LED is dimmed by default so the lit ones can be counted through
   the shared diffuser; the LEDs can come on all at once or, by default, one by one — counting up to
-  the level, holding, and counting again — with the last lit LED blinking three times once the level
-  is reached; and the gauge can repeat at an interval while the charger stays in. It fires
+  the level, holding, and counting again for a set number of plays (two by default), then ending
+  cleanly — with the last lit LED blinking three times once the level is reached, and a full battery
+  settling to a solid ring, green by default, after one count; and the gauge can repeat at an
+  interval while the charger stays in. It fires
   as an ordinary finite alert, so the one-minute cap, the duty-cycle guard, quiet hours and Battery
   Saver all apply unchanged.
 

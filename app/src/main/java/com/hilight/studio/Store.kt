@@ -968,12 +968,13 @@ class Store private constructor(private val app: Context) {
 
     /** Shows the gauge at the real level now, the way the Test buttons do for other looks. */
     fun previewCharging(rule: ChargingRule = _chargingRule.value) {
-        val level = _batteryLevel.value / 100f
+        val levelPct = _batteryLevel.value
+        val showing = rule.showingMs(levelPct)
         holdAlert(
-            alert = Bridge.chargingAlertJson(Bridge.nextAlertId(), rule, level),
-            durationMs = rule.durationMs,
+            alert = Bridge.chargingAlertJson(Bridge.nextAlertId(), rule, levelPct / 100f, showing),
+            durationMs = showing,
             arm = true,                // the user asked for this one, so it may open a window
-            preview = rule.previewLook(level),
+            preview = rule.previewLook(levelPct / 100f),
         )
     }
 
@@ -1008,8 +1009,11 @@ class Store private constructor(private val app: Context) {
         if (guardState().alertSuppression() != null) return
         if (rule.onlyWhenScreenOff && screenOn()) return
         holdAlert(
-            alert = Bridge.chargingAlertJson(Bridge.nextAlertId(), rule, levelPct / 100f),
-            durationMs = rule.durationMs,
+            alert = Bridge.chargingAlertJson(
+                Bridge.nextAlertId(), rule, levelPct / 100f, rule.showingMs(levelPct),
+            ),
+            // as long as the animation takes at this level: whole counts, never cut off
+            durationMs = rule.showingMs(levelPct),
             arm = false,               // a charger is not the user asking for the ambient look
             preview = null,
         )

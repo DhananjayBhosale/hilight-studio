@@ -321,7 +321,13 @@
     <string name="charging_fill_all">一斉に点灯</string>
     <string name="charging_fill_step">1 つずつ点灯</string>
     <string name="charging_step_time">LED 1 つあたりの時間</string>
+    <string name="charging_plays">再生回数</string>
+    <string name="charging_plays_value">%1$d 回</string>
     <string name="charging_blink_tip">最後の LED を点滅</string>
+    <string name="charging_full_green">満充電時は全体を単色に</string>
+    <string name="charging_full_colour">満充電時の色</string>
+    <string name="charging_showing_length">現在の残量では、1 回の表示は約 %1$s です。</string>
+    <string name="charging_show_for_hint">一斉に点灯する場合と、満充電時の緑のリングに使われます。1 つずつ点灯する場合は再生回数で長さが決まります。</string>
     <string name="charging_alternate">LED を交互に点灯</string>
     <string name="charging_alternate_level">2 つ目ごとの LED の明るさ</string>
     <string name="charging_alternate_off">消灯</string>
