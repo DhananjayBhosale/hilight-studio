@@ -32,25 +32,16 @@ import kotlinx.coroutines.delay
 import kotlin.math.cos
 import kotlin.math.sin
 
-/**
- * The device drawn in the Live hero.
- *
- * Google's press renders are copyrighted, so this is a vector reconstruction rather than a bundled
- * image — which also lets the glow be driven by the live pattern maths. The layouts follow the launch
- * hardware: on the Pro and Pro XL, HiLight sits at the right-hand end of the full-width camera bar;
- * on the Pro Fold the bar is a compact block in the top-left corner; the non-Pro Pixel 11 has no
- * HiLight at all.
- */
 enum class DeviceProfile(
     val label: String,
-    /** width / height of the body */
+
     val aspect: Float,
     val lensCount: Int,
     val hasHiLight: Boolean,
     val foldStyle: Boolean = false,
-    /** body width as a fraction of the canvas — over 1 means the device runs off the sides */
+
     val zoom: Float = 0.93f,
-    /** where the body's left edge sits, as a fraction of the canvas */
+
     val originX: Float = -1f,
 ) {
     PRO_XL("Pixel 11 Pro XL", aspect = 0.470f, lensCount = 3, hasHiLight = true),
@@ -64,7 +55,6 @@ enum class DeviceProfile(
     ;
 
     companion object {
-        /** Best-effort match on the marketing name, which is what Build.MODEL carries on Pixels. */
         fun detect(model: String = Build.MODEL): DeviceProfile {
             val m = model.lowercase()
             return when {
@@ -82,14 +72,6 @@ enum class DeviceProfile(
 @Composable
 fun rememberDeviceProfile(): DeviceProfile = remember { DeviceProfile.detect() }
 
-/**
- * The back of the phone with HiLight lit by the real pattern maths, plus the light it pools onto the
- * surface underneath — which is how the feature is actually seen, face-down.
- *
- * The array reads as one diffused disc rather than eight pinpoints, because the eight LEDs sit behind
- * the flash window; the individual colours still drive the disc, so a chase or a rainbow visibly
- * travels around it.
- */
 @Composable
 fun DeviceHero(
     pattern: Pattern,
@@ -110,7 +92,7 @@ fun DeviceHero(
         modifier
             .fillMaxWidth()
             .height(heightDp.dp)
-            .clip(RoundedCornerShape(26.dp))           // the device is cropped by the card edge
+            .clip(RoundedCornerShape(26.dp))
             .semantics {
                 contentDescription = buildString {
                     append(profile.label)
@@ -135,8 +117,6 @@ fun DeviceHero(
                 ),
             )
 
-            // Only the top of the device is shown, framed on the camera bar the way Google's own
-            // close-ups are; the body deliberately runs off the bottom of the card.
             val phoneW = size.width * profile.zoom
             val phoneH = phoneW / profile.aspect
             val left =
@@ -157,8 +137,6 @@ fun DeviceHero(
     }
 }
 
-// The device keeps its own graphite palette whatever the wallpaper does: a real Pixel is dark, and the
-// LEDs only read as light against a dark body.
 private val Stage = Color(0xFF0C0E11)
 private val StageHigh = Color(0xFF1A1D22)
 private val Body = Color(0xFF23262B)
@@ -188,7 +166,6 @@ private fun DrawScope.drawBody(left: Float, top: Float, w: Float, h: Float, corn
     )
 }
 
-/** Pro and Pro XL: full-width pill, three lenses, HiLight at the right-hand end. */
 private fun DrawScope.drawVisorBar(
     frame: IntArray,
     left: Float,
@@ -217,7 +194,6 @@ private fun DrawScope.drawVisorBar(
     val positions = if (profile.lensCount >= 3) listOf(0.14f, 0.32f, 0.50f) else listOf(0.18f, 0.40f)
     positions.forEach { fx -> drawLens(left + inset + barW * fx, cy, lensR) }
 
-    // the small square sensor window that sits above the flash on the real bar
     val sensorSize = barH * 0.13f
     drawRoundRect(
         Color(0xFF2A2E33),
@@ -229,12 +205,10 @@ private fun DrawScope.drawVisorBar(
     if (profile.hasHiLight) {
         drawHiLightDisc(frame, Offset(left + inset + barW * 0.80f, cy), barH * 0.335f, bloom)
     } else {
-        // non-Pro: plain flash, no array
         drawLens(left + inset + barW * 0.74f, cy, barH * 0.15f)
     }
 }
 
-/** Pro Fold: compact camera block in the top-left corner, HiLight inside it. */
 private fun DrawScope.drawFoldCameraBlock(
     frame: IntArray,
     left: Float,
@@ -258,12 +232,10 @@ private fun DrawScope.drawFoldCameraBlock(
         style = Stroke(width = size.height * 0.003f),
     )
 
-    // three rear cameras, then the array
     val lensR = blockH * 0.28f
     listOf(0.15f, 0.35f, 0.55f).forEach { fx -> drawLens(blockLeft + blockW * fx, cy, lensR) }
     drawHiLightDisc(frame, Offset(blockLeft + blockW * 0.82f, cy), blockH * 0.30f, bloom)
 
-    // hinge seam, so the silhouette reads as the foldable
     drawRoundRect(
         BodyEdge.copy(alpha = 0.55f),
         Offset(left + phoneW * 0.495f, top + phoneH * 0.02f),
@@ -281,7 +253,7 @@ private fun DrawScope.drawLens(cx: Float, cy: Float, r: Float) {
         style = Stroke(width = size.height * 0.0035f),
     )
     drawCircle(Color(0xFF10131A), radius = r * 0.6f, center = Offset(cx, cy))
-    // glass highlight
+
     drawCircle(
         Color(0xFF3D4A6B).copy(alpha = 0.55f),
         radius = r * 0.2f,
@@ -289,14 +261,7 @@ private fun DrawScope.drawLens(cx: Float, cy: Float, r: Float) {
     )
 }
 
-/**
- * HiLight itself: eight LEDs behind one flash window.
- *
- * Each LED is placed on a ring inside the window and blurred outward, so the result looks like the
- * single diffused disc on the real hardware while still showing pattern movement around it.
- */
 private fun DrawScope.drawHiLightDisc(colors: IntArray, center: Offset, radius: Float, bloom: Float) {
-    // the dark window the array shines through
     drawCircle(Color(0xFF05070A), radius = radius * 1.12f, center = center)
     drawCircle(
         LensRing.copy(alpha = 0.5f),
@@ -323,8 +288,6 @@ private fun DrawScope.drawHiLightDisc(colors: IntArray, center: Offset, radius: 
     val avg = Color(r / n, g / n, b / n)
     val lum = lumSum / n
 
-    // The lamp itself: a crisp disc of the blended colour, with each LED's own colour showing through
-    // from its position inside the window. Clipped, so the light does not smear across the bar.
     clipPath(Path().apply { addOval(Rect(center = center, radius = radius)) }) {
         drawCircle(avg.copy(alpha = 0.92f * bloom), radius = radius, center = center)
         for (i in 0 until n) {
@@ -345,7 +308,7 @@ private fun DrawScope.drawHiLightDisc(colors: IntArray, center: Offset, radius: 
                 center = pos,
             )
         }
-        // hot centre
+
         drawCircle(
             brush = Brush.radialGradient(
                 listOf(Color.White.copy(alpha = 0.30f * bloom * lum), Color.Transparent),
@@ -357,7 +320,6 @@ private fun DrawScope.drawHiLightDisc(colors: IntArray, center: Offset, radius: 
         )
     }
 
-    // bloom outside the window, kept modest so the disc keeps its edge
     drawCircle(
         brush = Brush.radialGradient(
             listOf(avg.copy(alpha = 0.34f * bloom * lum), Color.Transparent),
@@ -369,7 +331,6 @@ private fun DrawScope.drawHiLightDisc(colors: IntArray, center: Offset, radius: 
     )
 }
 
-/** Soft pool of colour under the phone. */
 private fun DrawScope.drawSpill(colors: IntArray, left: Float, top: Float, phoneW: Float, bloom: Float) {
     var r = 0f
     var g = 0f
@@ -395,10 +356,6 @@ private fun DrawScope.drawSpill(colors: IntArray, left: Float, top: Float, phone
     )
 }
 
-/**
- * Drives previews at the hardware's own frame rate using the shared pattern maths, so what is on
- * screen matches what the LEDs are doing.
- */
 @Composable
 fun rememberLedFrame(pattern: Pattern, cfg: Ambient, active: Boolean = true): IntArray {
     val dark = IntArray(LED_COUNT) { 0xFF000000.toInt() }
@@ -410,13 +367,12 @@ fun rememberLedFrame(pattern: Pattern, cfg: Ambient, active: Boolean = true): In
         val start = System.currentTimeMillis()
         while (true) {
             value = Renderer.frame(pattern, System.currentTimeMillis() - start, cfg)
-            delay(33)                       // Light.getMinUpdatePeriodMillis()
+            delay(33)
         }
     }
     return frame
 }
 
-/** Compact strip used on rule cards: an abstraction of the array, one dot per addressable LED. */
 @Composable
 fun LedStrip(
     pattern: Pattern,

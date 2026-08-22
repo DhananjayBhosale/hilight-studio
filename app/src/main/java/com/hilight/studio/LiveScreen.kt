@@ -34,11 +34,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 
-/**
- * Explains what the safety limits are doing, so a dark array never looks like a fault.
- *
- * The countdown ticks locally between status polls, which arrive about every 1.5 s.
- */
 @Composable
 private fun SafetyState(status: HelperStatus) {
     var elapsedMs by remember(status.ambientRemainingMs, status.ambientHeld) { mutableLongStateOf(0L) }
@@ -63,7 +58,6 @@ private fun SafetyState(status: HelperStatus) {
     }
 }
 
-/** White-light effects have no colour of their own, so give their tiles a readable accent. */
 @Composable
 private fun tileAccent(label: String, color: Int): Color = when {
     color != 0xFFFFFFFF.toInt() -> Color(color)
@@ -71,7 +65,6 @@ private fun tileAccent(label: String, color: Int): Color = when {
     else -> Color(0xFFFFB300)
 }
 
-/** Home surface: the phone itself, the master switch, and one-tap effects. */
 @Composable
 fun LiveScreen(store: Store) {
     val enabled by store.enabled.collectAsStateWithLifecycle()
@@ -84,7 +77,6 @@ fun LiveScreen(store: Store) {
     val profile = rememberDeviceProfile()
 
     PixelCard(tone = 0) {
-        // while a test is running the hero shows the test, not the ambient look
         val shown = previewLook ?: ambient
         DeviceHero(
             pattern = if (enabled) shown.pattern else Pattern.OFF,
@@ -148,7 +140,7 @@ fun LiveScreen(store: Store) {
     val tests: List<Triple<String, ImageVector, Pair<Pattern, Int>>> = listOf(
         Triple("Rainbow", Icons.Rounded.AutoAwesome, Pattern.RAINBOW to 0xFFFFFFFF.toInt()),
         Triple("Random", Icons.Rounded.Casino, Pattern.RANDOM to 0xFFFFFFFF.toInt()),
-        // tile accents are chosen for legibility; the effect colours themselves are above
+
         Triple("Comet", Icons.Rounded.Flare, Pattern.COMET to 0xFF00E5FF.toInt()),
         Triple("Pulse", Icons.Rounded.Bolt, Pattern.PULSE to 0xFFFF1744.toInt()),
         Triple("Breathe", Icons.Rounded.Nightlight, Pattern.BREATHE to 0xFF7C4DFF.toInt()),

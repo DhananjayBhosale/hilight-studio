@@ -58,7 +58,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -72,12 +71,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** Without this the app's own notifications are dropped, including the Setup self test. */
     private fun requestNotificationPermissionIfNeeded() {
-        val perm = android.Manifest.permission.POST_NOTIFICATIONS
-        if (checkSelfPermission(perm) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(arrayOf(perm), 1)
+        val wanted = listOf(
+            android.Manifest.permission.POST_NOTIFICATIONS,
+            AdbAccess.LOCAL_NETWORK_PERMISSION,
+        ).filter {
+            checkSelfPermission(it) != android.content.pm.PackageManager.PERMISSION_GRANTED
         }
+        if (wanted.isNotEmpty()) requestPermissions(wanted.toTypedArray(), 1)
     }
 
     override fun onResume() {
@@ -85,7 +86,6 @@ class MainActivity : ComponentActivity() {
         Store.get(this).refreshStatus()
     }
 
-    /** A test the user started by hand must not outlive the screen they started it from. */
     override fun onStop() {
         super.onStop()
         Store.get(this).stopPreview()
@@ -102,7 +102,6 @@ private enum class Tab(val label: String, val icon: ImageVector) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun App(store: Store) {
-    // saved, so a rotation or a recreated activity does not drop the user back on Live
     var tabIndex by rememberSaveable { mutableIntStateOf(0) }
     val tab = Tab.entries[tabIndex.coerceIn(0, Tab.entries.lastIndex)]
     val status by store.status.collectAsStateWithLifecycle()
@@ -110,9 +109,6 @@ private fun App(store: Store) {
     val haptics = LocalHapticFeedback.current
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
-    // Tied to the lifecycle, not just the composition: a plain LaunchedEffect keeps its coroutine
-    // running once the activity stops, so this polled the helper over binder and file I/O every 1.5s
-    // in the background, for a screen nobody was looking at.
     val owner = LocalLifecycleOwner.current
     LaunchedEffect(owner) {
         owner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -126,7 +122,6 @@ private fun App(store: Store) {
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            // single-line bar: the hero already carries the visual weight
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -167,7 +162,7 @@ private fun App(store: Store) {
             }
         },
     ) { pad ->
-        // tabs slide in the direction of travel, like the system's pagers
+
         AnimatedContent(
             targetState = tab,
             transitionSpec = {

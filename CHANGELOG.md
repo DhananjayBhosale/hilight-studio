@@ -4,6 +4,20 @@ All notable changes to HiLight Studio are documented here.
 
 ## [Unreleased]
 
+## [1.1.0-experimental]
+
+- Added built-in setup: HiLight Studio now pairs with the phone's own Wireless debugging service
+  and starts its renderer itself, so no computer, no Shizuku install, and no typed shell commands
+  are needed.
+- Pairing is entered from a reply notification, so the Settings pairing dialog can stay open while
+  the six-digit code is sent.
+- The renderer is re-attached automatically after a reboot or an app update, and whenever the app
+  finds it is no longer running.
+- Added `INTERNET`, `ACCESS_NETWORK_STATE`, and `ACCESS_LOCAL_NETWORK`, used only to find and reach
+  the phone's own debug daemon, and `RECEIVE_BOOT_COMPLETED` for the automatic reconnect. Android 17
+  requires the local-network permission at runtime and asks for it on first launch.
+- Shizuku and the two-command ADB flow are still available as alternatives.
+
 ## [1.0.4-experimental] - 2026-08-20
 
 - Released the first APK signed with HiLight Studio's permanent release certificate, establishing

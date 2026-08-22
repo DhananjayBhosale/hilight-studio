@@ -55,12 +55,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
-/**
- * The Pixel-flavoured building blocks: tonal cards, springy presses, pill selectors and the little
- * animated status affordances the system UI uses.
- */
-
-/** Pixel's system surfaces squash slightly when touched, on a spring rather than a curve. */
 @Composable
 private fun Modifier.pressSquash(pressed: Boolean, min: Float = 0.965f): Modifier {
     val scale by animateFloatAsState(
@@ -131,7 +125,6 @@ fun Caption(text: String, modifier: Modifier = Modifier) {
     )
 }
 
-/** Status chip with a breathing dot, the way Pixel shows a live connection. */
 @Composable
 fun LivePill(text: String, ok: Boolean, modifier: Modifier = Modifier) {
     val bg by animateColorAsState(
@@ -172,7 +165,6 @@ fun BreathingDot(color: Color, animate: Boolean, size: Int = 8) {
     )
 }
 
-/** Quick-Settings style tile: big rounded square, icon over label, springy. */
 @Composable
 fun PixelTile(
     label: String,
@@ -192,7 +184,7 @@ fun PixelTile(
     Column(
         modifier
             .pressSquash(pressed, min = 0.94f)
-            // clip first: an unclipped ripple paints a rectangle outside the tile's rounded shape
+
             .clip(MaterialTheme.shapes.medium)
             .background(container)
             .clickable(interactionSource = interaction, indication = ripple()) {
@@ -218,7 +210,6 @@ fun PixelTile(
     }
 }
 
-/** Big primary toggle row, haptic on change like the system's own switches. */
 @Composable
 fun PixelToggleRow(
     title: String,
@@ -268,7 +259,6 @@ fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     }
 }
 
-/** Slider with the value shown in a tonal badge that animates as it changes. */
 @Composable
 fun PixelSlider(
     label: String,
@@ -308,12 +298,6 @@ fun PixelSlider(
     }
 }
 
-/**
- * Button text that never wraps.
- *
- * Buttons sharing a row are equal width, so a label that wraps makes one button taller than its
- * neighbours — which is exactly how the row ends up looking crooked.
- */
 @Composable
 fun ButtonLabel(text: String) {
     Text(
@@ -325,7 +309,6 @@ fun ButtonLabel(text: String) {
     )
 }
 
-/** Pill segmented selector — the control Pixel uses for small either/or choices. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun <T> SegmentedSelector(
@@ -351,12 +334,6 @@ fun <T> SegmentedSelector(
     }
 }
 
-/**
- * Two-step confirmation, used before letting the LEDs stay on longer than 30 seconds.
- *
- * Deliberately two dialogs rather than one: the first explains, the second makes the user commit. Any
- * dismissal anywhere cancels, so the safe default survives an accidental tap.
- */
 @Composable
 fun DoubleConfirm(
     firstTitle: String,
@@ -387,7 +364,6 @@ fun DoubleConfirm(
     )
 }
 
-/** Slider whose upper range is gated behind [DoubleConfirm]. */
 @Composable
 fun GatedDurationSlider(
     label: String,
@@ -435,7 +411,6 @@ fun GatedDurationSlider(
     }
 }
 
-/** Sub-second values must not read as "0s", which is what integer seconds would give. */
 fun formatDuration(ms: Int): String = when {
     ms >= 60_000 -> {
         val m = ms / 60_000

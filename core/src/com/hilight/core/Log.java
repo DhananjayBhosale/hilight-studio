@@ -1,11 +1,6 @@
 package com.hilight.core;
 
-/**
- * Logging that works in both hosts: the adb helper writes to stdout (its log file), and the Shizuku
- * user service has no stdout worth reading, so everything also goes to logcat under one tag.
- */
 public final class Log {
-
     public static final String TAG = "HiLightCore";
 
     private Log() { }

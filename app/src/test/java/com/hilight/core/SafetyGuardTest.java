@@ -7,7 +7,6 @@ import static org.junit.Assert.assertTrue;
 import org.junit.Test;
 
 public final class SafetyGuardTest {
-
     private static final int[] RED = {0xFFFF0000};
 
     @Test

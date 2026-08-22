@@ -5,23 +5,7 @@ import java.io.FileOutputStream;
 import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
 
-/**
- * ADB host: `app_process` entry point, launched under the shell UID.
- *
- * This class ships inside the APK, so it can be started straight out of the installed app with no
- * file to push:
- *
- *   adb shell "CLASSPATH=$(pm path com.hilight.studio | head -1 | cut -d: -f2) \
- *              app_process / com.hilight.core.AdbHelper"
- *
- * The app cannot bind a cross-UID binder to us (a shell-UID process is killed by ActivityManager as
- * soon as it touches a ContentProvider), so state arrives as a JSON file that we poll.
- *
- * File ownership matters: on external storage a file keeps its creator's UID, and a file created
- * here would be unreadable by the app. The app creates both files; we only overwrite in place.
- */
 public final class AdbHelper {
-
     private static final long POLL_MS = 100;
     private static final long STATUS_MS = 1000;
     private static final String DEFAULT_DIR =
@@ -67,22 +51,11 @@ public final class AdbHelper {
         }
     }
 
-    /**
-     * Applies the state file whenever it has been rewritten.
-     *
-     * Any rewrite counts, even one whose bytes are unchanged: the document carries commands as well
-     * as state — "arm" restarts the auto-off window — so an identical re-push is a fresh instruction,
-     * not a no-op, and comparing contents would swallow it.
-     *
-     * The markers are recorded only once the read has produced something, so a read that loses the
-     * race with the writer and comes back empty is retried on the next poll instead of being
-     * discarded. (The old order recorded the file as seen first, which lost that update for good.)
-     */
     private void reloadIfChanged() {
         long m = stateFile.lastModified(), s = stateFile.length();
         if (m == stamp && s == size) return;
         String raw = read(stateFile);
-        if (raw == null || raw.isEmpty()) return;       // leave the markers; try again next poll
+        if (raw == null || raw.isEmpty()) return;
         stamp = m;
         size = s;
         engine.setState(raw);
@@ -97,7 +70,6 @@ public final class AdbHelper {
             return;
         }
         try {
-            // in-place truncating write, so the app stays the file's owner
             byte[] data = engine.status().getBytes(StandardCharsets.UTF_8);
             try (FileOutputStream f = new FileOutputStream(statusFile, false)) {
                 f.write(data);

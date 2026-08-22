@@ -5,16 +5,14 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
 
-/** Turns notifications from chosen apps into HiLight alerts. */
 class NotificationTrigger : NotificationListenerService() {
-
     private val store by lazy { Store.get(this) }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         Log.d(TAG, "posted by ${sbn.packageName}")
         if (sbn.packageName == packageName && sbn.notification.channelId == "fg_watch") return
         val rule = store.ruleFor(sbn.packageName, Trigger.NOTIFICATION) ?: return
-        if (sbn.isOngoing) return                       // media/progress notifications repeat a lot
+        if (sbn.isOngoing) return
         if (rule.onlyWhenScreenOff && screenOn()) return
         if (store.respectDnd.value && inDoNotDisturb()) {
             Log.i(TAG, "suppressed by Do Not Disturb")
@@ -25,10 +23,6 @@ class NotificationTrigger : NotificationListenerService() {
         store.fireAlert(rule)
     }
 
-    /**
-     * The listener sees the current interruption filter without needing policy access, which a plain
-     * app would.
-     */
     private fun inDoNotDisturb(): Boolean =
         currentInterruptionFilter.let {
             it == INTERRUPTION_FILTER_PRIORITY ||

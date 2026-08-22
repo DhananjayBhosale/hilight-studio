@@ -1,12 +1,6 @@
 package com.hilight.core;
 
-/**
- * Pure, stateful safety limiter for the LED renderer.
- *
- * Keeping this separate from Android and binder work makes the timing limits directly testable.
- */
 final class SafetyGuard {
-
     static final long FRAME_MS = 33;
     static final long DUTY_WINDOW_MS = 10 * 60_000;
     static final double MAX_DUTY = 0.5;

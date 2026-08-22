@@ -51,7 +51,6 @@ import androidx.compose.ui.unit.dp
 import android.widget.Toast
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
-/** The always-on look: pattern, colours, timing. */
 @Composable
 fun AmbientScreen(store: Store) {
     val ambient by store.ambient.collectAsStateWithLifecycle()
@@ -77,7 +76,6 @@ fun AmbientScreen(store: Store) {
         }
     }
 
-    // options morph rather than jump when the pattern changes
     AnimatedContent(
         targetState = ambient.pattern,
         transitionSpec = { fadeIn(tween(180)).togetherWith(fadeOut(tween(120))) },
@@ -214,7 +212,6 @@ fun AmbientScreen(store: Store) {
     }
 }
 
-/** Saved looks: apply with a tap, save the current one, and move them between devices as JSON. */
 @Composable
 private fun PresetsCard(store: Store) {
     val ctx = LocalContext.current
@@ -335,7 +332,6 @@ private fun shareText(ctx: android.content.Context, text: String) {
     ctx.startActivity(android.content.Intent.createChooser(send, "Export presets"))
 }
 
-/** Scrolling pattern picker whose selection animates in colour and size. */
 @Composable
 fun PatternCarousel(
     selected: Pattern,
@@ -345,7 +341,6 @@ fun PatternCarousel(
     val haptics = LocalHapticFeedback.current
     val listState = rememberLazyListState()
 
-    // keep the current pattern on screen, including when it is restored from settings
     LaunchedEffect(selected, options) {
         val index = options.indexOf(selected)
         if (index >= 0) listState.animateScrollToItem(index, scrollOffset = -120)

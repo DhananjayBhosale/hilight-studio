@@ -7,6 +7,8 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -28,6 +30,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -35,42 +38,15 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
-/**
- * Clears any renderer already holding the array, before a new one is started.
- *
- * Only one renderer may drive the LEDs, but nothing stops a second from opening its own session, and
- * a leftover one goes on pushing black — which wins over the live renderer, so the array stays dark
- * while every status readout insists it is working. Two ways in: running the start command twice
- * without a reboot, and a Shizuku user service, which is a daemon and survives both Shizuku being
- * stopped and this app being uninstalled.
- *
- * One `pkill` with an alternation rather than two, because `-f` matches this very command line: the
- * first `pkill` would kill the shell before the second could run. One pass signals every match
- * including that shell, which is harmless when nothing follows it — hence a separate line from
- * [ADB_COMMAND]. The quoting here is safe in both Windows shells and in sh.
- */
 const val ADB_RESET =
     "adb shell \"pkill -f 'com.hilight.(core.AdbHelper|studio:hilight)'\""
 
-/**
- * Starts the renderer out of the installed APK.
- *
- * Single quotes matter: they stop the desktop shell touching `$(...)`, so the *phone* resolves the
- * APK path with its own `pm`. Substituting on the desktop instead makes the command shell-specific —
- * it needs a second `adb shell`, it breaks on any adb that ends lines with CRLF (the trailing return
- * lands in CLASSPATH), and it cannot work in a Windows shell at all, where `head` and `cut` are
- * missing. All of those fail silently, with an empty log.
- *
- * Windows Command Prompt has no single quotes; [ADB_COMMAND_CMD] is the same thing with double ones.
- * Quoting keeps `|`, parentheses, redirects, and `&` away from cmd.exe, while cmd.exe leaves `$`
- * alone, so the phone receives and expands the command substitution.
- */
 const val ADB_COMMAND = ADB_RESET + "\n" +
     "adb shell 'CLASSPATH=${'$'}(pm path com.hilight.studio | head -1 | cut -d: -f2) " +
         "nohup app_process / com.hilight.core.AdbHelper > /data/local/tmp/hilight.log 2>&1 &'"
 
-/** The same pair for Windows Command Prompt, which does not understand single quotes. */
 const val ADB_COMMAND_CMD = ADB_RESET + "\n" +
     "adb shell \"CLASSPATH=${'$'}(pm path com.hilight.studio | head -1 | cut -d: -f2) " +
         "nohup app_process / com.hilight.core.AdbHelper > /data/local/tmp/hilight.log 2>&1 &\""
@@ -105,6 +81,7 @@ fun SetupScreen(store: Store) {
             notifAccess = hasNotificationAccess(ctx)
             usageAccess = ForegroundWatcher.hasUsageAccess(ctx)
             store.shizuku.refresh()
+            AdbAccess.refresh(ctx)
             delay(1500)
         }
     }
@@ -177,14 +154,17 @@ fun SetupScreen(store: Store) {
 
     PixelCard(tone = 2) {
         SectionTitle("Privileged access")
-        Caption("The renderer needs shell-UID privileges. Choose how it starts.")
+        Caption(
+            "The renderer needs shell-UID privileges, which Android only grants through the debug " +
+                "service. Built-in access sets that up on the phone itself.",
+        )
         SegmentedSelector(
             options = Transport.entries,
             selected = transport,
             label = { it.label },
             onSelect = { store.setTransport(it) },
         )
-        if (transport == Transport.AUTO) Caption("Prefers Shizuku, falls back to ADB.")
+        if (transport == Transport.AUTO) Caption("Prefers Shizuku when it is running, otherwise built-in.")
     }
 
     AnimatedContent(
@@ -193,8 +173,8 @@ fun SetupScreen(store: Store) {
         label = "transportCards",
     ) { t ->
         Column {
-            if (t != Transport.ADB) ShizukuCard(store, shizukuState)
             if (t != Transport.SHIZUKU) AdbCard(ctx)
+            if (t != Transport.ADB) ShizukuCard(store, shizukuState)
         }
     }
 
@@ -310,37 +290,201 @@ private fun ShizukuCard(store: Store, state: ShizukuBackend.State) {
 
 @Composable
 private fun AdbCard(ctx: Context) {
+    val scope = rememberCoroutineScope()
+    val state by AdbAccess.state.collectAsStateWithLifecycle()
+    val detail by AdbAccess.detail.collectAsStateWithLifecycle()
+    val phase by AdbPairingService.phase.collectAsStateWithLifecycle()
+    val phaseDetail by AdbPairingService.detail.collectAsStateWithLifecycle()
+    var manual by remember { mutableStateOf(false) }
+    val localNetwork = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { AdbAccess.refresh(ctx) }
+
     PixelCard {
-        SectionTitle("ADB")
-        Caption(
-            "Run both lines with the phone plugged in. Nothing to push. Re-run after a reboot — and " +
-                "the first line matters every time, since a leftover renderer keeps the array dark.",
+        SectionTitle(
+            "Built-in access",
+            trailing = { LivePill(state.label, state == AdbAccessState.READY) },
         )
-        Text(
-            ADB_COMMAND,
-            style = MaterialTheme.typography.bodySmall,
-            fontFamily = FontFamily.Monospace,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    MaterialTheme.colorScheme.surfaceContainerHighest,
-                    MaterialTheme.shapes.medium,
-                )
-                .padding(14.dp),
-        )
-        Caption(
-            "Works in Terminal on macOS and Linux, and in PowerShell. In Windows Command Prompt, " +
-                "copy the cmd.exe version instead — it has no single quotes.",
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Button(onClick = { copy(ctx, ADB_COMMAND, "Command copied") }) { ButtonLabel("Copy") }
-            TextButton(onClick = { copy(ctx, ADB_COMMAND_CMD, "cmd.exe version copied") }) {
-                ButtonLabel("Copy for cmd.exe")
+
+        AnimatedContent(
+            targetState = state,
+            transitionSpec = { fadeIn(tween(160)).togetherWith(fadeOut(tween(100))) },
+            label = "adbState",
+        ) { s ->
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                when (s) {
+                    AdbAccessState.LOCAL_NETWORK_OFF -> {
+                        Caption(
+                            "Android needs your permission for HiLight Studio to reach the phone's " +
+                                "own debug service on the local network. Nothing leaves the device.",
+                        )
+                        Button(onClick = { localNetwork.launch(AdbAccess.LOCAL_NETWORK_PERMISSION) }) {
+                            ButtonLabel("Allow local network")
+                        }
+                    }
+
+                    AdbAccessState.DEVELOPER_OFF -> {
+                        Caption(
+                            "Turn on Developer options first: Settings, About phone, then tap " +
+                                "Build number seven times.",
+                        )
+                        Button(onClick = { openAboutPhone(ctx) }) { ButtonLabel("Open About phone") }
+                    }
+
+                    AdbAccessState.WIRELESS_OFF -> {
+                        Caption(
+                            "Turn on Wireless debugging and stay on Wi-Fi. HiLight talks to the " +
+                                "on-device debug service over the loopback address, so no computer " +
+                                "is involved.",
+                        )
+                        Button(onClick = { AdbAccess.openWirelessDebugging(ctx) }) {
+                            ButtonLabel("Open Wireless debugging")
+                        }
+                    }
+
+                    AdbAccessState.NEEDS_PAIRING -> {
+                        Caption(
+                            "One-time pairing. Tap below, then in Wireless debugging choose " +
+                                "\"Pair device with pairing code\" and leave that dialog open — a " +
+                                "HiLight notification will ask you for the six digits.",
+                        )
+                        if (notificationsEnabled(ctx)) {
+                            Button(
+                                onClick = {
+                                    AdbPairingService.start(ctx)
+                                    AdbAccess.openWirelessDebugging(ctx)
+                                },
+                            ) { ButtonLabel("Pair with this phone") }
+                        } else {
+                            Caption(
+                                "Notifications from HiLight Studio are turned off, so the code " +
+                                    "prompt cannot appear. Turn them on to pair.",
+                            )
+                            Button(onClick = { openAppNotificationSettings(ctx) }) {
+                                ButtonLabel("Turn on notifications")
+                            }
+                        }
+                        PairingProgress(phase, phaseDetail)
+                    }
+
+                    AdbAccessState.WORKING -> {
+                        Caption("Finding the debug service and starting the renderer.")
+                        PairingProgress(phase, phaseDetail)
+                    }
+
+                    AdbAccessState.READY -> {
+                        Caption(
+                            "The renderer is running in a shell-UID process. Pairing is remembered, " +
+                                "so this comes back on its own after a reboot.",
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            FilledTonalButton(onClick = { scope.launch { AdbAccess.retry(ctx) } }) {
+                                ButtonLabel("Restart renderer")
+                            }
+                            TextButton(onClick = { AdbAccess.forget(ctx) }) {
+                                ButtonLabel("Forget pairing")
+                            }
+                        }
+                    }
+
+                    AdbAccessState.FAILED -> {
+                        Caption(detail ?: "Could not reach the on-device debug service.")
+                        Caption(
+                            "Wireless debugging must be on and the phone must be on a Wi-Fi " +
+                                "network for the service to be discoverable.",
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Button(onClick = { scope.launch { AdbAccess.retry(ctx) } }) {
+                                ButtonLabel("Try again")
+                            }
+                            TextButton(onClick = { AdbAccess.openWirelessDebugging(ctx) }) {
+                                ButtonLabel("Wireless debugging")
+                            }
+                        }
+                    }
+
+                    else -> {
+                        Caption("Checking whether the renderer is reachable.")
+                        Button(onClick = { scope.launch { AdbAccess.retry(ctx) } }) {
+                            ButtonLabel("Connect")
+                        }
+                    }
+                }
             }
         }
-        Caption("It worked if the array responds. Nothing printed means it did not start.")
-        TextButton(onClick = { share(ctx, ADB_COMMAND) }) { ButtonLabel("Send to computer") }
+
+        TextButton(onClick = { manual = !manual }) {
+            ButtonLabel(if (manual) "Hide computer fallback" else "Use a computer instead")
+        }
+        if (manual) ManualCommands(ctx)
+    }
+}
+
+@Composable
+private fun PairingProgress(phase: PairingPhase, detail: String?) {
+    if (phase == PairingPhase.OFF) return
+    val text = detail ?: when (phase) {
+        PairingPhase.SEARCHING -> "Waiting for the pairing dialog to appear."
+        PairingPhase.WAITING_FOR_CODE -> "Enter the six digits in the HiLight notification."
+        PairingPhase.PAIRING -> "Pairing and starting the renderer."
+        PairingPhase.DONE -> "Paired."
+        PairingPhase.FAILED -> "Pairing did not finish."
+        PairingPhase.OFF -> return
+    }
+    Caption(text)
+}
+
+@Composable
+private fun ManualCommands(ctx: Context) {
+    Caption(
+        "Only needed if Wireless debugging is unavailable. Run both lines with the phone plugged " +
+            "in, and re-run them after every reboot.",
+    )
+    Text(
+        ADB_COMMAND,
+        style = MaterialTheme.typography.bodySmall,
+        fontFamily = FontFamily.Monospace,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                MaterialTheme.colorScheme.surfaceContainerHighest,
+                MaterialTheme.shapes.medium,
+            )
+            .padding(14.dp),
+    )
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Button(onClick = { copy(ctx, ADB_COMMAND, "Command copied") }) { ButtonLabel("Copy") }
+        TextButton(onClick = { copy(ctx, ADB_COMMAND_CMD, "cmd.exe version copied") }) {
+            ButtonLabel("Copy for cmd.exe")
+        }
+    }
+    TextButton(onClick = { share(ctx, ADB_COMMAND) }) { ButtonLabel("Send to computer") }
+}
+
+private fun openAboutPhone(ctx: Context) {
+    val candidates = listOf(
+        Intent(Settings.ACTION_DEVICE_INFO_SETTINGS),
+        Intent(Settings.ACTION_SETTINGS),
+    )
+    for (intent in candidates) {
+        if (runCatching { ctx.startActivity(intent) }.isSuccess) return
+    }
+}
+
+private fun notificationsEnabled(ctx: Context): Boolean =
+    ctx.getSystemService(android.app.NotificationManager::class.java)
+        ?.areNotificationsEnabled() ?: false
+
+private fun openAppNotificationSettings(ctx: Context) {
+    val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+        .putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName)
+    if (runCatching { ctx.startActivity(intent) }.isSuccess) return
+    runCatching {
+        ctx.startActivity(
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                .setData(Uri.fromParts("package", ctx.packageName, null))
+        )
     }
 }
 
@@ -387,7 +531,6 @@ private fun postSelfTestNotification(ctx: Context) {
     )
 }
 
-/** minutes since midnight to a 24-hour clock string */
 fun clock(minutes: Int): String = "%02d:%02d".format(minutes / 60, minutes % 60)
 
 private fun pickTime(ctx: Context, currentMinutes: Int, onPicked: (Int) -> Unit) {

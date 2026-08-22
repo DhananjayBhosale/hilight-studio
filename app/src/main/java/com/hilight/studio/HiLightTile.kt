@@ -6,14 +6,7 @@ import android.content.Intent
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 
-/**
- * Quick Settings tile: take the array over, or hand it back, without opening the app.
- *
- * The tile is unavailable when no renderer is connected, and tapping it in that state opens Setup
- * rather than silently doing nothing.
- */
 class HiLightTile : TileService() {
-
     private val store by lazy { Store.get(this) }
 
     private val main = android.os.Handler(android.os.Looper.getMainLooper())
@@ -22,7 +15,7 @@ class HiLightTile : TileService() {
         super.onStartListening()
         store.refreshStatus()
         render()
-        // the renderer connection is asynchronous, so re-read shortly after binding
+
         main.postDelayed({
             store.refreshStatus()
             render()
@@ -44,8 +37,7 @@ class HiLightTile : TileService() {
         val tile = qsTile ?: return
         val status = store.status.value
         val on = store.enabled.value
-        // Never UNAVAILABLE: this build hides unavailable third-party tiles entirely, and a tile the
-        // user cannot even tap to find out why is worse than one that explains itself in the subtitle.
+
         tile.state = if (on && status.alive) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
         tile.label = "HiLight"
         tile.subtitle = when {
@@ -69,7 +61,6 @@ class HiLightTile : TileService() {
     }
 
     companion object {
-        /** Nudges the tile to re-read state after the app changes something. */
         fun refresh(ctx: android.content.Context) {
             runCatching {
                 requestListeningState(ctx, ComponentName(ctx, HiLightTile::class.java))

@@ -37,12 +37,6 @@ val PRESET_COLORS = listOf(
     0xFF2979FF, 0xFF7C4DFF, 0xFFFF4081, 0xFFFFFFFF, 0xFFFF80AB,
 ).map { it.toInt() }
 
-/**
- * Swatches plus hue / saturation / intensity.
- *
- * The selected swatch grows on a spring and keeps a ring, the way Pixel's wallpaper and theme
- * pickers behave, and the hue track is the gradient itself rather than a tinted bar.
- */
 @Composable
 fun ColorPicker(color: Int, onColor: (Int) -> Unit, label: String = "Colour") {
     val hsv = FloatArray(3).also { android.graphics.Color.colorToHSV(color, it) }
@@ -93,7 +87,6 @@ fun ColorPicker(color: Int, onColor: (Int) -> Unit, label: String = "Colour") {
             }
         }
 
-        // hue: the track is the spectrum, the thumb rides on top
         Box(
             Modifier
                 .fillMaxWidth()
@@ -135,13 +128,6 @@ fun ColorPicker(color: Int, onColor: (Int) -> Unit, label: String = "Colour") {
     }
 }
 
-/**
- * Eight saturated LED colours derived from the app's current Material You scheme — which, with
- * wallpaper colours on, is derived from the wallpaper itself.
- *
- * The scheme's key hues are taken and their saturation and value pushed up, because container tones
- * are pale by design and pale is nearly invisible on an LED.
- */
 @Composable
 fun wallpaperLedColours(): List<Int> {
     val scheme = MaterialTheme.colorScheme
@@ -150,7 +136,7 @@ fun wallpaperLedColours(): List<Int> {
     val hues = seeds.map { c ->
         FloatArray(3).also { android.graphics.Color.colorToHSV(c, it) }[0]
     }
-    // walk between the key hues so all eight LEDs differ but stay in the wallpaper's family
+
     return (0 until LED_COUNT).map { i ->
         val t = i.toFloat() / LED_COUNT * hues.size
         val a = hues[t.toInt().coerceAtMost(hues.lastIndex)]

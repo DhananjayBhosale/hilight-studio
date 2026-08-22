@@ -5,12 +5,6 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
-/**
- * Release signing material, from `key.properties` at the repo root or the matching env vars.
- *
- * Both are outside version control (see .gitignore), so the keystore and its passwords never land in
- * the repository. A clone without them still builds — the release APK just comes out unsigned.
- */
 val releaseKeystore = Properties().apply {
     val f = rootProject.file("key.properties")
     if (f.exists()) f.inputStream().use { load(it) }
@@ -25,12 +19,12 @@ android {
 
     defaultConfig {
         applicationId = "com.hilight.studio"
-        // HiLight is a Pixel 11 / Android 17 feature. Keeping this floor aligned with the
-        // supported hardware prevents installation on devices the renderer cannot support.
+
         minSdk = 37
         targetSdk = 37
-        versionCode = 5
-        versionName = "1.0.4"
+        versionCode = 6
+        versionName = "1.1.0"
+        ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
 
     signingConfigs {
@@ -48,9 +42,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            // Public APKs use the permanent release certificate when signing material is present
-            // and remain non-debuggable. The stable certificate enables future in-place updates;
-            // Play Protect reputation checks are separate and are not guaranteed by signing alone.
+
             signingConfig = signingConfigs.getByName("release").takeIf { it.storeFile != null }
         }
     }
@@ -62,9 +54,6 @@ android {
     }
 
     sourceSets {
-        // The renderer core is shared with the adb host, which is compiled separately into a dex by
-        // scripts/build-helper.sh. Including it here also means AdbHelper ships inside the APK, so
-        // the adb command can run straight out of the installed app with nothing to push.
         getByName("main").java.srcDir("../core/src")
     }
 
@@ -85,5 +74,8 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
+    implementation("com.github.MuntashirAkon:libadb-android:3.1.1")
+    implementation("org.bouncycastle:bcprov-jdk15to18:1.81")
+    implementation("org.conscrypt:conscrypt-android:2.5.3")
     testImplementation("junit:junit:4.13.2")
 }

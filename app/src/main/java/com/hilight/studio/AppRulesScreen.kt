@@ -61,7 +61,6 @@ import kotlinx.coroutines.withContext
 
 private data class InstalledApp(val pkg: String, val label: String, val info: ApplicationInfo?)
 
-/** "Show X for app Y" rules. */
 @Composable
 fun AppRulesScreen(store: Store) {
     val rules by store.rules.collectAsStateWithLifecycle()
@@ -79,7 +78,7 @@ fun AppRulesScreen(store: Store) {
     }
 
     rules.forEachIndexed { index, rule ->
-        // cards ease in rather than appearing, staggered down the list
+
         AnimatedVisibility(
             visible = true,
             enter = fadeIn(tween(220, delayMillis = index * 40)) +
@@ -91,7 +90,6 @@ fun AppRulesScreen(store: Store) {
                 onToggle = { store.upsertRule(rule.copy(enabled = it)) },
                 onEdit = { editing = rule },
                 onTest = {
-                    // test what the rule will actually do, including how long it stays lit
                     store.preview(
                         rule.pattern, rule.color, rule.speedMs, rule.brightness, rule.durationMs,
                     )
@@ -220,7 +218,6 @@ private fun AppPickerDialog(onDismiss: () -> Unit, onPick: (InstalledApp) -> Uni
                 )
                 val shown = apps.filter { it.label.contains(query, ignoreCase = true) }
                 LazyColumn(Modifier.heightIn(max = 380.dp)) {
-                    // a rule that covers every app without one of its own
                     item(key = AppRule.ANY_APP) {
                         Row(
                             Modifier

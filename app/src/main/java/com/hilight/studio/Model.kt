@@ -3,13 +3,6 @@ package com.hilight.studio
 import org.json.JSONArray
 import org.json.JSONObject
 
-/**
- * Patterns the renderer understands.
- *
- * [cycleMeaning] spells out what one "cycle" is for each pattern, because it means something different
- * every time. [usesSpeed] is false for the patterns whose maths ignore speedMs entirely — those must
- * not show a cycle slider that does nothing.
- */
 enum class Pattern(
     val key: String,
     val label: String,
@@ -36,7 +29,6 @@ enum class Pattern(
 
 enum class Trigger { NOTIFICATION, FOREGROUND }
 
-/** The always-on look: what HiLight shows when nothing else is happening. */
 data class Ambient(
     val pattern: Pattern = Pattern.OFF,
     val color: Int = 0xFF7C4DFF.toInt(),
@@ -90,7 +82,6 @@ data class Ambient(
         )
     }
 
-    /** Local persistence form (keeps UI-only fields the helper does not need). */
     fun toPrefsJson(): JSONObject = JSONObject().apply {
         put("pattern", pattern.key)
         put("color", color.toUInt().toLong())
@@ -107,7 +98,6 @@ data class Ambient(
     }
 }
 
-/** One "show X for app Y" rule. */
 data class AppRule(
     val pkg: String,
     val label: String,
@@ -120,10 +110,9 @@ data class AppRule(
     val speedMs: Int = 800,
     val brightness: Float = 1f,
     val onlyWhenScreenOff: Boolean = false,
-    /** only fire when the title or text contains this, case-insensitive; empty means anything */
+
     val keyword: String = "",
 ) {
-    /** The catch-all rule, which matches any app without one of its own. */
     val isCatchAll: Boolean get() = pkg == ANY_APP
 
     fun toPrefsJson(): JSONObject = JSONObject().apply {
@@ -142,7 +131,6 @@ data class AppRule(
     }
 
     companion object {
-        /** Package sentinel for the catch-all rule. */
         const val ANY_APP = "*"
 
         fun fromJson(o: JSONObject) = AppRule(
@@ -163,7 +151,6 @@ data class AppRule(
     }
 }
 
-/** A saved look. Only the ambient config is stored; rules are separate. */
 data class Preset(val name: String, val ambient: Ambient) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("name", name)
@@ -178,7 +165,6 @@ data class Preset(val name: String, val ambient: Ambient) {
     }
 }
 
-/** Why the array is being held dark despite the master switch being on. */
 enum class Suppression(val short: String) {
     QUIET_HOURS("Quiet hours"),
     LOW_BATTERY("Low battery"),
@@ -186,20 +172,17 @@ enum class Suppression(val short: String) {
     SCREEN_ON("Screen-off only"),
 }
 
-/** Nothing may run indefinitely: these are the ceilings the UI enforces. */
 object Limits {
-    /** Battery level at or below which the array pauses, unless the user moves it. */
     const val BATTERY_DEFAULT_PCT = 10
     const val BATTERY_MIN_PCT = 5
     const val BATTERY_MAX_PCT = 50
     const val AMBIENT_DEFAULT_MS = 30_000
-    const val AMBIENT_MAX_MS = 300_000          // 5 minutes, behind two warnings
+    const val AMBIENT_MAX_MS = 300_000
     const val RULE_DEFAULT_MS = 10_000
-    const val RULE_MAX_MS = 60_000              // 1 minute, behind two warnings
-    const val WARN_ABOVE_MS = 30_000            // anything longer than this warns twice
+    const val RULE_MAX_MS = 60_000
+    const val WARN_ABOVE_MS = 30_000
 }
 
-/** What the helper is reporting back. */
 data class HelperStatus(
     val alive: Boolean,
     val ageMs: Long = -1,
@@ -207,13 +190,13 @@ data class HelperStatus(
     val ledCount: Int = 0,
     val sessionOpen: Boolean = false,
     val mode: String = "-",
-    /** ms left on the ambient auto-off window at the moment this status was read */
+
     val ambientRemainingMs: Long = 0,
-    /** the auto-off window has expired and the array is dark until the user acts */
+
     val ambientHeld: Boolean = false,
-    /** the duty-cycle guard is resting the array */
+
     val resting: Boolean = false,
-    /** how much of the duty allowance is used, 0-100 */
+
     val dutyPct: Int = 0,
 )
 

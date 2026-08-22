@@ -1,8 +1,4 @@
 #!/usr/bin/env bash
-# Compiles the shared renderer core into a standalone dex for the ADB transport.
-#
-# Only needed for the "push a dex" flow kept for development. The normal ADB path runs the same
-# classes straight out of the installed APK (see ADB_COMMAND in the app), so nothing is pushed.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

@@ -8,12 +8,7 @@ import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.sin
 
-/**
- * On-screen mirror of the helper's renderer, so the UI can show what the LEDs will do without
- * touching the hardware. Kept deliberately in step with HiLightHelper.render().
- */
 object Renderer {
-
     fun frame(pattern: Pattern, tMs: Long, cfg: Ambient, colorOverride: Int? = null): IntArray {
         val n = LED_COUNT
         val out = IntArray(n)
@@ -75,7 +70,6 @@ object Renderer {
             }
 
             Pattern.RANDOM -> {
-                // deterministic stand-in so the preview animates without flickering randomly
                 val step = t / max(120, cfg.randomIntervalMs).toLong()
                 for (i in 0 until n) {
                     val seed = if (cfg.randomPerLed) step * 31 + i else step

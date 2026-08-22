@@ -6,16 +6,7 @@ import android.util.Log
 import org.json.JSONObject
 import java.io.File
 
-/**
- * File channel used by the ADB transport.
- *
- * Cross-UID binder is not available there: the helper runs as the adb shell UID (2000) so that it can
- * hold CONTROL_DEVICE_LIGHTS, and a shell process that touches a ContentProvider gets killed by
- * ActivityManager. So state and status are exchanged as two small JSON files. (The Shizuku transport
- * has a real binder and does not use any of this.)
- */
 object Bridge {
-
     private const val TAG = "HiLightBridge"
     const val DIR_NAME = "hilight"
     const val DEVICE_DIR = "/storage/emulated/0/Android/data/com.hilight.studio/files/hilight"
@@ -26,13 +17,6 @@ object Bridge {
     fun stateFile(ctx: Context) = File(dir(ctx), "state.json")
     private fun statusFile(ctx: Context) = File(dir(ctx), "helper_status.json")
 
-    /**
-     * Both files must be created by the app, not by the helper.
-     *
-     * On external storage a file keeps the uid of whoever created it, and the app has no access to a
-     * file the shell UID created — but the shell can happily write into a file the app owns. So the
-     * app pre-creates both, and the helper only ever overwrites them in place.
-     */
     fun ensureFiles(ctx: Context) {
         runCatching {
             dir(ctx)
@@ -41,16 +25,15 @@ object Bridge {
         }.onFailure { Log.w(TAG, "could not prepare bridge files", it) }
     }
 
-    /** Builds the state document both transports understand. */
     fun stateJson(
         enabled: Boolean,
         priority: Int,
         ambient: Ambient,
         alert: JSONObject?,
         ambientTimeoutMs: Int = Limits.AMBIENT_DEFAULT_MS,
-        /** true only for deliberate user action; see Engine's arm handling */
+
         arm: Boolean = true,
-        /** scales every frame, ambient and alert alike — used by dimmed quiet hours */
+
         dim: Float = 1f,
     ): String =
         JSONObject().apply {
@@ -64,23 +47,13 @@ object Bridge {
             if (alert != null) put("alert", alert)
         }.toString()
 
-    /**
-     * Replaces the state document the ADB helper polls.
-     *
-     * Synchronized because the scratch file has one fixed name: two threads could each write it and
-     * then rename, so whichever payload lost the write race was the one promoted and the other push
-     * vanished. Only this app writes the state file, so serialising here is enough.
-     */
     @Synchronized
     fun writeState(ctx: Context, json: String) {
-        // Never let a bridge failure take the UI down with it.
         runCatching {
             val target = stateFile(ctx)
             val tmp = File(target.parentFile, target.name + ".tmp")
             tmp.writeText(json)
             if (!tmp.renameTo(target)) {
-                // FUSE can refuse the rename; a direct write is fine because the helper reads whole
-                // files and simply retries when a parse fails.
                 target.writeText(json)
                 tmp.delete()
             }
@@ -94,7 +67,7 @@ object Bridge {
             val o = JSONObject(f.readText())
             val age = System.currentTimeMillis() - o.optLong("ts", 0)
             HelperStatus(
-                // the helper writes a heartbeat every second
+
                 alive = age in -5_000..4_000,
                 ageMs = age,
                 pid = o.optInt("pid", -1),
@@ -112,7 +85,6 @@ object Bridge {
         }
     }
 
-    /** Builds an alert payload for a rule; [durationMs] of 0 holds until cleared. */
     fun alertJson(
         id: Long,
         pattern: Pattern,
@@ -133,6 +105,5 @@ object Bridge {
         put("randomSmooth", true)
     }
 
-    /** Monotonic-ish alert ids so the renderer can tell a new alert from a re-push. */
     fun nextAlertId(): Long = SystemClock.elapsedRealtime()
 }

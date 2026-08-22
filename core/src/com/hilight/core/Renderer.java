@@ -5,24 +5,12 @@ import org.json.JSONObject;
 
 import java.util.Random;
 
-/**
- * Turns a pattern config into one frame of LED colours.
- *
- * Config keys: "mode" (ambient) or "pattern" (alert), "color" or "colors", "brightness", "speedMs",
- * "spread", "rotateMs", and the random-mode keys "randomIntervalMs" / "randomPerLed" /
- * "randomSmooth" / "randomSaturation".
- *
- * The app mirrors this maths in Kotlin for its on-screen preview; keep the two in step.
- */
 public final class Renderer {
-
     private final Random rnd = new Random();
 
-    // random-mode fade state
     private int[] randFrom, randTo;
     private long randStart, randDuration = 1500;
 
-    /** Discards animation state so the next frame starts a pattern cleanly. */
     public void reset() {
         randFrom = null;
         randTo = null;
@@ -32,7 +20,6 @@ public final class Renderer {
         int[] out = new int[n];
         if (cfg == null) return out;
 
-        // ambient configs carry "mode", alerts carry "pattern" — accept either
         String mode = cfg.optString("mode", cfg.optString("pattern", "off"));
         double bright = clamp01(cfg.optDouble("brightness", 1.0));
         long speed = Math.max(60, cfg.optLong("speedMs", 2000));
@@ -68,7 +55,6 @@ public final class Renderer {
             }
 
             case "pulse": {
-                // sharp attack, exponential decay — reads well as a notification
                 double phase = (t % speed) / (double) speed;
                 double k = phase < 0.12 ? phase / 0.12 : Math.exp(-(phase - 0.12) * 5);
                 for (int i = 0; i < n; i++) out[i] = scale(palette[i % palette.length], k);
@@ -162,8 +148,6 @@ public final class Renderer {
         }
         return new int[]{(int) (cfg.optLong("color", 0xFFFFFFFFL) | 0xFF000000L)};
     }
-
-    // ------------------------------------------------------------------------------ colour maths
 
     static double clamp01(double v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
 

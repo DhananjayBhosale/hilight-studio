@@ -59,10 +59,23 @@ HiLight Studio (normal app)                    privileged renderer (uid 2000 = s
 │ NotificationTrigger (listener)  │ ─────────► │   com.hilight.studio:hilight       │
 │ ForegroundWatcher (UsageStats)  │            ├────────────────────────────────────┤
 │ Store: layering + rules         │  2 JSON    │ ADB: com.hilight.core.AdbHelper    │
-│ Transport: Auto/Shizuku/ADB     │ ◄────────► │   run from the installed APK       │
-└─────────────────────────────────┘  files     └────────────────────────────────────┘
+│ Transport: Auto/Built-in/Shizuku│ ◄────────► │   run from the installed APK       │
+│ AdbAccess: own ADB client       │  files     │   started by the app, or by adb    │
+└─────────────────────────────────┘            └────────────────────────────────────┘
                                                 shared core: Engine + Renderer + LightsBackend
 ```
+
+**Built-in access (default).** The app is its own ADB client. It discovers the phone's debug daemon
+over mDNS, pairs once with the six-digit code from Wireless debugging, opens a TLS shell session to
+`127.0.0.1`, and runs the same two commands the manual flow used to ask for. From there it is the
+ADB transport: the helper polls `state.json` and writes `helper_status.json`. Discovery, pairing,
+and reconnection live in `AdbAccess`, `AdbPairingService`, and `AdbReconnect`.
+
+The pairing service (`_adb-tls-pairing._tcp`) is advertised only while the Settings pairing dialog
+is open, and the code is shown in that same dialog, so the code is collected from a notification
+with a `RemoteInput` reply action rather than from a field inside the app. The RSA key and its
+self-signed certificate are generated once and kept in app-private storage, so the daemon keeps
+trusting the app across reboots and updates.
 
 **Shizuku transport (preferred, no computer).** Shizuku launches `HiLightUserService` into a shell-UID
 process (`daemon(true)`, so it outlives the UI) and the app holds a real binder to it. State is
@@ -162,15 +175,19 @@ attribute either per-LED, so these figures are conservative by design rather tha
 
 ## Known limits
 
-- Privileged access has to be re-established after every reboot: either restart Shizuku (on-device,
-  ~30 s) or re-run the adb command. Nothing an installed app can do avoids this on a locked device.
-  A one-time setup would need either root or an unlocked bootloader (app in `/system/priv-app`).
+- Privileged access has to be re-established after every reboot. Built-in access does this itself
+  from a `BOOT_COMPLETED` receiver, retrying over a three-minute window because Wi-Fi and the debug
+  daemon are usually not up yet at boot; the Shizuku and manual ADB routes still need the user.
+  Wireless debugging must stay enabled either way. Removing that requirement entirely would need
+  root or an unlocked bootloader (app in `/system/priv-app`).
+- Built-in access needs the phone to be on a Wi-Fi network: the debug daemon advertises itself over
+  mDNS on that interface, and there is nothing to discover without it.
 - If Shizuku is (re)started while HiLight Studio is already running, reopen the app so Shizuku can hand
   it access. Shizuku's own "Authorized applications" count also resets when its server restarts, so it
   may ask for approval again.
 - While our session is open the system's own HiLight effects (calls, Gemini) are suppressed, so the
-  session is held only while there is actually something to show. The moment the array goes dark —
-  the auto-off deadline passing, an alert ending, the master switch going off — it is handed straight
+  session is held only while there is actually something to show. The moment the array goes dark,
+  whether from the auto-off deadline passing, an alert ending, or the master switch going off, it is handed straight
   back, and a rule firing reclaims it before the first frame. An all-black session left open beats
   the system's own effects, and because the Shizuku renderer is a daemon that outlives the app, that
   used to leave calls and Gemini dark until the phone was rebooted. The Setup tab still exposes the

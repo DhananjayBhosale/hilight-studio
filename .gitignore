@@ -19,3 +19,6 @@ skills-lock.json
 
 # Retain local logo explorations without publishing them.
 docs/media/hilight-studio-logo-v*.png
+
+# Internal working documentation, kept out of the published repository.
+internal-docs/

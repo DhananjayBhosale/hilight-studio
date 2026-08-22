@@ -2,20 +2,20 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Optional "while app is open" rules: user grants this in
-         Settings > Apps > Special app access > Usage access. -->
     <uses-permission
         android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
     <uses-permission
         android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
 
-    <!-- Shizuku transport: the user starts Shizuku once per boot, on-device via wireless
-         debugging or from adb, and approves this app in Shizuku's own dialog. -->
     <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
 
     <queries>
@@ -38,8 +38,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Long-pressing the Quick Settings tile lands here; without this filter the system has
-                 nowhere to send the gesture and it does nothing. -->
+
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
             </intent-filter>
@@ -53,7 +52,6 @@
             android:multiprocess="false"
             android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
 
-        <!-- Quick Settings tile: toggle the array without opening the app -->
         <service
             android:name=".HiLightTile"
             android:exported="true"
@@ -65,7 +63,6 @@
             </intent-filter>
         </service>
 
-        <!-- Per-app notification triggers -->
         <service
             android:name=".NotificationTrigger"
             android:exported="true"
@@ -76,7 +73,6 @@
             </intent-filter>
         </service>
 
-        <!-- "While app is open" triggers -->
         <service
             android:name=".ForegroundWatcher"
             android:exported="false"
@@ -85,5 +81,35 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Drives the HiLight LEDs from the foreground app" />
         </service>
+
+        <service
+            android:name=".AdbPairingService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Pairs with the on-device ADB daemon to start the renderer" />
+        </service>
+
+        <service
+            android:name=".AdbReconnectService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Restores privileged renderer access after a restart" />
+        </service>
+
+        <receiver
+            android:name=".BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

@@ -8,19 +8,7 @@ import android.os.IBinder;
 import java.lang.reflect.Method;
 import java.util.List;
 
-/**
- * Thin wrapper over the hidden ILightsManager binder interface.
- *
- * Reflection rather than the public android.hardware.lights.LightsManager because that needs a
- * Context, and both callers here (the adb-launched helper and the Shizuku user service) are plain
- * processes. The binder route also exposes openSession(token, priority), which the public API does
- * not.
- *
- * Requires android.permission.CONTROL_DEVICE_LIGHTS, which is signature|privileged — this class only
- * works in a process running as the shell UID (2000) or root.
- */
 public final class LightsBackend {
-
     private final IBinder token = new Binder();
     private Object service;
     private Method mGetLights, mOpenSession, mCloseSession, mSetLightStates;
@@ -50,14 +38,6 @@ public final class LightsBackend {
         describe(all);
     }
 
-    /**
-     * Logs what the framework reports about every light it hands us.
-     *
-     * Worth the few lines: it is the first thing needed to tell "this device has no addressable
-     * array" apart from "the renderer never got hold of it", which is otherwise guesswork from a bug
-     * report, and it is the only place these capabilities are observable — `dumpsys lights` shows
-     * ids and colours but nothing about control.
-     */
     private void describe(List<Light> all) {
         for (Light l : all) {
             if (l.getType() != Light.LIGHT_TYPE_APPLICATION) continue;
@@ -103,7 +83,6 @@ public final class LightsBackend {
         sessionOpen = false;
     }
 
-    /** Pushes one frame. [colors] is indexed per LED; a shorter array is repeated. */
     public void push(int[] colors) {
         if (!sessionOpen || ids.length == 0) return;
         LightState[] st = new LightState[ids.length];
@@ -114,9 +93,7 @@ public final class LightsBackend {
             mSetLightStates.invoke(service, token, ids, st);
         } catch (Exception e) {
             Log.w("setLightStates failed: " + e);
-            // Tell the service the session is over before dropping the local flag. A transient
-            // binder failure does not mean the far side closed anything, and simply forgetting the
-            // session here left the caller reopening a token the service still held open.
+
             closeSession();
         }
     }

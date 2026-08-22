@@ -5,7 +5,6 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class GuardStateTest {
-
     @Test
     fun `nothing suppresses a healthy phone`() {
         assertNull(GuardState().suppression())
@@ -26,7 +25,6 @@ class GuardStateTest {
 
     @Test
     fun `the default threshold only bites in single digits`() {
-        // the reported case: 10 or 11 percent off the charger used to go dark at the old 20 default
         assertNull(GuardState(batteryPct = 11).suppression())
         assertNull(GuardState(batteryPct = 10).suppression())
         assertEquals(Suppression.LOW_BATTERY, GuardState(batteryPct = 9).suppression())
@@ -49,7 +47,6 @@ class GuardStateTest {
 
     @Test
     fun `charging bypasses the level guard but not battery saver`() {
-        // Store maps a charging phone to 100, so the level guard cannot fire
         assertNull(GuardState(batteryPct = 100, batteryMinPct = 50).suppression())
         assertEquals(
             Suppression.POWER_SAVER,
@@ -85,8 +82,6 @@ class GuardStateTest {
             GuardState(quietEnabled = true, quietDim = true, inQuietWindow = true).suppression(),
         )
     }
-
-    // ---------------------------------------------------------------- notification flashes
 
     @Test
     fun `the screen-off-only switch darkens the always-on look but not a flash`() {
@@ -125,7 +120,6 @@ class GuardStateTest {
 
     @Test
     fun `screen on plus a real reason still silences a flash`() {
-        // the exemption is for the screen switch alone, not a blanket pass
         val s = GuardState(screenOffOnly = true, screenOn = true, powerSaveMode = true)
         assertEquals(Suppression.POWER_SAVER, s.alertSuppression())
     }

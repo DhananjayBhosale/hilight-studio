@@ -18,15 +18,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/**
- * Pixel-flavoured Material 3.
- *
- * Two things carry most of the "this is a Pixel app" feeling: wallpaper-derived dynamic colour
- * (Material You, API 31+), and shapes that are rounder than stock Material. Everything else — the
- * springy motion, the tonal card stack, the pill navigation — is in PixelUi.kt.
- */
-
-/** Used when the user turns wallpaper colours off, or on a device without dynamic colour. */
 private val FallbackDark = darkColorScheme(
     primary = Color(0xFFB69DFF),
     onPrimary = Color(0xFF2B1667),
@@ -64,7 +55,6 @@ private val FallbackLight = lightColorScheme(
     surfaceContainerHighest = Color(0xFFE6E0E9),
 )
 
-/** Rounder than stock Material 3 — Pixel's system surfaces sit around 28-32dp. */
 private val PixelShapes = Shapes(
     extraSmall = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
     small = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
@@ -73,7 +63,6 @@ private val PixelShapes = Shapes(
     extraLarge = androidx.compose.foundation.shape.RoundedCornerShape(36.dp),
 )
 
-/** Slightly tighter tracking and heavier headlines, closer to Pixel's system typography. */
 private val PixelTypography = Typography().let { base ->
     base.copy(
         displaySmall = base.displaySmall.copy(fontWeight = FontWeight.Normal, letterSpacing = (-0.5).sp),
