@@ -9,12 +9,54 @@ import java.util.Random;
  * Turns a pattern config into one frame of LED colours.
  *
  * Config keys: "mode" (ambient) or "pattern" (alert), "color" or "colors", "brightness", "speedMs",
- * "spread", "rotateMs", and the random-mode keys "randomIntervalMs" / "randomPerLed" /
- * "randomSmooth" / "randomSaturation".
+ * "spread", "rotateMs", the random-mode keys "randomIntervalMs" / "randomPerLed" /
+ * "randomSmooth" / "randomSaturation", and the battery-gauge keys "level" / "byLevel".
  *
  * The app mirrors this maths in Kotlin for its on-screen preview; keep the two in step.
  */
 public final class Renderer {
+
+    /**
+     * Dimmest the battery gauge draws a partly-filled LED. Straight proportion would make the first
+     * few percent of an LED invisible, so the boundary LED reads as "just started" instead of off.
+     */
+    static final double PARTIAL_FLOOR = 0.1;
+
+    /** Shortest hold at the level between two one-by-one counts of the battery gauge. */
+    static final long STEP_HOLD_MIN_MS = 1200;
+
+    /** How often, and how fast, the gauge's last lit LED blinks once the level is reached. */
+    static final int TIP_BLINKS = 3;
+    static final long TIP_BLINK_MS = 300;
+
+    /** The solid ring a full battery settles to, and the level that counts as full. */
+    static final int FULL_COLOR = 0xFF00E676;
+    static final double FULL_LEVEL = 0.999;
+
+    /** How many of [n] LEDs a gauge at [level] involves, counting a partly-lit boundary LED. */
+    public static int gaugeLitLeds(double level, int n) {
+        return (int) Math.ceil(clamp01(level) * n - 1e-9);
+    }
+
+    /**
+     * One full one-by-one cycle of the gauge in ms: the count, the tip blink if any, the hold and
+     * the dark gap before the next count. The app sizes a gauge showing from this so that it ends
+     * exactly after a whole number of cycles, which is why this is the renderer's own arithmetic
+     * rather than a copy of it.
+     */
+    public static long gaugeCycleMs(int litLeds, long speedMs, boolean blinkTip) {
+        long speed = Math.max(60, speedMs);
+        long blink = blinkTip ? 2L * TIP_BLINKS * TIP_BLINK_MS : 0;
+        return litLeds * speed + Math.max(STEP_HOLD_MIN_MS, 3 * speed) + blink + speed;
+    }
+
+    /**
+     * Whether the tip LED is in an off beat of its blink: [sinceMs] into a blink run of [totalMs],
+     * the on and off beats each last TIP_BLINK_MS, starting on, and it holds lit once the run is over.
+     */
+    static boolean tipBlinkOff(long sinceMs, long totalMs) {
+        return sinceMs < totalMs && ((sinceMs / TIP_BLINK_MS) & 1) == 1;
+    }
 
     private final Random rnd = new Random();
 
@@ -130,6 +172,75 @@ public final class Renderer {
                 long rotateMs = cfg.optLong("rotateMs", 0);
                 int shift = rotateMs > 50 ? (int) ((t / rotateMs) % n) : 0;
                 for (int i = 0; i < n; i++) out[i] = palette[((i + shift) % n) % palette.length];
+                break;
+            }
+
+            case "battery": {
+                // A charge gauge. The LEDs fill from ordinal 0 upwards to "level" (0..1), each LED
+                // standing for 1/n of the range, and the LED on the boundary is dimmed to its share.
+                // With "byLevel" every lit LED takes the colour of the level itself, red at empty
+                // through amber to green at full; otherwise the palette applies per LED, so a colour
+                // scale can be painted by hand. "oddScale" dims every second LED (ordinals 1, 3, 5, 7)
+                // by that factor: the eight LEDs sit behind one diffuser, and a solid run of lit ones
+                // blurs into a single glow nobody can count, whereas alternating bright and dim reads
+                // as separate dots while the run still reaches as far as the level does.
+                //
+                // "fill" is how the lit LEDs appear. "all": together, from the first frame, and still
+                // from then on. "step": one after another, each easing in over speedMs, then a hold
+                // at the level, a short dark gap, and the count starts again — so the LEDs can be
+                // counted as they come on, for as long as the gauge is showing.
+                //
+                // "blinkTip" makes the last lit LED blink TIP_BLINKS times once the gauge has reached
+                // its level — straight away for "all", after the count for "step" — and then hold,
+                // so the eye is drawn to where the level actually is.
+                //
+                // "fullGreen": a full battery has nothing to count, so once the level is reached
+                // (after one count in "step" mode, at once in "all") every LED goes solid in
+                // "fullColor" (FULL_COLOR unless the rule says otherwise) — no dimming, no blink, no
+                // repeat — and stays there for the rest of the showing.
+                double level = clamp01(cfg.optDouble("level", 0));
+                boolean byLevel = cfg.optBoolean("byLevel", false);
+                double oddScale = clamp01(cfg.optDouble("oddScale", 1.0));
+                boolean blinkTip = cfg.optBoolean("blinkTip", false);
+                boolean fullGreen = cfg.optBoolean("fullGreen", false) && level >= FULL_LEVEL;
+                int fullColor = (int) (cfg.optLong("fullColor", FULL_COLOR & 0xFFFFFFFFL) | 0xFF000000L);
+                long blinkMs = blinkTip ? 2L * TIP_BLINKS * TIP_BLINK_MS : 0;
+                double target = level * n;
+                int lit = gaugeLitLeds(level, n);
+                double shown = target;
+                boolean tipOff = false;
+                boolean stepwise = "step".equals(cfg.optString("fill", "all"));
+                if (fullGreen && (!stepwise || t >= lit * speed)) {
+                    for (int i = 0; i < n; i++) out[i] = fullColor;
+                    if (bright < 1.0) for (int i = 0; i < n; i++) out[i] = scale(out[i], bright);
+                    return out;
+                }
+                if (stepwise) {
+                    long count = lit * speed;
+                    long cycle = gaugeCycleMs(lit, speed, blinkTip);
+                    long hold = cycle - count - speed;
+                    long phase = fullGreen ? t : t % cycle;    // a full battery counts only once
+                    if (phase < count) {
+                        long idx = phase / speed;
+                        shown = Math.min(target, idx + (phase % speed) / (double) speed);
+                    } else if (phase >= count + hold) {
+                        shown = 0;                      // the gap before the next count
+                    } else {
+                        tipOff = tipBlinkOff(phase - count, blinkMs);
+                    }
+                } else {
+                    tipOff = tipBlinkOff(t, blinkMs);
+                }
+                int levelColor = hsv(level * 120.0, 1f, 1f);
+                for (int i = 0; i < n; i++) {
+                    double k = clamp01(shown - i);
+                    if (k <= 0) continue;
+                    if (tipOff && i == lit - 1) continue;
+                    int c = byLevel ? levelColor : palette[i % palette.length];
+                    double f = k >= 1 ? 1 : PARTIAL_FLOOR + (1 - PARTIAL_FLOOR) * k;
+                    if ((i & 1) == 1) f *= oddScale;
+                    out[i] = scale(c, f);
+                }
                 break;
             }
 

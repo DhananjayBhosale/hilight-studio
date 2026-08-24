@@ -24,6 +24,8 @@ Control the eight-LED HiLight array on Pixel 11 Pro devices.
 - Per-contact rules: a colour for one person or one chat, picked from the chats HiLight has seen
 - Saved presets with import and export
 - Wallpaper-derived colours and a Quick Settings tile
+- Charging gauge: the battery level drawn across the eight LEDs when the charger goes in or the
+  battery is full, coloured by level, in one colour, or per LED
 - Quiet hours, Do Not Disturb, Battery Saver, and low-battery controls
 - English and Japanese, selectable per app from Android's own language settings
 - Automatic root access when available, with Shizuku and ADB as fallbacks

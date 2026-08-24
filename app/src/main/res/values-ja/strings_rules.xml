@@ -287,4 +287,58 @@
     <string name="privacy_one_minute_cap">使用が終了するとすぐに停止します。連続した 1 回の使用で通知する時間は最大 1 分です。</string>
     <string name="privacy_replace_warning">保存すると、このアクティビティとアプリの既存のルールが置き換えられます。</string>
 
+    <!-- The charging gauge -->
+    <string name="charging_section_title">充電</string>
+    <string name="charging_intro">充電器を接続したときにバッテリー残量を LED アレイに表示します。残量に応じて LED が順に点灯し、最後の 1 つは残りの割合に合わせて減光します。</string>
+    <string name="charging_rule_title">バッテリー ゲージ</string>
+    <string name="charging_trigger_plug_in">接続時</string>
+    <string name="charging_trigger_full">満充電時</string>
+    <string name="charging_no_triggers">タイミングが選択されていません</string>
+    <string name="charging_card_summary">%1$s · %2$s</string>
+    <string name="charging_repeat_summary">充電中は %1$s ごと</string>
+    <string name="charging_now_level">現在のバッテリー残量 %1$d%%</string>
+
+    <string name="charging_group_when">表示するとき</string>
+    <string name="charging_group_colours">色</string>
+    <string name="charging_group_readability">見やすさ</string>
+    <string name="charging_group_timing">時間と明るさ</string>
+
+    <string name="charging_colour_by_level">残量で色分け</string>
+    <string name="charging_colour_single">単色</string>
+    <string name="charging_colour_per_led">LED ごと</string>
+    <string name="charging_by_level_hint">残量が少ないときは赤、半分で琥珀色、満充電で緑になります。</string>
+    <string name="charging_preset_traffic_light">信号</string>
+    <string name="charging_preset_red_green">赤 → 緑</string>
+    <string name="charging_preset_fire">炎</string>
+    <string name="charging_preset_sunset">夕焼け</string>
+    <string name="charging_preset_ocean">海</string>
+    <string name="charging_preset_aurora">オーロラ</string>
+    <string name="charging_preset_four_colours">4 色</string>
+    <string name="charging_preset_ice">氷</string>
+    <string name="charging_preset_mint">ミント</string>
+    <string name="charging_preset_white">白</string>
+
+    <string name="charging_fill_all">一斉に点灯</string>
+    <string name="charging_fill_step">1 つずつ点灯</string>
+    <string name="charging_step_time">LED 1 つあたりの時間</string>
+    <string name="charging_plays">再生回数</string>
+    <string name="charging_plays_value">%1$d 回</string>
+    <string name="charging_blink_tip">最後の LED を点滅</string>
+    <string name="charging_full_green">満充電時は全体を単色に</string>
+    <string name="charging_full_colour">満充電時の色</string>
+    <string name="charging_showing_length">現在の残量では、1 回の表示は約 %1$s です。</string>
+    <string name="charging_show_for_hint">一斉に点灯する場合と、満充電時の緑のリングに使われます。1 つずつ点灯する場合は再生回数で長さが決まります。</string>
+    <string name="charging_alternate">LED を交互に点灯</string>
+    <string name="charging_alternate_level">2 つ目ごとの LED の明るさ</string>
+    <string name="charging_alternate_off">消灯</string>
+    <string name="charging_readability_hint">8 個の LED は 1 つの拡散板を共有しています。1 つずつ点灯し、2 つ目ごとに暗くすることで点灯数を数えやすくなります。明るい点 1 つが 25% です。</string>
+
+    <string name="charging_duration_warn_first_title">30 秒より長く表示しますか</string>
+    <string name="charging_duration_warn_first_body">充電器を接続するたびに、その時間だけ LED アレイが点灯し続けます。標準の HiLight の動作を大きく超えます。</string>
+    <string name="charging_duration_warn_second_title">本当によろしいですか</string>
+    <string name="charging_duration_warn_second_body">繰り返しを有効にすると、充電中の大半の時間 LED が点灯する可能性があります。いつでも元に戻せます。</string>
+    <string name="charging_repeat">充電中に繰り返す</string>
+    <string name="charging_repeat_off">オフ</string>
+    <string name="charging_safety_note">通常の通知と同じ扱いです。最大 1 分、おやすみ時間とバッテリー セーバー中は表示されず、LED アレイの使用制限にカウントされます。</string>
+
 </resources>

@@ -34,6 +34,8 @@
     <string name="pattern_rainbow_short">Rainbow</string>
     <string name="pattern_random">Random colours</string>
     <string name="pattern_custom">Per-LED custom</string>
+    <!-- Only ever drawn by the charging rule; never offered as a look -->
+    <string name="pattern_battery">Battery gauge</string>
 
     <!-- What one cycle of each pattern means -->
     <string name="cycle_breathe">One full breath: dim up to full, back down.</string>

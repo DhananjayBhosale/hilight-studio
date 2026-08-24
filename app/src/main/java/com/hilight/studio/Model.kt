@@ -28,6 +28,11 @@ enum class Pattern(
      * [shortLabelRes], which falls back to the full name.
      */
     @StringRes private val narrowLabelRes: Int? = null,
+    /**
+     * True for a pattern the renderer understands but no picker should offer, because it needs an
+     * input only one trigger can supply. Read through [selectable].
+     */
+    val internal: Boolean = false,
 ) {
     OFF("off", R.string.pattern_off, usesSpeed = false),
     SOLID("solid", R.string.pattern_solid, usesSpeed = false),
@@ -43,7 +48,13 @@ enum class Pattern(
         narrowLabelRes = R.string.pattern_rainbow_short,
     ),
     RANDOM("random", R.string.pattern_random, usesSpeed = false),
-    CUSTOM("custom", R.string.pattern_custom, usesSpeed = false);
+    CUSTOM("custom", R.string.pattern_custom, usesSpeed = false),
+
+    /**
+     * The charging gauge. It draws a battery level the renderer is handed with the alert, so it is
+     * meaningless as an always-on look or a per-app effect and stays out of those pickers.
+     */
+    BATTERY("battery", R.string.pattern_battery, internal = true);
 
     /** The name to show where a third of a row is all there is. */
     @get:StringRes
@@ -51,13 +62,18 @@ enum class Pattern(
 
     companion object {
         fun of(key: String) = entries.firstOrNull { it.key == key } ?: SOLID
+
+        /** Every pattern a user may pick as a look or a rule effect. */
+        val selectable: List<Pattern> get() = entries.filter { !it.internal }
     }
 }
 
 enum class Trigger { NOTIFICATION, FOREGROUND }
 
 enum class AlertSource(val key: String) {
-    NOTIFICATION("notification"), PREVIEW("preview"), FOREGROUND("foreground")
+    NOTIFICATION("notification"), PREVIEW("preview"), FOREGROUND("foreground"),
+    /** the charging gauge; survives the screen coming on, unlike a notification flash */
+    CHARGING("charging"),
 }
 
 /** A continuous Android privacy operation observed by the privileged renderer. */
@@ -84,6 +100,22 @@ data class Ambient(
     val randomSmooth: Boolean = true,
     val randomSaturation: Float = 1f,
     val rotateMs: Int = 0,
+    /**
+     * Charging-gauge inputs, only read for [Pattern.BATTERY] previews. Neither is persisted: the
+     * always-on look never uses the gauge, and a real alert carries the level of the moment it fires.
+     */
+    val level: Float = 1f,
+    val colorByLevel: Boolean = false,
+    /** gauge only: brightness factor for every second LED, 1 for none; see ChargingRule.alternate */
+    val oddLedScale: Float = 1f,
+    /** gauge only: light the LEDs one after another instead of together; see ChargingFill */
+    val fillStepwise: Boolean = false,
+    /** gauge only: blink the last lit LED a few times once the level is reached */
+    val blinkTip: Boolean = false,
+    /** gauge only: a full battery settles to a solid ring instead of counting again */
+    val fullGreen: Boolean = false,
+    /** gauge only: the colour of that ring */
+    val fullColor: Int = ChargingRule.DEFAULT_FULL_COLOR,
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("mode", pattern.key)
@@ -97,6 +129,16 @@ data class Ambient(
         put("rotateMs", rotateMs)
         when (pattern) {
             Pattern.CUSTOM -> put("colors", JSONArray().also { a -> perLed.forEach { a.put(it.toUInt().toLong()) } })
+            Pattern.BATTERY -> {
+                put("colors", JSONArray().also { a -> perLed.forEach { a.put(it.toUInt().toLong()) } })
+                put("level", level.toDouble())
+                put("byLevel", colorByLevel)
+                put("oddScale", oddLedScale.toDouble())
+                put("fill", if (fillStepwise) ChargingFill.STEP.key else ChargingFill.ALL.key)
+                put("blinkTip", blinkTip)
+                put("fullGreen", fullGreen)
+                put("fullColor", fullColor.toUInt().toLong())
+            }
             Pattern.GRADIENT -> put(
                 "colors",
                 JSONArray().put(color.toUInt().toLong()).put(secondColor.toUInt().toLong())
@@ -299,7 +341,7 @@ data class PrivacyRule(
 
         /** Every built-in one-rule look; Off and per-LED Custom are not trigger effects. */
         val selectablePatterns: List<Pattern>
-            get() = Pattern.entries.filter { it != Pattern.OFF && it != Pattern.CUSTOM }
+            get() = Pattern.selectable.filter { it != Pattern.OFF && it != Pattern.CUSTOM }
 
         fun default(
             activity: PrivacyActivity,
@@ -337,6 +379,250 @@ data class PrivacyRule(
                 speedMs = o.optInt("speedMs", defaults.speedMs).coerceIn(100, 10_000),
                 brightness = o.optDouble("brightness", defaults.brightness.toDouble()).toFloat()
                     .coerceIn(0.05f, 1f),
+            )
+        }
+    }
+}
+
+/** How the charging gauge colours the LEDs it lights. */
+enum class ChargingColorMode(val key: String, @StringRes val labelRes: Int) {
+    /** Every lit LED takes the colour of the level itself: red at empty, amber halfway, green at full. */
+    LEVEL("level", R.string.charging_colour_by_level),
+    SINGLE("single", R.string.charging_colour_single),
+    PER_LED("perLed", R.string.charging_colour_per_led);
+
+    companion object {
+        fun of(key: String): ChargingColorMode = entries.firstOrNull { it.key == key } ?: LEVEL
+    }
+}
+
+/** How the charging gauge's lit LEDs appear. */
+enum class ChargingFill(val key: String, @StringRes val labelRes: Int) {
+    /** Every lit LED comes on together, and the gauge then holds still. */
+    ALL("all", R.string.charging_fill_all),
+    /** LEDs 1 to 8 come on in turn up to the level, hold, then count again — so they can be counted. */
+    STEP("step", R.string.charging_fill_step);
+
+    companion object {
+        fun of(key: String): ChargingFill = entries.firstOrNull { it.key == key } ?: STEP
+    }
+}
+
+/**
+ * Ready-made looks for the charging gauge.
+ *
+ * A preset is applied by copying its colours into the rule, so the rule stores colours rather than a
+ * preset name: a preset the user has tweaked by hand is simply a custom look, and [matching] finds the
+ * chip to highlight by comparing colours, not by remembering what was tapped.
+ */
+enum class ChargingPreset(
+    @StringRes val labelRes: Int,
+    val colorMode: ChargingColorMode,
+    val color: Int = 0xFF00E676.toInt(),
+    private val colors: (() -> List<Int>)? = null,
+) {
+    /** The default: red at empty, amber halfway, green at full. */
+    TRAFFIC_LIGHT(R.string.charging_preset_traffic_light, ChargingColorMode.LEVEL),
+    RED_TO_GREEN(R.string.charging_preset_red_green, ChargingColorMode.PER_LED, colors = { ChargingRule.redToGreen() }),
+    FIRE(R.string.charging_preset_fire, ChargingColorMode.PER_LED, colors = { sweep(0f, 50f) }),
+    SUNSET(R.string.charging_preset_sunset, ChargingColorMode.PER_LED, colors = { sweep(300f, 400f) }),
+    OCEAN(R.string.charging_preset_ocean, ChargingColorMode.PER_LED, colors = { sweep(230f, 170f) }),
+    AURORA(R.string.charging_preset_aurora, ChargingColorMode.PER_LED, colors = { sweep(120f, 240f) }),
+    RAINBOW(
+        R.string.pattern_rainbow_short, ChargingColorMode.PER_LED,
+        colors = { List(LED_COUNT) { i -> Renderer.hsv(i * 360f / LED_COUNT) } },
+    ),
+    FOUR_COLOURS(
+        R.string.charging_preset_four_colours, ChargingColorMode.PER_LED,
+        colors = { List(LED_COUNT) { i -> QUARTET[i % QUARTET.size] } },
+    ),
+    ICE(R.string.charging_preset_ice, ChargingColorMode.SINGLE, color = 0xFF00E5FF.toInt()),
+    MINT(R.string.charging_preset_mint, ChargingColorMode.SINGLE, color = 0xFF00E676.toInt()),
+    WHITE(R.string.charging_preset_white, ChargingColorMode.SINGLE, color = 0xFFFFFFFF.toInt());
+
+    /** The eight colours this preset paints, one per LED. */
+    val perLed: List<Int> get() = colors?.invoke() ?: List(LED_COUNT) { color }
+
+    /** [rule] with this preset's colours; fields the preset does not speak for are kept. */
+    fun applyTo(rule: ChargingRule): ChargingRule = rule.copy(
+        colorMode = colorMode,
+        color = if (colorMode == ChargingColorMode.SINGLE) color else rule.color,
+        perLed = if (colorMode == ChargingColorMode.PER_LED) perLed else rule.perLed,
+    )
+
+    /** True while [rule] still shows exactly this preset. */
+    fun matches(rule: ChargingRule): Boolean = when (colorMode) {
+        ChargingColorMode.LEVEL -> rule.colorMode == ChargingColorMode.LEVEL
+        ChargingColorMode.SINGLE -> rule.colorMode == ChargingColorMode.SINGLE && rule.color == color
+        ChargingColorMode.PER_LED -> rule.colorMode == ChargingColorMode.PER_LED && rule.perLed == perLed
+    }
+
+    /**
+     * A miniature of the preset. Per-LED and single-colour presets show the full ring so every colour
+     * is visible; the by-level preset is shown part-way up, because all-green would hide what it does.
+     */
+    fun previewLook(): Ambient =
+        // still, and never the solid full ring, so the chip shows the preset's own colours
+        applyTo(ChargingRule(fill = ChargingFill.ALL, blinkTip = false, fullGreen = false))
+            .previewLook(if (colorMode == ChargingColorMode.LEVEL) 0.6f else 1f)
+
+    companion object {
+        /** Blue, red, yellow, green: four colours that read as distinct at a glance. */
+        private val QUARTET = listOf(0xFF4285F4.toInt(), 0xFFEA4335.toInt(), 0xFFFBBC05.toInt(), 0xFF34A853.toInt())
+
+        /** Hues from [fromHue] on the first LED to [toHue] on the last; degrees, may run past 360. */
+        private fun sweep(fromHue: Float, toHue: Float): List<Int> =
+            List(LED_COUNT) { i -> Renderer.hsv((fromHue + (toHue - fromHue) * i / (LED_COUNT - 1)) % 360f) }
+
+        /** The preset [rule] currently shows, or null once it has been tweaked into a custom look. */
+        fun matching(rule: ChargingRule): ChargingPreset? = entries.firstOrNull { it.matches(rule) }
+    }
+}
+
+/**
+ * The charging gauge: the battery level drawn across the eight LEDs when the charger goes in, and
+ * again when the battery is full.
+ *
+ * One rule rather than a list, because there is one battery. It fires as an ordinary finite alert,
+ * so the renderer's one-minute cap, the duty-cycle guard and the quiet-hours and Battery Saver rules
+ * all apply to it unchanged — nothing here adds a new way to keep the array lit.
+ */
+data class ChargingRule(
+    val enabled: Boolean = false,
+    val onPlugIn: Boolean = true,
+    val onFull: Boolean = true,
+    val colorMode: ChargingColorMode = ChargingColorMode.LEVEL,
+    val color: Int = 0xFF00E676.toInt(),
+    val perLed: List<Int> = redToGreen(),
+    val durationMs: Int = DEFAULT_DURATION_MS,
+    /** whether the lit LEDs come on together or one after another */
+    val fill: ChargingFill = ChargingFill.STEP,
+    /** in one-by-one mode, how long each LED takes to come on */
+    val stepMs: Int = DEFAULT_STEP_MS,
+    /** blink the last lit LED a few times once the level is reached, so the eye finds it */
+    val blinkTip: Boolean = true,
+    /** at 100%, count once and then settle to a solid ring rather than counting again */
+    val fullGreen: Boolean = true,
+    /** the colour of that ring; green unless changed */
+    val fullColor: Int = DEFAULT_FULL_COLOR,
+    /** in one-by-one mode, how many complete counts a showing plays before it ends */
+    val plays: Int = DEFAULT_PLAYS,
+    val brightness: Float = 1f,
+    val onlyWhenScreenOff: Boolean = false,
+    /** show the gauge again this often while the charger stays connected; 0 is off */
+    val repeatEveryMin: Int = 0,
+    /**
+     * Dim every second LED so the lit ones can be counted. The eight LEDs share one diffuser, and a
+     * solid run of them blurs into a single glow; alternating bright and dim reads as separate dots.
+     */
+    val alternate: Boolean = true,
+    /** brightness of the dimmed LEDs while [alternate] is on; 0 turns them off outright */
+    val alternateLevel: Float = DEFAULT_ALTERNATE_LEVEL,
+) {
+    /** The factor the renderer applies to every second LED. */
+    val oddLedScale: Float get() = if (alternate) alternateLevel.coerceIn(0f, MAX_ALTERNATE_LEVEL) else 1f
+
+    /**
+     * How long one showing lasts at [levelPct].
+     *
+     * A static gauge — all at once, or the solid ring of a full battery once its single count is
+     * done — holds for [durationMs]. A counting gauge instead plays [plays] whole cycles and ends the
+     * moment the last hold is over, so it is never cut off mid-count and never shows the dark gap
+     * that precedes a count that is not coming. The cycle length is the renderer's own arithmetic.
+     * Everything stays under the rule ceiling, which the renderer clamps to anyway.
+     */
+    fun showingMs(levelPct: Int): Int {
+        if (fill == ChargingFill.ALL) return durationMs
+        val lit = com.hilight.core.Renderer.gaugeLitLeds(levelPct / 100.0, LED_COUNT)
+        val ms = if (fullGreen && levelPct >= 100) {
+            lit.toLong() * stepMs + durationMs
+        } else {
+            plays * com.hilight.core.Renderer.gaugeCycleMs(lit, stepMs.toLong(), blinkTip) - stepMs
+        }
+        return ms.coerceIn(MIN_DURATION_MS.toLong(), Limits.RULE_MAX_MS.toLong()).toInt()
+    }
+
+    /** The on-screen form of this rule at [level] (0..1), for the card, the editor and the hero. */
+    fun previewLook(level: Float): Ambient = Ambient(
+        pattern = Pattern.BATTERY,
+        color = color,
+        perLed = if (colorMode == ChargingColorMode.PER_LED) perLed else List(LED_COUNT) { color },
+        brightness = brightness,
+        speedMs = stepMs,
+        level = level.coerceIn(0f, 1f),
+        colorByLevel = colorMode == ChargingColorMode.LEVEL,
+        oddLedScale = oddLedScale,
+        fillStepwise = fill == ChargingFill.STEP,
+        blinkTip = blinkTip,
+        fullGreen = fullGreen,
+        fullColor = fullColor,
+    )
+
+    fun toPrefsJson(): JSONObject = JSONObject().apply {
+        put("enabled", enabled)
+        put("onPlugIn", onPlugIn)
+        put("onFull", onFull)
+        put("colorMode", colorMode.key)
+        put("color", color.toUInt().toLong())
+        put("perLed", JSONArray().also { a -> perLed.forEach { a.put(it.toUInt().toLong()) } })
+        put("durationMs", durationMs)
+        put("fill", fill.key)
+        put("stepMs", stepMs)
+        put("blinkTip", blinkTip)
+        put("fullGreen", fullGreen)
+        put("fullColor", fullColor.toUInt().toLong())
+        put("plays", plays)
+        put("brightness", brightness.toDouble())
+        put("onlyWhenScreenOff", onlyWhenScreenOff)
+        put("repeatEveryMin", repeatEveryMin)
+        put("alternate", alternate)
+        put("alternateLevel", alternateLevel.toDouble())
+    }
+
+    companion object {
+        const val DEFAULT_DURATION_MS = 8_000
+        const val MIN_DURATION_MS = 2_000
+        const val DEFAULT_STEP_MS = 400
+        const val MIN_STEP_MS = 150
+        const val MAX_STEP_MS = 1_000
+        const val MAX_REPEAT_MIN = 30
+        const val DEFAULT_PLAYS = 2
+        const val MAX_PLAYS = 3
+        /** The app's green, which is also what the renderer falls back to. */
+        const val DEFAULT_FULL_COLOR = 0xFF00E676.toInt()
+        const val DEFAULT_ALTERNATE_LEVEL = 0.25f
+        /** Above this the dimmed LEDs stop reading as dimmed, so the slider ends here. */
+        const val MAX_ALTERNATE_LEVEL = 0.6f
+
+        /** Red on the first LED through amber to green on the last: the ring as a scale. */
+        fun redToGreen(): List<Int> = List(LED_COUNT) { i -> Renderer.hsv(i * 120f / (LED_COUNT - 1)) }
+
+        /** Clamps as it loads, so an edited preferences file cannot smuggle in a longer showing. */
+        fun fromJson(o: JSONObject): ChargingRule {
+            val defaults = ChargingRule()
+            return ChargingRule(
+                enabled = o.optBoolean("enabled", defaults.enabled),
+                onPlugIn = o.optBoolean("onPlugIn", defaults.onPlugIn),
+                onFull = o.optBoolean("onFull", defaults.onFull),
+                colorMode = ChargingColorMode.of(o.optString("colorMode", defaults.colorMode.key)),
+                color = o.optLong("color", defaults.color.toUInt().toLong()).toInt(),
+                perLed = o.optJSONArray("perLed")?.let { a ->
+                    (0 until a.length()).map { a.optLong(it).toInt() }
+                }?.takeIf { it.size == LED_COUNT } ?: defaults.perLed,
+                durationMs = o.optInt("durationMs", DEFAULT_DURATION_MS)
+                    .coerceIn(MIN_DURATION_MS, Limits.RULE_MAX_MS),
+                fill = ChargingFill.of(o.optString("fill", defaults.fill.key)),
+                stepMs = o.optInt("stepMs", DEFAULT_STEP_MS).coerceIn(MIN_STEP_MS, MAX_STEP_MS),
+                blinkTip = o.optBoolean("blinkTip", defaults.blinkTip),
+                fullGreen = o.optBoolean("fullGreen", defaults.fullGreen),
+                fullColor = o.optLong("fullColor", DEFAULT_FULL_COLOR.toUInt().toLong()).toInt(),
+                plays = o.optInt("plays", DEFAULT_PLAYS).coerceIn(1, MAX_PLAYS),
+                brightness = o.optDouble("brightness", 1.0).toFloat().coerceIn(0.05f, 1f),
+                onlyWhenScreenOff = o.optBoolean("onlyWhenScreenOff", false),
+                repeatEveryMin = o.optInt("repeatEveryMin", 0).coerceIn(0, MAX_REPEAT_MIN),
+                alternate = o.optBoolean("alternate", defaults.alternate),
+                alternateLevel = o.optDouble("alternateLevel", DEFAULT_ALTERNATE_LEVEL.toDouble())
+                    .toFloat().coerceIn(0f, MAX_ALTERNATE_LEVEL),
             )
         }
     }

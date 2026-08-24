@@ -186,4 +186,63 @@
     <string name="privacy_one_minute_cap">Stops immediately when use ends. One uninterrupted use can signal for at most 1 minute.</string>
     <string name="privacy_replace_warning">Saving will replace the existing rule for this activity and app.</string>
 
+    <!-- The charging gauge: one rule, drawn across the eight LEDs as a battery level -->
+    <string name="charging_section_title">Charging</string>
+    <string name="charging_intro">Show the battery level on the array when the charger goes in: the LEDs fill up to the charge, with the last one dimmed to its share.</string>
+    <string name="charging_rule_title">Battery gauge</string>
+    <string name="charging_trigger_plug_in">On plug-in</string>
+    <string name="charging_trigger_full">When full</string>
+    <string name="charging_no_triggers">No moment selected</string>
+    <!-- %1$s is the moments it fires on, %2$s how long it shows -->
+    <string name="charging_card_summary">%1$s · %2$s</string>
+    <string name="charging_repeat_summary">every %1$s while charging</string>
+    <string name="charging_now_level">Battery now at %1$d%%</string>
+
+    <!-- The editor's four groups -->
+    <string name="charging_group_when">When</string>
+    <string name="charging_group_colours">Colours</string>
+    <string name="charging_group_readability">Readability</string>
+    <string name="charging_group_timing">Timing</string>
+
+    <!-- Colours. Rainbow reuses pattern_rainbow_short. -->
+    <string name="charging_colour_by_level">By level</string>
+    <string name="charging_colour_single">One colour</string>
+    <string name="charging_colour_per_led">Per LED</string>
+    <string name="charging_by_level_hint">Red when empty, amber halfway, green when full.</string>
+    <string name="charging_preset_traffic_light">Traffic light</string>
+    <string name="charging_preset_red_green">Red → green</string>
+    <string name="charging_preset_fire">Fire</string>
+    <string name="charging_preset_sunset">Sunset</string>
+    <string name="charging_preset_ocean">Ocean</string>
+    <string name="charging_preset_aurora">Aurora</string>
+    <string name="charging_preset_four_colours">Four colours</string>
+    <string name="charging_preset_ice">Ice</string>
+    <string name="charging_preset_mint">Mint</string>
+    <string name="charging_preset_white">White</string>
+
+    <!-- Readability: the eight LEDs sit behind one diffuser -->
+    <string name="charging_fill_all">All at once</string>
+    <string name="charging_fill_step">One by one</string>
+    <string name="charging_step_time">Time per LED</string>
+    <string name="charging_plays">Plays</string>
+    <string name="charging_plays_value">%1$d×</string>
+    <string name="charging_blink_tip">Blink the last LED</string>
+    <string name="charging_full_green">Solid colour when full</string>
+    <string name="charging_full_colour">Colour when full</string>
+    <string name="charging_showing_length">At the level now, one showing lasts about %1$s.</string>
+    <string name="charging_show_for_hint">Used when the LEDs come on all at once, and for the solid green ring when full. One by one lasts as long as its plays take instead.</string>
+    <string name="charging_alternate">Alternate LEDs</string>
+    <string name="charging_alternate_level">Every second LED at</string>
+    <string name="charging_alternate_off">Off</string>
+    <string name="charging_readability_hint">The eight LEDs share one diffuser. Counting them up one by one, and dimming every second one, keeps the lit LEDs tellable apart: each bright dot is 25%.</string>
+
+    <!-- Timing -->
+    <string name="charging_duration_warn_first_title">Longer than 30 seconds?</string>
+    <string name="charging_duration_warn_first_body">The gauge would keep the array lit for that long every time the charger goes in, which is far beyond what stock HiLight does.</string>
+    <string name="charging_duration_warn_second_title">Are you sure?</string>
+    <string name="charging_duration_warn_second_body">With repeats on, the LEDs could be lit for a large share of every charge. You can turn this back down at any time.</string>
+    <string name="charging_repeat">Repeat while charging</string>
+    <string name="charging_repeat_off">Off</string>
+    <string name="charging_safety_note">An ordinary alert: capped at 1 minute, silent during quiet hours and Battery Saver, and counted toward the array\'s duty limit.</string>
+
 </resources>

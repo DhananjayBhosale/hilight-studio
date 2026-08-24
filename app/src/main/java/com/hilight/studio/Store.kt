@@ -177,6 +177,19 @@ class Store private constructor(private val app: Context) {
 
     private data class PendingOutput(val enabled: Boolean, val alert: JSONObject?, val arm: Boolean)
 
+    /** The one charging-gauge rule; see [ChargingRule]. */
+    private val _chargingRule = MutableStateFlow(loadChargingRule())
+    val chargingRule: StateFlow<ChargingRule> = _chargingRule.asStateFlow()
+
+    /** Battery level as last broadcast, 0-100, so the charging card and its previews draw the real thing. */
+    private val _batteryLevel = MutableStateFlow(batteryReading().levelPct)
+    val batteryLevel: StateFlow<Int> = _batteryLevel.asStateFlow()
+
+    /** Plug-in and full moments, primed so that starting up on the charger is not one. */
+    private val chargingEvents =
+        batteryReading().let { ChargingEvents(pluggedNow = it.plugged, fullNow = it.full) }
+    private var chargingRepeat: Runnable? = null
+
     init {
         Bridge.ensureFiles(app)
         _suppression.value = suppressionNow()
@@ -201,8 +214,17 @@ class Store private constructor(private val app: Context) {
                             cancelAlert()
                             refreshSuppression()
                         }
-                        // plugging in, unplugging, or toggling Battery Saver: re-check, but a power
-                        // event is not the user looking at the phone, so any alert keeps running
+                        // Every level change, and the sticky reading on registration. Only the
+                        // charging gauge reads these; the guards keep their own 30s tick.
+                        Intent.ACTION_BATTERY_CHANGED -> onBatteryReading(BatteryReading.from(i))
+                        // plugging in or unplugging: the guards first, so a gauge fired here
+                        // already sees the charger, and a power event is not the user looking at
+                        // the phone, so any running alert keeps going
+                        Intent.ACTION_POWER_CONNECTED, Intent.ACTION_POWER_DISCONNECTED -> {
+                            refreshSuppression()
+                            onBatteryReading(batteryReading())
+                        }
+                        // toggling Battery Saver: re-check only
                         else -> refreshSuppression()
                     }
                 }
@@ -213,9 +235,12 @@ class Store private constructor(private val app: Context) {
                 addAction(Intent.ACTION_USER_PRESENT)
                 addAction(Intent.ACTION_POWER_CONNECTED)
                 addAction(Intent.ACTION_POWER_DISCONNECTED)
+                addAction(Intent.ACTION_BATTERY_CHANGED)
                 addAction(android.os.PowerManager.ACTION_POWER_SAVE_MODE_CHANGED)
             },
         )
+        // already on the charger when the process came up: the repeat timer still has to run
+        if (chargingEvents.plugged) scheduleChargingRepeat()
         // Whenever Shizuku appears or disappears, re-push: a new user service starts stateless, and
         // after a loss the ADB helper needs to be told to take over.
         shizuku.onAvailabilityChanged = {
@@ -864,7 +889,10 @@ class Store private constructor(private val app: Context) {
      * has been there is nothing to keep lit. No-op when no alert is in flight.
      */
     fun cancelAlert() {
-        if (activeAlert == null) return
+        val alert = activeAlert ?: return
+        // A charging gauge is there to be read, and the screen waking as the charger goes in is
+        // exactly when it gets read — so unlike a notification flash it survives the screen coming on.
+        if (alert.optString("source") == AlertSource.CHARGING.key) return
         alertExpiry?.let { main.removeCallbacks(it) }
         alertExpiry = null
         releaseAlert()
@@ -928,6 +956,95 @@ class Store private constructor(private val app: Context) {
         // clears the test immediately, and does not hand ambient a fresh window on the way out
         releaseAlert()
     }
+
+    // ------------------------------------------------------------------ charging gauge
+
+    /** Replaces the charging rule and re-plans the repeat timer around it. */
+    fun setChargingRule(rule: ChargingRule) {
+        _chargingRule.value = rule
+        prefs.edit().putString("chargingRule", rule.toPrefsJson().toString()).apply()
+        if (chargingEvents.plugged) scheduleChargingRepeat() else cancelChargingRepeat()
+    }
+
+    /** Shows the gauge at the real level now, the way the Test buttons do for other looks. */
+    fun previewCharging(rule: ChargingRule = _chargingRule.value) {
+        val levelPct = _batteryLevel.value
+        val showing = rule.showingMs(levelPct)
+        holdAlert(
+            alert = Bridge.chargingAlertJson(Bridge.nextAlertId(), rule, levelPct / 100f, showing),
+            durationMs = showing,
+            arm = true,                // the user asked for this one, so it may open a window
+            preview = rule.previewLook(levelPct / 100f),
+        )
+    }
+
+    /**
+     * Folds a battery broadcast into the charging tracker and fires the gauge on the moments it
+     * reports. Every broadcast lands here, including the sticky one delivered on registration — which
+     * is why [chargingEvents] is primed with the state at start-up rather than left at "unplugged".
+     */
+    private fun onBatteryReading(r: BatteryReading) {
+        _batteryLevel.value = r.levelPct
+        val rule = _chargingRule.value
+        when (chargingEvents.onReading(r.levelPct, r.plugged, r.full)) {
+            ChargingEvents.Event.PLUGGED_IN -> {
+                if (rule.onPlugIn) fireCharging(r.levelPct)
+                scheduleChargingRepeat()
+            }
+            ChargingEvents.Event.FULL -> if (rule.onFull) fireCharging(100)
+            null -> Unit
+        }
+        if (!r.plugged) cancelChargingRepeat()
+    }
+
+    /**
+     * Fires the gauge as a finite alert, through the same gates as [fireAlert] — the master switch,
+     * quiet hours and the battery rules — plus the rule's own screen-off condition. The low-battery
+     * guard never bites here, because on the charger the level is reported as full; which is the
+     * point, since a gauge at 5% is the one most worth seeing.
+     */
+    private fun fireCharging(levelPct: Int) {
+        val rule = _chargingRule.value
+        if (!_enabled.value || !rule.enabled) return
+        if (guardState().alertSuppression() != null) return
+        if (rule.onlyWhenScreenOff && screenOn()) return
+        holdAlert(
+            alert = Bridge.chargingAlertJson(
+                Bridge.nextAlertId(), rule, levelPct / 100f, rule.showingMs(levelPct),
+            ),
+            // as long as the animation takes at this level: whole counts, never cut off
+            durationMs = rule.showingMs(levelPct),
+            arm = false,               // a charger is not the user asking for the ambient look
+            preview = null,
+        )
+    }
+
+    /** Plans the next repeat showing while the charger stays in; a no-op when repeats are off. */
+    private fun scheduleChargingRepeat() {
+        cancelChargingRepeat()
+        val rule = _chargingRule.value
+        if (!rule.enabled || rule.repeatEveryMin <= 0 || !chargingEvents.plugged) return
+        val r = object : Runnable {
+            override fun run() {
+                chargingRepeat = null
+                if (!chargingEvents.plugged) return
+                fireCharging(_batteryLevel.value)
+                scheduleChargingRepeat()
+            }
+        }
+        chargingRepeat = r
+        main.postDelayed(r, rule.repeatEveryMin * 60_000L)
+    }
+
+    private fun cancelChargingRepeat() {
+        chargingRepeat?.let { main.removeCallbacks(it) }
+        chargingRepeat = null
+    }
+
+    /** The sticky battery broadcast, read without keeping a receiver alive. */
+    private fun batteryReading(): BatteryReading = BatteryReading.from(
+        app.registerReceiver(null, android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+    )
 
     /** Battery level from the sticky broadcast — no receiver to keep alive. */
     private fun batteryPct(): Int {
@@ -1195,6 +1312,11 @@ class Store private constructor(private val app: Context) {
         _privacyRules.value.forEach { a.put(it.toPrefsJson()) }
         prefs.edit().putString("privacyRules", a.toString()).apply()
     }
+
+    private fun loadChargingRule(): ChargingRule =
+        prefs.getString("chargingRule", null)
+            ?.let { runCatching { ChargingRule.fromJson(JSONObject(it)) }.getOrNull() }
+            ?: ChargingRule()
 
     private fun loadConversations(): List<ConversationRef> =
         prefs.getString("conversations", null)?.let { raw ->

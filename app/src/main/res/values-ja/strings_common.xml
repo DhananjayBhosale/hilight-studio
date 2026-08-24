@@ -48,6 +48,8 @@
     <string name="pattern_random">ランダムな色</string>
     <!-- "Per-LED custom" -->
     <string name="pattern_custom">LED ごとに設定</string>
+    <!-- "Battery gauge" -->
+    <string name="pattern_battery">バッテリー ゲージ</string>
 
     <!-- What one cycle of each pattern means -->
     <!-- "One full breath: dim up to full, back down." -->
