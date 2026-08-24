@@ -1,0 +1,1 @@
+Adds custom microphone and camera activity rules, automatic root support, manual update checks, safer renderer handoff, and a much smaller optimized release build. Privacy rules stop when sensor activity ends and default to 10 seconds on, 10 seconds off, for up to one minute. Root falls back to Shizuku or ADB when unavailable.

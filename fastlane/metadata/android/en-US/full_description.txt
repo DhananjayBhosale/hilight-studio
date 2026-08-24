@@ -1,0 +1,9 @@
+HiLight Studio is an open-source controller for the eight-LED HiLight array on the Pixel 11 Pro, Pixel 11 Pro XL, and Pixel 11 Pro Fold running Android 17.
+
+Create solid colours and animated patterns, save presets, and let the array respond to notifications, foreground apps, selected contacts, microphone activity, or camera activity. Quiet hours, Do Not Disturb, Battery Saver, low-battery controls, and enforced runtime limits help prevent unwanted or excessive output.
+
+The app automatically uses root access when it is available. Shizuku and an ADB-started helper are supported as alternatives. Privileged access must be restored after a reboot.
+
+HiLight Studio has no advertising, analytics, account system, or telemetry. Rules, remembered chat names, and settings remain on the device. Notification contents, audio, and video are never recorded or uploaded. The internet is used only when you manually request an update check.
+
+This is experimental software for specific hardware. It is not affiliated with or endorsed by Google. Review the setup instructions and safety notes before use.

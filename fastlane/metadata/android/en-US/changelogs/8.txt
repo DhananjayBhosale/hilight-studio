@@ -1,0 +1,1 @@
+Enables reproducible, developer-signed builds for F-Droid. App behavior is unchanged from 1.0.6.

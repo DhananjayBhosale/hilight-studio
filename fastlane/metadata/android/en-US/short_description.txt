@@ -1,0 +1,1 @@
+Control the HiLight LED array on supported Pixel 11 Pro devices

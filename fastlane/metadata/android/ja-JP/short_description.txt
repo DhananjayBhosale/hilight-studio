@@ -1,0 +1,1 @@
+対応する Pixel 11 Pro の HiLight LED アレイを制御
