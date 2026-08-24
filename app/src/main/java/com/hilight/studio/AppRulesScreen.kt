@@ -155,6 +155,7 @@ fun AppRulesScreen(store: Store) {
 
     if (picking) {
         AppPickerDialog(
+            alsoOffer = conversations.mapTo(mutableSetOf()) { it.pkg },
             onDismiss = { picking = false },
             onPick = { app ->
                 picking = false
@@ -421,18 +422,38 @@ private fun RuleCard(
 }
 
 @Composable
-fun AppPickerDialog(onDismiss: () -> Unit, onPick: (InstalledApp) -> Unit) {
+fun AppPickerDialog(
+    onDismiss: () -> Unit,
+    onPick: (InstalledApp) -> Unit,
+    /**
+     * Packages to offer beyond the ones carrying a launcher activity.
+     *
+     * A launcher query answers "what can this person open", which is not the question this screen
+     * asks. `android` posts the permission prompts, and an app whose launcher has been hidden still
+     * reaches the shade — both are already remembered as chats, and neither can be picked here, so
+     * the screen refuses a rule for a notification HiLight has demonstrably seen.
+     */
+    alsoOffer: Set<String> = emptySet(),
+) {
     val ctx = LocalContext.current
     var query by remember { mutableStateOf("") }
-    val apps by produceState(initialValue = emptyList<InstalledApp>()) {
+    val apps by produceState(initialValue = emptyList<InstalledApp>(), alsoOffer) {
         value = withContext(Dispatchers.IO) {
             val pm = ctx.packageManager
             val launchable = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-            pm.queryIntentActivities(launchable, 0)
+            val launcherApps = pm.queryIntentActivities(launchable, 0)
                 .mapNotNull { ri ->
                     val ai = ri.activityInfo?.applicationInfo ?: return@mapNotNull null
                     InstalledApp(ai.packageName, pm.getApplicationLabel(ai).toString(), ai)
                 }
+            val launcherPkgs = launcherApps.mapTo(mutableSetOf()) { it.pkg }
+            val seenOnly = (alsoOffer - launcherPkgs).mapNotNull { pkg ->
+                runCatching {
+                    val ai = pm.getApplicationInfo(pkg, 0)
+                    InstalledApp(pkg, pm.getApplicationLabel(ai).toString(), ai)
+                }.getOrNull()
+            }
+            (launcherApps + seenOnly)
                 .distinctBy { it.pkg }
                 .sortedBy { it.label.lowercase() }
         }

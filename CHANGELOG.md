@@ -4,6 +4,11 @@ All notable changes to HiLight Studio are documented here.
 
 ## [Unreleased]
 
+- Fixed the rule picker leaving out apps that have no launcher activity. Android's own permission
+  prompts are remembered as chats but could never be given a rule, because the picker listed only
+  apps that can be opened. Any package HiLight has already seen notify is now offered alongside
+  them.
+
 ## [1.0.8-experimental] - 2026-08-25
 
 - Released the light session whenever a rendered frame is dark, so an idle or temporarily dark
