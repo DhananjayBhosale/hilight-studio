@@ -96,6 +96,8 @@
     <string name="duration_minutes">%1$d分</string>
     <!-- "%1$dm %2$ds" -->
     <string name="duration_minutes_seconds">%1$d分%2$d秒</string>
+    <!-- "Seconds" — field label in the dialog for typing a duration directly -->
+    <string name="duration_seconds_field">秒</string>
 
     <!-- Buttons and labels used on more than one screen -->
     <!-- "Cancel" -->

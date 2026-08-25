@@ -674,6 +674,7 @@ private fun RuleEditorDialog(
                         r.speedMs.toFloat(),
                         150f..5000f,
                         { r = r.copy(speedMs = it.toInt()) },
+                        typeInSeconds = true,
                     ) { formatDuration(it.toInt()) }
                     r.pattern.cycleMeaningRes?.let { Caption(stringResource(it)) }
                 }

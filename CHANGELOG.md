@@ -4,6 +4,10 @@ All notable changes to HiLight Studio are documented here.
 
 ## [Unreleased]
 
+- Added typed entry on time sliders: tapping the value badge opens a dialog to type the time in
+  seconds, for values the hundredth-stepped drag is too coarse to land on. Typed values are clamped
+  to the slider's range, so the long-duration safety gates still apply.
+
 ## [1.0.8-experimental] - 2026-08-25
 
 - Released the light session whenever a rendered frame is dark, so an idle or temporarily dark

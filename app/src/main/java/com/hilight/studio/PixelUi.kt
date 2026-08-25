@@ -24,7 +24,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -52,6 +54,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -276,10 +279,14 @@ fun PixelSlider(
     value: Float,
     range: ClosedFloatingPointRange<Float>,
     onChange: (Float) -> Unit,
+    // Opt-in for ms-valued sliders: tapping the badge opens a dialog to type the time in seconds,
+    // since the slider's hundredth-steps are hard to land exactly by drag.
+    typeInSeconds: Boolean = false,
     // Composable because the value badge often shows a duration, and a duration's units come from
     // resources now that they have to be translated.
     format: @Composable (Float) -> String = { "%.0f".format(it) },
 ) {
+    var typing by remember { mutableStateOf(false) }
     Column {
         Row(
             Modifier.fillMaxWidth(),
@@ -289,7 +296,9 @@ fun PixelSlider(
             Text(label, style = MaterialTheme.typography.bodyLarge)
             Box(
                 Modifier
-                    .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.secondaryContainer)
+                    .then(if (typeInSeconds) Modifier.clickable { typing = true } else Modifier)
                     .padding(horizontal = 10.dp, vertical = 3.dp)
             ) {
                 Text(
@@ -307,6 +316,43 @@ fun PixelSlider(
                 activeTrackColor = MaterialTheme.colorScheme.primary,
                 inactiveTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
             ),
+        )
+    }
+    if (typing) {
+        // Prefilled in seconds, trailing zeros trimmed; the separator may be a comma in locales
+        // that write one, so parsing accepts both.
+        var text by remember {
+            mutableStateOf("%.2f".format(value / 1000f).trimEnd('0').trimEnd('.', ','))
+        }
+        val typedMs = text.trim().replace(',', '.').toFloatOrNull()?.times(1000f)
+        AlertDialog(
+            onDismissRequest = { typing = false },
+            shape = MaterialTheme.shapes.extraLarge,
+            title = { Text(label) },
+            text = {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    singleLine = true,
+                    label = { Text(stringResource(R.string.duration_seconds_field)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = typedMs != null,
+                    onClick = {
+                        typing = false
+                        // Clamped to the slider's own range, so typing cannot pass a safety gate.
+                        if (typedMs != null) onChange(typedMs.coerceIn(range))
+                    },
+                ) { ButtonLabel(stringResource(R.string.common_save)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { typing = false }) {
+                    ButtonLabel(stringResource(R.string.common_cancel))
+                }
+            },
         )
     }
 }
@@ -419,6 +465,7 @@ fun GatedDurationSlider(
         value = valueMs.toFloat(),
         range = minMs.toFloat()..(if (unlocked) extendedMaxMs else safeMaxMs).toFloat(),
         onChange = { onChange(it.toInt()) },
+        typeInSeconds = true,
     ) { formatDuration(it.toInt()) }
 
     ToggleRow(unlockLabel, unlocked) { wanted ->

@@ -94,6 +94,7 @@ fun AmbientScreen(store: Store) {
                         ambient.randomIntervalMs.toFloat(),
                         150f..8000f,
                         { store.setAmbient(ambient.copy(randomIntervalMs = it.toInt())) },
+                        typeInSeconds = true,
                     ) {
                         // shown to a tenth of a second, so dragging does not spray digits
                         val tenths = (it / 100).toInt() / 10f
@@ -148,6 +149,7 @@ fun AmbientScreen(store: Store) {
                         ambient.rotateMs.toFloat(),
                         0f..2000f,
                         { store.setAmbient(ambient.copy(rotateMs = it.toInt())) },
+                        typeInSeconds = true,
                     ) {
                         if (it < 50) stringResource(R.string.style_rotate_off)
                         else stringResource(R.string.duration_ms, it.toInt())
@@ -210,6 +212,7 @@ fun AmbientScreen(store: Store) {
                             ambient.speedMs.toFloat(),
                             150f..8000f,
                             { store.setAmbient(ambient.copy(speedMs = it.toInt())) },
+                            typeInSeconds = true,
                         ) { formatDuration(it.toInt()) }
                         pattern.cycleMeaningRes?.let { Caption(stringResource(it)) }
                         Caption(stringResource(R.string.style_shorter_is_faster))

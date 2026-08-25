@@ -252,6 +252,7 @@ fun PrivacyRuleEditorDialog(
                     value = edited.cooldownMs.toFloat(),
                     range = PrivacyRule.MIN_PHASE_MS.toFloat()..PrivacyRule.MAX_PHASE_MS.toFloat(),
                     onChange = { edited = edited.copy(cooldownMs = it.toInt()) },
+                    typeInSeconds = true,
                 ) { formatDuration(it.toInt()) }
                 Caption(
                     if (edited.cooldownMs < 10_000)
@@ -264,6 +265,7 @@ fun PrivacyRuleEditorDialog(
                         stringResource(R.string.rules_time_per_cycle),
                         edited.speedMs.toFloat(), 150f..5000f,
                         { edited = edited.copy(speedMs = it.toInt()) },
+                        typeInSeconds = true,
                     ) { formatDuration(it.toInt()) }
                 }
                 PixelSlider(
