@@ -1,9 +1,8 @@
 # Japanese review — HiLight Studio
 
-Every user-visible string in the app, English beside Japanese, grouped by the resource file it
-lives in. Generated from the resources themselves, so it cannot drift from what the app shows.
-
-323 strings. Every one has a Japanese rendering.
+Manual localization review snapshot, with English beside Japanese and grouped by resource file. It
+is not generated and may lag the XML resources; `app/src/main/res/values/` and `values-ja/` are the
+source of truth. Update or regenerate this snapshot before treating it as an exhaustive string audit.
 
 What to check, in the order it matters:
 
@@ -292,18 +291,19 @@ Leave Latin as-is: HiLight, Shizuku, ADB, LED, JSON, MessagingStyle, shortcutId,
 | `shizuku_connected_body` | Renderer running in Shizuku\'s shell-UID process. | レンダラーは Shizuku の shell UID プロセスで動作しています。 |
 | `shizuku_disconnect` | Disconnect | 切断 |
 | `shizuku_error_dead_binder` | service returned a dead binder | サービスが無効なバインダーを返しました |
-| `shizuku_error_too_old` | Shizuku is too old; v11 or newer is required | Shizuku のバージョンが古すぎます。v11 以降が必要です |
+| `shizuku_error_too_old` | Shizuku is too old; v12 or newer is required | Shizuku のバージョンが古すぎます。v12 以降が必要です |
+| `shizuku_error_renderer_incompatible` | The renderer did not match this app. Restart Shizuku and try again. | レンダラーがこのアプリと一致しません。Shizuku を再起動して、もう一度お試しください。 |
 | `shizuku_unreachable` | Could not reach Shizuku. | Shizuku に接続できませんでした。 |
 | `shizuku_retry` | Retry | 再試行 |
 | `setup_no_browser` | No browser available | 利用できるブラウザがありません |
 | `adb_title` | ADB | ADB |
-| `adb_body` | Run both lines with the phone plugged in. Nothing to push. Re-run after a reboot — and the first line matters every time, since a leftover renderer keeps the array dark. | 端末を接続した状態で 2 行とも実行してください。転送するファイルはありません。端末を再起動したら再実行が必要です。1 行目は毎回重要です。前回のレンダラーが残っていると LED アレイは消灯したままになります。 |
+| `adb_body` | Run the one copied command with the phone plugged in. Nothing to push. Re-run after a reboot. It stops old renderers, waits for confirmed exit, then starts one new helper. | 端末を接続した状態で、コピーした 1 つのコマンドを実行してください。転送するファイルはありません。端末を再起動したら再実行が必要です。このコマンドは古いレンダラーを停止し、終了を確認してから、新しいヘルパーを 1 つ起動します。 |
 | `adb_shells_note` | Works in Terminal on macOS and Linux, and in PowerShell. In Windows Command Prompt, copy the cmd.exe version instead — it has no single quotes. | macOS と Linux のターミナル、および PowerShell で動作します。Windows のコマンドプロンプトでは、シングルクォートを使わない cmd.exe 用をコピーしてください。 |
 | `adb_copy` | Copy | コピー |
 | `adb_copy_cmd` | Copy for cmd.exe | cmd.exe 用をコピー |
 | `adb_copied` | Command copied | コマンドをコピーしました |
 | `adb_copied_cmd` | cmd.exe version copied | cmd.exe 用をコピーしました |
-| `adb_verify_note` | It worked if the array responds. Nothing printed means it did not start. | LED アレイが反応すれば成功です。何も表示されない場合は起動していません。 |
+| `adb_verify_note` | The command normally prints nothing because the helper runs in the background and writes to its log. The array response or helper log confirms startup. | ヘルパーはバックグラウンドで動作し、出力はログに書き込まれるため、通常このコマンドは何も表示しません。LED アレイの反応またはヘルパーログで起動を確認してください。 |
 | `adb_send` | Send to computer | パソコンに送る |
 | `adb_share_title` | Send command | コマンドを送信 |
 | `setup_notif_title` | Notification access | 通知へのアクセス |

@@ -7,8 +7,7 @@
     通知へのアクセス / 使用状況へのアクセス for the two special accesses, so that the wording matches the
     Settings screens these buttons open.
 
-    The adb command lines themselves are constants in code and appear untranslated between these
-    captions, which is why the ADB card's prose refers to "1 行目" rather than quoting the command.
+    The combined adb command is a constant in code and appears untranslated between these captions.
 -->
 <resources>
 
@@ -107,8 +106,10 @@
     <string name="shizuku_disconnect">切断</string>
     <!-- "service returned a dead binder" — HiLight's own diagnosis, so it is translated -->
     <string name="shizuku_error_dead_binder">サービスが無効なバインダーを返しました</string>
-    <!-- "Shizuku is too old; v11 or newer is required" -->
-    <string name="shizuku_error_too_old">Shizuku のバージョンが古すぎます。v11 以降が必要です</string>
+    <!-- "Shizuku is too old; v12 or newer is required" -->
+    <string name="shizuku_error_too_old">Shizuku のバージョンが古すぎます。v12 以降が必要です</string>
+    <!-- "The renderer did not match this app. Restart Shizuku and try again." -->
+    <string name="shizuku_error_renderer_incompatible">レンダラーがこのアプリと一致しません。Shizuku を再起動して、もう一度お試しください。</string>
     <!-- "Could not reach Shizuku." -->
     <string name="shizuku_unreachable">Shizuku に接続できませんでした。</string>
     <!-- "Retry" -->
@@ -116,12 +117,12 @@
     <!-- "No browser available" -->
     <string name="setup_no_browser">利用できるブラウザがありません</string>
 
-    <!-- The ADB card. The command lines between these captions are untranslated literals. -->
+    <!-- The ADB card. The combined command between these captions is an untranslated literal. -->
     <!-- "ADB" -->
     <string name="adb_title">ADB</string>
-    <!-- "Run both lines with the phone plugged in. Nothing to push. Re-run after a reboot — and the
-         first line matters every time, since a leftover renderer keeps the array dark." -->
-    <string name="adb_body">端末を接続した状態で 2 行とも実行してください。転送するファイルはありません。端末を再起動したら再実行が必要です。1 行目は毎回重要です。前回のレンダラーが残っていると LED アレイは消灯したままになります。</string>
+    <!-- "Run the one copied command with the phone plugged in. Nothing to push. Re-run after a reboot.
+         It stops old renderers, waits for confirmed exit, then starts one new helper." -->
+    <string name="adb_body">端末を接続した状態で、コピーした 1 つのコマンドを実行してください。転送するファイルはありません。端末を再起動したら再実行が必要です。このコマンドは古いレンダラーを停止し、終了を確認してから、新しいヘルパーを 1 つ起動します。</string>
     <!-- "Works in Terminal on macOS and Linux, and in PowerShell. In Windows Command Prompt, copy the
          cmd.exe version instead — it has no single quotes." -->
     <string name="adb_shells_note">macOS と Linux のターミナル、および PowerShell で動作します。Windows のコマンドプロンプトでは、シングルクォートを使わない cmd.exe 用をコピーしてください。</string>
@@ -133,8 +134,9 @@
     <string name="adb_copied">コマンドをコピーしました</string>
     <!-- "cmd.exe version copied" -->
     <string name="adb_copied_cmd">cmd.exe 用をコピーしました</string>
-    <!-- "It worked if the array responds. Nothing printed means it did not start." -->
-    <string name="adb_verify_note">LED アレイが反応すれば成功です。何も表示されない場合は起動していません。</string>
+    <!-- "The command normally prints nothing because the helper runs in the background and writes to
+         its log. The array response or helper log confirms startup." -->
+    <string name="adb_verify_note">ヘルパーはバックグラウンドで動作し、出力はログに書き込まれるため、通常このコマンドは何も表示しません。LED アレイの反応またはヘルパーログで起動を確認してください。</string>
     <!-- "Send to computer" -->
     <string name="adb_send">パソコンに送る</string>
     <!-- "Send command" -->
@@ -227,6 +229,21 @@
     <string name="setup_selftest_title">HiLight セルフテスト</string>
     <!-- "If a rule exists for this app, the LEDs just fired" -->
     <string name="setup_selftest_body">このアプリのルールがあれば、今 LED が点灯しました</string>
+
+    <!-- Privacy-safe renderer evidence for stuck-LED reports. -->
+    <string name="setup_led_diagnostics_title">LED 診断</string>
+    <string name="setup_led_diagnostics_body">不具合報告用に、レンダラーとセッションのライフサイクル情報をコピーします。通知内容、パッケージ名、アカウント、端末のシリアル番号と Android ID、logcat は含まれません。</string>
+    <string name="setup_led_diagnostics_copy">LED 診断をコピー</string>
+    <string name="setup_led_diagnostics_copied">LED 診断をコピーしました</string>
+    <!-- "Retry LED cleanup" -->
+    <string name="setup_led_cleanup_retry">LED クリーンアップを再試行</string>
+    <!-- "Cleanup retry in progress…" -->
+    <string name="setup_led_cleanup_retry_pending">クリーンアップを再試行中…</string>
+    <!-- "Sends three black-only cleanup passes. It does not flash colors or confirm that the
+         physical LED switched off. Available only while HiLight is off and the renderer is idle." -->
+    <string name="setup_led_cleanup_retry_body">黒のみのクリーンアップを 3 回送信します。色を点滅させることはなく、実際の LED が消灯したことを確認する機能でもありません。HiLight がオフでレンダラーが待機中の場合にのみ使用できます。</string>
+    <!-- "Reconnect Shizuku, restart the ADB helper, or start the root renderer to enable cleanup." -->
+    <string name="setup_led_cleanup_renderer_unavailable">クリーンアップを有効にするには、Shizuku に再接続するか、ADB ヘルパーを再起動するか、root レンダラーを起動してください。</string>
 
     <!-- Session priority -->
     <!-- "Session priority" -->

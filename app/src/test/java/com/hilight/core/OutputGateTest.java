@@ -16,7 +16,7 @@ public final class OutputGateTest {
         gate.armAmbient(0, TIMEOUT);
 
         assertEquals(OutputGate.Layer.AMBIENT, gate.next(1_000));
-        assertEquals(OutputGate.Layer.BLANK, gate.next(TIMEOUT + 1));
+        assertEquals(OutputGate.Layer.BLANK, gate.next(TIMEOUT));
         // the blank latch stops a binder push every frame once the array is already dark
         assertEquals(OutputGate.Layer.IDLE, gate.next(TIMEOUT + 100));
         assertTrue(gate.isAmbientHeld());

@@ -51,6 +51,12 @@ body:
     attributes:
       label: Additional context
       description: Add logs or screenshots only after removing notification contents and personal data.
+  - type: textarea
+    id: led-diagnostics
+    attributes:
+      label: LED diagnostics, if relevant
+      description: For a stuck or dark LED, use Setup > Copy LED diagnostics before rebooting or restarting the renderer, then paste it here. It contains allowlisted software state only and does not prove what the physical LED displayed.
+      render: json
   - type: input
     id: privacy-activity
     attributes:

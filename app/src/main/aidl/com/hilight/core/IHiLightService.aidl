@@ -13,4 +13,11 @@ interface IHiLightService {
 
     /** Number of addressable HiLight LEDs the service found. */
     int ledCount() = 3;
+
+    /**
+     * Stops only the release-acknowledged adb helper whose PID and renderer instance both match.
+     * An empty instance is the legacy exact-PID/cmdline upgrade path. No other helper is signalled;
+     * if one remains, takeover fails closed instead of trusting or terminating the other identity.
+     */
+    boolean stopAdbRenderers(int expectedPid, String expectedRendererInstanceId) = 4;
 }

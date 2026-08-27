@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
 import androidx.annotation.StringRes
@@ -52,13 +53,48 @@ import kotlinx.coroutines.withContext
  * without a reboot, and a Shizuku user service, which is a daemon and survives both Shizuku being
  * stopped and this app being uninstalled.
  *
- * One `pkill` with an alternation rather than two, because `-f` matches this very command line: the
- * first `pkill` would kill the shell before the second could run. One pass signals every match
- * including that shell, which is harmless when nothing follows it — hence a separate line from
- * [ADB_COMMAND]. The quoting here is safe in both Windows shells and in sh.
+ * The reset enumerates `/proc`, accepts only the exact helper entry point or Shizuku process name,
+ * sends cooperative TERM, and waits up to 6.5 seconds for exact exit. That exceeds Engine's bounded
+ * four-second stop path. Launch is in the same phone-shell command and is skipped on any survivor,
+ * so copying the setup command cannot create a second writer after a failed reset.
  */
+private const val ADB_PHONE_RESET =
+    "live=1; i=0; while [ ${'$'}i -lt 65 ] && [ -n \"${'$'}live\" ]; do live=\"\"; " +
+        "for d in /proc/[0-9]*; do p=${'$'}{d#/proc/}; " +
+        "c=${'$'}(tr \"\\000\" \" \" < ${'$'}d/cmdline 2>/dev/null); " +
+        "if [ -z \"${'$'}c\" ]; then e=${'$'}(readlink ${'$'}d/exe 2>/dev/null); " +
+        "x=${'$'}{e##*/}; if [ \"${'$'}x\" = app_process ] || " +
+        "[ \"${'$'}x\" = app_process32 ] || " +
+        "[ \"${'$'}x\" = app_process64 ]; then exit 1; fi; continue; fi; " +
+        "set -- ${'$'}c; " +
+        "x=${'$'}{1##*/}; if { { [ \"${'$'}x\" = app_process ] || " +
+        "[ \"${'$'}x\" = app_process32 ] || [ \"${'$'}x\" = app_process64 ]; } && " +
+        "[ \"${'$'}{2:-x}\" = / ] && " +
+        "[ \"${'$'}{3:-x}\" = com.hilight.core.AdbHelper ]; } || " +
+        "[ \"${'$'}{1:-x}\" = com.hilight.studio:hilight ]; then " +
+        "kill -TERM ${'$'}p 2>/dev/null || exit 1; live=1; fi; done; " +
+        "[ -n \"${'$'}live\" ] && sleep 0.1; i=${'$'}((i + 1)); done; " +
+        "[ -z \"${'$'}live\" ] || exit 1"
+
+private const val ADB_PHONE_RESET_CMD =
+    "live=1; i=0; while [ ${'$'}i -lt 65 ] && [ ${'$'}live = 1 ]; do live=0; " +
+        "for d in /proc/[0-9]*; do p=${'$'}{d#/proc/}; " +
+        "c=${'$'}(tr '\\000' ' ' < ${'$'}d/cmdline 2>/dev/null); set -- ${'$'}c; " +
+        "if [ ${'$'}# -eq 0 ]; then e=${'$'}(readlink ${'$'}d/exe 2>/dev/null); " +
+        "x=${'$'}{e##*/}; if [ ${'$'}{x:-none} = app_process ] || " +
+        "[ ${'$'}{x:-none} = app_process32 ] || [ ${'$'}{x:-none} = app_process64 ]; " +
+        "then exit 1; fi; continue; fi; " +
+        "x=${'$'}{1##*/}; if { { [ ${'$'}x = app_process ] || " +
+        "[ ${'$'}x = app_process32 ] || [ ${'$'}x = app_process64 ]; } && " +
+        "[ ${'$'}{2:-x} = / ] && " +
+        "[ ${'$'}{3:-x} = com.hilight.core.AdbHelper ]; } || " +
+        "[ ${'$'}{1:-x} = com.hilight.studio:hilight ]; then " +
+        "kill -TERM ${'$'}p 2>/dev/null || exit 1; live=1; fi; done; " +
+        "[ ${'$'}live = 1 ] && sleep 0.1; i=${'$'}((i + 1)); done; " +
+        "[ ${'$'}live = 0 ] || exit 1"
+
 const val ADB_RESET =
-    "adb shell \"pkill -f 'com.hilight.(core.AdbHelper|studio:hilight)'\""
+    "adb shell '$ADB_PHONE_RESET'"
 
 /**
  * Starts the renderer out of the installed APK.
@@ -73,19 +109,29 @@ const val ADB_RESET =
  * Quoting keeps `|`, parentheses, redirects, and `&` away from cmd.exe, while cmd.exe leaves `$`
  * alone, so the phone receives and expands the command substitution.
  */
-const val ADB_COMMAND = ADB_RESET + "\n" +
-    "adb shell 'CLASSPATH=${'$'}(pm path com.hilight.studio | head -1 | cut -d: -f2) " +
-        "nohup app_process / com.hilight.core.AdbHelper > /data/local/tmp/hilight.log 2>&1 &'"
+const val ADB_COMMAND =
+    "adb shell '$ADB_PHONE_RESET; " +
+        "instance=adb-${'$'}(cat /proc/sys/kernel/random/uuid); " +
+        "CLASSPATH=${'$'}(pm path com.hilight.studio | head -1 | cut -d: -f2) " +
+        "nohup app_process / com.hilight.core.AdbHelper --owner adb " +
+        "--instance \"${'$'}instance\" --exclusive > /data/local/tmp/hilight.log 2>&1 &'"
 
 /** The same pair for Windows Command Prompt, which does not understand single quotes. */
-const val ADB_COMMAND_CMD = ADB_RESET + "\n" +
-    "adb shell \"CLASSPATH=${'$'}(pm path com.hilight.studio | head -1 | cut -d: -f2) " +
-        "nohup app_process / com.hilight.core.AdbHelper > /data/local/tmp/hilight.log 2>&1 &\""
+const val ADB_COMMAND_CMD =
+    "adb shell \"$ADB_PHONE_RESET_CMD; " +
+        "instance=adb-${'$'}(cat /proc/sys/kernel/random/uuid); " +
+        "CLASSPATH=${'$'}(pm path com.hilight.studio | head -1 | cut -d: -f2) " +
+        "nohup app_process / com.hilight.core.AdbHelper --owner adb " +
+        "--instance ${'$'}instance --exclusive > /data/local/tmp/hilight.log 2>&1 &\""
 
 @Composable
 fun SetupScreen(store: Store) {
     val ctx = LocalContext.current
     val status by store.status.collectAsStateWithLifecycle()
+    val masterEnabled by store.enabled.collectAsStateWithLifecycle()
+    val manualCleanupPending by store.manualLedCleanupPending.collectAsStateWithLifecycle()
+    val manualCleanupInProgress = manualCleanupPending ||
+        (status.blackClearPending && status.blackClearCycleSource == "manual")
     val transport by store.transport.collectAsStateWithLifecycle()
     val active by store.activeTransport.collectAsStateWithLifecycle()
     val shizukuState by store.shizuku.state.collectAsStateWithLifecycle()
@@ -395,6 +441,53 @@ fun SetupScreen(store: Store) {
         }
     }
 
+    PixelCard(tone = 2) {
+        SectionTitle(stringResource(R.string.setup_led_diagnostics_title))
+        Caption(stringResource(R.string.setup_led_diagnostics_body))
+        FilledTonalButton(
+            onClick = {
+                updateScope.launch {
+                    val payload = withContext(Dispatchers.IO) {
+                        val snapshot = store.freshRendererStatusSnapshot()
+                        RendererDiagnostics.format(
+                            status = snapshot.status,
+                            selectedTransport = snapshot.selectedTransport,
+                            activeTransport = snapshot.activeTransport,
+                            appVersionName = BuildConfig.VERSION_NAME,
+                            appVersionCode = BuildConfig.VERSION_CODE.toLong(),
+                            deviceModel = Build.MODEL,
+                            buildId = Build.ID,
+                            sdkInt = Build.VERSION.SDK_INT,
+                            capturedAtEpochMs = snapshot.capturedAtEpochMs,
+                        )
+                    }
+                    copy(ctx, payload, R.string.setup_led_diagnostics_copied)
+                }
+            },
+        ) {
+            ButtonLabel(stringResource(R.string.setup_led_diagnostics_copy))
+        }
+        Caption(stringResource(R.string.setup_led_cleanup_retry_body))
+        if (!status.alive || status.rendererStale) {
+            Caption(stringResource(R.string.setup_led_cleanup_renderer_unavailable))
+        }
+        FilledTonalButton(
+            onClick = { store.retryLedCleanup() },
+            enabled = store.isLedCleanupRetryEnabled(
+                masterEnabled = masterEnabled,
+                status = status,
+                requestPending = manualCleanupPending,
+            ),
+        ) {
+            ButtonLabel(
+                stringResource(
+                    if (manualCleanupInProgress) R.string.setup_led_cleanup_retry_pending
+                    else R.string.setup_led_cleanup_retry,
+                )
+            )
+        }
+    }
+
     PixelCard {
         SectionTitle(stringResource(R.string.setup_priority_title))
         Caption(stringResource(R.string.setup_priority_body))
@@ -495,7 +588,7 @@ private fun ShizukuCard(store: Store, state: ShizukuBackend.State) {
 
                     ShizukuBackend.State.CONNECTED -> {
                         Caption(stringResource(R.string.shizuku_connected_body))
-                        TextButton(onClick = { store.shizuku.unbind() }) {
+                        TextButton(onClick = { store.disconnectShizuku() }) {
                             ButtonLabel(stringResource(R.string.shizuku_disconnect))
                         }
                     }

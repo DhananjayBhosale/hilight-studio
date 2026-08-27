@@ -1,6 +1,7 @@
 package com.hilight.studio
 
 import androidx.annotation.StringRes
+import com.hilight.core.RendererContract
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -378,6 +379,9 @@ object Limits {
     const val WARN_ABOVE_MS = 30_000            // anything longer than this warns twice
 }
 
+/** Whether the privileged process is provably running the renderer bundled with this app. */
+enum class RendererCompatibility { CURRENT, INCOMPATIBLE, UNKNOWN }
+
 /** What the helper is reporting back. */
 data class HelperStatus(
     val alive: Boolean,
@@ -385,8 +389,44 @@ data class HelperStatus(
     val pid: Int = -1,
     val uid: Int = -1,
     val owner: String = "",
+    /** Per-process nonce emitted by file-bridge helpers; prevents another writer hiding the source. */
+    val rendererInstanceId: String = "",
+    /** False only when the latest file-bridge read could not prove a complete process identity. */
+    val identityResolved: Boolean = true,
     val ledCount: Int = 0,
     val sessionOpen: Boolean = false,
+    /** the renderer still owes the framework a two-step black clear */
+    val blackClearPending: Boolean = false,
+    /** true once the current cycle can no longer make forward progress without a new trigger */
+    val blackClearTerminal: Boolean = false,
+    val blackClearResult: String = "not_requested",
+    val blackClearAttemptResult: String = "not_requested",
+    val blackClearStage: String = "idle",
+    val blackClearTimestampElapsedMs: Long = 0,
+    val blackClearCycleId: Long = 0,
+    /** Whether the current bounded cleanup cycle was automatic or explicitly requested. */
+    val blackClearCycleSource: String = "automatic",
+    val blackClearAttemptsUsed: Int = 0,
+    /** bounded post-release recovery attempts left for the most recent visible frame */
+    val blackClearAttemptsRemaining: Int = 0,
+    val blackClearStopAttemptAvailable: Boolean = false,
+    val blackClearCloseFailures: Int = 0,
+    /** Final close override also failed; ownership remains unresolved until this process exits. */
+    val blackClearUnreleasedFatal: Boolean = false,
+    val lightMinUpdatePeriodMs: Long = 0,
+    val blackClearStrategy: String = "unknown",
+    val blackClearStrategyVersion: Int = 0,
+    /** Actual build loaded by the privileged renderer; distinct from the installed app build. */
+    val rendererVersionCode: Int = -1,
+    val rendererVersionName: String = "",
+    val rendererContractVersion: Int = -1,
+    val rendererImplementationRevision: Int = -1,
+    val rendererStatusSchemaVersion: Int = -1,
+    val rendererClearAlgorithmVersion: Int = -1,
+    /** Composite lifecycle version used by Shizuku; unavailable for file-bridge renderers. */
+    val rendererServiceVersion: Int = -1,
+    /** Shizuku reports this explicitly; a live ADB/root helper has already started its engine. */
+    val rendererReady: Boolean = false,
     val mode: String = "-",
     /** ms left on the ambient auto-off window at the moment this status was read */
     val ambientRemainingMs: Long = 0,
@@ -396,10 +436,47 @@ data class HelperStatus(
     val resting: Boolean = false,
     /** how much of the duty allowance is used, 0-100 */
     val dutyPct: Int = 0,
+    /** Legacy alias for [receivedStateRevision], kept for v1.0.8 bridge compatibility. */
     val appliedStateRevision: Long = 0,
+    val receivedStateRevision: Long = appliedStateRevision,
+    val settledStateRevision: Long = 0,
+    val releasedStateRevision: Long = 0,
+    val lastSeenManualBlackClearRequestId: Long = 0,
+    val lastAcceptedManualBlackClearRequestId: Long = 0,
     val privacyObserverEnabled: Boolean = false,
     val privacyObserverState: String = "stopped",
     val privacyPhase: String = "inactive",
+) {
+    val rendererCompatibility: RendererCompatibility
+        get() = when {
+            rendererContractVersion < 0 || rendererImplementationRevision < 0 ||
+                rendererStatusSchemaVersion < 0 || rendererClearAlgorithmVersion < 0 ->
+                RendererCompatibility.UNKNOWN
+            RendererContract.isCompatible(
+                rendererContractVersion,
+                rendererImplementationRevision,
+                rendererStatusSchemaVersion,
+                rendererClearAlgorithmVersion,
+            ) -> RendererCompatibility.CURRENT
+            else -> RendererCompatibility.INCOMPATIBLE
+        }
+
+    /**
+     * A recorded process remains stale even after its heartbeat expires when its renderer is legacy,
+     * incompatible or not ready. Absence (no PID) and an expired proven-current renderer are not
+     * stale; callers can distinguish the latter through [pid] and [alive].
+     */
+    val rendererStale: Boolean
+        get() = (alive || pid > 0) &&
+            (rendererCompatibility != RendererCompatibility.CURRENT || !rendererReady)
+}
+
+/** One internally consistent renderer sample used when the user copies diagnostics. */
+data class RendererStatusSnapshot(
+    val status: HelperStatus,
+    val selectedTransport: Transport,
+    val activeTransport: Transport,
+    val capturedAtEpochMs: Long,
 )
 
 const val LED_COUNT = 8

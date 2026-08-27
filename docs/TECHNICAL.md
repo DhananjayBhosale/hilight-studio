@@ -70,28 +70,51 @@ list from GitHub. It does not run in the background and does not send rule, noti
 or device state.
 
 **Root transport (automatic when available).** The app checks for `su` without elevating. When
-HiLight is turned on, it asks the root manager once, resets old renderers, and launches `AdbHelper` as
-uid 0. The app accepts the new renderer only after its PID, owner, state revision, and idle privacy
-state all match. A denied or failed request leaves output off and exposes the Shizuku/ADB fallbacks.
+HiLight is turned on, it asks the root manager once, stages a release document, cooperatively stops
+the PID- and owner-validated old renderer, and launches `AdbHelper` as uid 0. The app accepts the new
+renderer only after its identity, PID, owner, released state revision, closed session, terminal
+cleanup, and idle privacy state all match. A denied or failed request leaves output off and exposes
+the Shizuku/ADB fallbacks.
 
-**Shizuku transport (no computer).** Shizuku launches `HiLightUserService` into a shell-UID
-process (`daemon(true)`, so it outlives the UI) and the app holds a real binder to it. State is
-pushed straight in, no polling. Verified running as `shell` uid 2000.
+**Shizuku transport (no computer).** Shizuku v12 or newer launches `HiLightUserService` into a
+shell-UID process (`daemon(true)`, so it outlives the UI) and the app holds a real binder to it. State
+is pushed straight in, no polling. The app first peeks at the existing user-service version so it does
+not invoke a mismatched AIDL interface. Before visible/current state replay, the 1.0.9 candidate
+requires renderer contract 1, implementation revision 4, status schema 6, clear algorithm 1, app
+version code 10, and composite Shizuku service version 1004. A mismatch may receive only a minimal
+disabled state to hold output dark; it is removed and rebound once, and every other transport remains
+fenced until the rejected binder is confirmed disconnected. Verified running as `shell` uid 2000.
 
 **ADB transport (fallback).** `AdbHelper` ships inside the APK, so the start command launches it with
-no file to push. Cross-UID binder is not usable there: a shell-UID process that touches a
-`ContentProvider` is killed by ActivityManager (verified), which rules out both a provider bridge and
-`ContentObserver` push. So that transport exchanges two small JSON files instead.
+no file to push. Every direct launch must include a valid explicit `--instance` value; the helper
+refuses an absent/invalid identity and takes a singleton process lock before starting `Engine`. Its
+synchronous startup cleanup can take roughly 2–3 seconds before it reports ready. Cross-UID binder is
+not usable there: a shell-UID process that touches a `ContentProvider` is killed by ActivityManager
+(verified), which rules out both a provider bridge and `ContentObserver` push. So that transport
+exchanges two small JSON files instead. Its status carries the same renderer identity, and `SIGTERM`
+runs `Engine.stop()` once before `app_process` exits.
 
 **File ownership rule that matters** for the ADB transport: on external storage a file keeps the UID
 of whoever created it. A file created by the shell is unreadable by the app, but the shell *can* write
 into a file the app owns. So the app creates the directory and both files, and the helper only ever
 overwrites in place.
 
-Only one renderer may drive the array at a time. A transport change first sends an idle state to the
-old renderer and waits for the matching revision and a stopped privacy observer. Only then is current
-state sent to the replacement. A two-second timeout fails closed: the replacement stays dark instead
-of risking two owners.
+Only one renderer may drive the array at a time. Every helper has a per-process renderer instance ID;
+file-bridge state targets one exact instance, and a handoff first disables and terminates that exact
+source before enabling its replacement. State receipt, render-thread settlement, and release are
+distinct revisions: `receivedStateRevision` means the JSON parsed, `settledStateRevision` means the
+render thread acted on it, and `releasedStateRevision` additionally requires a closed light session
+and terminal cleanup. A transport change sends an idle state to the old renderer and requires the
+matching released revision plus a stopped privacy observer. After the source's exact process or
+binder exit is proven, the replacement first receives a fully disabled one-shot cleanup request. The
+app waits for that exact request to be accepted and for its revision to become terminal, closed, and
+released before replaying desired output. A timeout fails closed instead of treating a Binder return
+or stale heartbeat as proof that the LEDs were released.
+
+The app also watches file-bridge heartbeats. If a fresh current ADB/root instance appears while no
+handoff or root transition is active, it retargets and re-pushes the saved current state exactly once
+with `arm=false`. This lets a legitimately restarted helper resume without restarting the auto-off
+clock. These are software/framework ownership guarantees; neither sequence observes the physical LED.
 
 Output layering, highest first:
 
@@ -149,7 +172,8 @@ the lamp.
 ## LED safety implementation
 
 The safety guards summarised in the README live in `Engine`, not in the UI, so no state document can
-opt out of them:
+opt out of them. In v1.0.9 the renderer itself clamps `ambientTimeoutMs` to five minutes; the bridge
+cannot bypass the UI ceiling:
 
 | Guard | Default | Ceiling |
 |---|---|---|
@@ -250,14 +274,40 @@ silence a configured microphone rule.
 - If Shizuku is (re)started while HiLight Studio is already running, reopen the app so Shizuku can hand
   it access. Shizuku's own "Authorized applications" count also resets when its server restarts, so it
   may ask for approval again.
-- While our session is open the system's own HiLight effects (calls, Gemini) are suppressed, so the
-  session is held only while there is actually something to show. The moment the array goes dark —
-  the auto-off deadline passing, an alert ending, the master switch going off — it is handed straight
-  back, and a rule firing reclaims it before the first frame. An all-black session left open beats
-  the system's own effects, and because the Shizuku renderer is a daemon that outlives the app, that
-  used to leave calls and Gemini dark until the phone was rebooted. The Setup tab still exposes the
-  session **priority** for the overlap while a look is genuinely running; the exact arbitration rule
-  in `LightsService` was not reverse-engineered.
+- While our normal session is open the system's own HiLight effects (calls, Gemini) are suppressed,
+  so it is held only while there is actually something visible to show. Once cleanup settles, the
+  renderer owns zero sessions while dark or off, and exactly one only while visibly driving.
+- v1.0.8 already wrote alpha-only black (`0x01000000`) followed by canonical black (`0x00000000`)
+  before closing the normal session. Reports from Pixel 11 Pro users show that a physical LED can
+  still remain latched after Android reports black and no session, so that sequence was not proof of
+  physical success.
+- v1.0.9 keeps the pre-release sequence, waits for the hardware's advertised update period clamped to
+  a bounded 1–250 ms interval after each accepted write, closes the normal session, then repeats the
+  two black states through three
+  fresh sessions at priority `-1000`, one borrow per second. A new renderer performs the same three
+  post-release passes before reporting ready, and **Retry LED cleanup** can explicitly request one
+  fresh three-pass cycle only while HiLight is off and idle. No production recovery stimulus asks an
+  RGB channel to emit light. Android's
+  [AOSP `LightsService`](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/main/services/core/java/com/android/server/lights/LightsService.java#94)
+  sorts sessions descending with `Integer.compare`, so priority `-1000` is below HiLight's normal
+  `-10` to `10` range and below any other session whose priority is greater than `-1000`. We have not
+  measured every system-session priority. The Setup priority applies only to HiLight's normal visible
+  session.
+- Cleanup status distinguishes Binder acceptance, effective framework readback, shadowing, I/O
+  failure, and exhausted retries. `getLightState()` is still framework evidence rather than a sensor
+  looking at the panel, so even `framework_effective_unverified` or `completed_unverified` never
+  means the physical LED was observed dark. **Copy LED diagnostics** exports an allowlist of device
+  build, renderer identity, transport, session/cleanup state, and revisions; it excludes notification
+  data, packages, accounts, stable device identifiers, and logcat.
+- ADB reset sends `SIGTERM` through the constrained helper-process pattern, treats an app-process with
+  an unreadable/empty cmdline as unresolved, waits up to 6.5 seconds, and skips launch if any exact
+  HiLight renderer survives. Root takeover additionally validates the exact PID, owner, and command
+  line. A current helper's shutdown hook runs the bounded stop cleanup once before exit; the singleton
+  lock and post-exit cleanup/replay fence keep takeover failed closed on a mismatched or unresponsive
+  process.
+- The black-only mitigation has not yet been physically validated on a Pixel 11 Pro that reproduces
+  the latch. The maintainer's Pixel 11 Pro XL does not reproduce it and can establish only regression,
+  renderer-identity, session-ownership, and call/Gemini hand-back behavior.
 - Deep sleep suspends the CPU, so animations freeze at the last frame until the device wakes. Static
   colours are unaffected.
 - Notification rules ignore ongoing notifications (media, progress) to avoid constant retriggering.

@@ -16,11 +16,20 @@ import java.util.Random;
  */
 public final class Renderer {
 
-    private final Random rnd = new Random();
+    private final Random rnd;
 
     // random-mode fade state
     private int[] randFrom, randTo;
     private long randStart, randDuration = 1500;
+
+    public Renderer() {
+        this(new Random());
+    }
+
+    /** Deterministic host-test constructor. */
+    Renderer(Random rnd) {
+        this.rnd = rnd;
+    }
 
     /** Discards animation state so the next frame starts a pattern cleanly. */
     public void reset() {
@@ -28,6 +37,7 @@ public final class Renderer {
         randTo = null;
     }
 
+    /** Renders a frame at a caller-supplied monotonic animation time. */
     public int[] frame(JSONObject cfg, long t, int n) {
         int[] out = new int[n];
         if (cfg == null) return out;
@@ -114,14 +124,13 @@ public final class Renderer {
                 long interval = Math.max(120, cfg.optLong("randomIntervalMs", 1500));
                 boolean perLed = cfg.optBoolean("randomPerLed", true);
                 boolean smooth = cfg.optBoolean("randomSmooth", true);
-                long now = System.currentTimeMillis();
-                if (randFrom == null || randFrom.length != n || now - randStart >= randDuration) {
+                if (randFrom == null || randFrom.length != n || t - randStart >= randDuration) {
                     randFrom = (randTo != null && randTo.length == n) ? randTo : randomColors(n, perLed, cfg);
                     randTo = randomColors(n, perLed, cfg);
-                    randStart = now;
+                    randStart = t;
                     randDuration = interval;
                 }
-                double k = smooth ? clamp01((now - randStart) / (double) randDuration) : 0;
+                double k = smooth ? clamp01((t - randStart) / (double) randDuration) : 0;
                 for (int i = 0; i < n; i++) out[i] = mix(randFrom[i], randTo[i], k);
                 break;
             }

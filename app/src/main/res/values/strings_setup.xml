@@ -6,8 +6,8 @@
     Prefixes follow the cards rather than the file: setup_ for the tab, and shizuku_ / adb_ for the
     two transport cards, each of which reads as a small screen of its own.
 
-    Nothing that is not shown to a person is here. The adb command lines and the shell snippets
-    inside them are identical in every language and stay as constants in SetupScreen.kt, as do the
+    Nothing that is not shown to a person is here. The adb command and its shell snippets are
+    identical in every language and stay as constants in SetupScreen.kt, as do the
     notification channel id, the clipboard label and the AnimatedContent debug labels.
 -->
 <resources>
@@ -72,22 +72,23 @@
     <!-- Failures HiLight diagnoses itself. Anything the framework hands us keeps its own wording,
          which is not translated. -->
     <string name="shizuku_error_dead_binder">service returned a dead binder</string>
-    <string name="shizuku_error_too_old">Shizuku is too old; v11 or newer is required</string>
+    <string name="shizuku_error_too_old">Shizuku is too old; v12 or newer is required</string>
+    <string name="shizuku_error_renderer_incompatible">The renderer did not match this app. Restart Shizuku and try again.</string>
     <string name="shizuku_unreachable">Could not reach Shizuku.</string>
     <string name="shizuku_retry">Retry</string>
     <!-- Said when there is no browser to open the Shizuku listing in. -->
     <string name="setup_no_browser">No browser available</string>
 
-    <!-- The ADB card. Its title is the tool, not the transport, so it is not transport_adb. The two
-         command lines shown between these captions are literals in code. -->
+    <!-- The ADB card. Its title is the tool, not the transport, so it is not transport_adb. The
+         combined command shown between these captions is a literal in code. -->
     <string name="adb_title">ADB</string>
-    <string name="adb_body">Run both lines with the phone plugged in. Nothing to push. Re-run after a reboot — and the first line matters every time, since a leftover renderer keeps the array dark.</string>
+    <string name="adb_body">Run the one copied command with the phone plugged in. Nothing to push. Re-run after a reboot. It stops old renderers, waits for confirmed exit, then starts one new helper.</string>
     <string name="adb_shells_note">Works in Terminal on macOS and Linux, and in PowerShell. In Windows Command Prompt, copy the cmd.exe version instead — it has no single quotes.</string>
     <string name="adb_copy">Copy</string>
     <string name="adb_copy_cmd">Copy for cmd.exe</string>
     <string name="adb_copied">Command copied</string>
     <string name="adb_copied_cmd">cmd.exe version copied</string>
-    <string name="adb_verify_note">It worked if the array responds. Nothing printed means it did not start.</string>
+    <string name="adb_verify_note">The command normally prints nothing because the helper runs in the background and writes to its log. The array response or helper log confirms startup.</string>
     <string name="adb_send">Send to computer</string>
     <!-- Title of the system share sheet the command is handed to. -->
     <string name="adb_share_title">Send command</string>
@@ -142,6 +143,16 @@
     <string name="setup_selftest_channel">Self test</string>
     <string name="setup_selftest_title">HiLight self test</string>
     <string name="setup_selftest_body">If a rule exists for this app, the LEDs just fired</string>
+
+    <!-- Privacy-safe renderer evidence for stuck-LED reports. -->
+    <string name="setup_led_diagnostics_title">LED diagnostics</string>
+    <string name="setup_led_diagnostics_body">Copies renderer and session lifecycle data for a bug report. It excludes notification content, package names, accounts, device serial and Android ID, and logcat.</string>
+    <string name="setup_led_diagnostics_copy">Copy LED diagnostics</string>
+    <string name="setup_led_diagnostics_copied">LED diagnostics copied</string>
+    <string name="setup_led_cleanup_retry">Retry LED cleanup</string>
+    <string name="setup_led_cleanup_retry_pending">Cleanup retry in progress…</string>
+    <string name="setup_led_cleanup_retry_body">Sends three black-only cleanup passes. It does not flash colors or confirm that the physical LED switched off. Available only while HiLight is off and the renderer is idle.</string>
+    <string name="setup_led_cleanup_renderer_unavailable">Reconnect Shizuku, restart the ADB helper, or start the root renderer to enable cleanup.</string>
 
     <!-- Session priority. The badge shows the bare number, which is formatted in code. -->
     <string name="setup_priority_title">Session priority</string>

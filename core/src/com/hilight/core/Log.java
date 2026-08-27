@@ -13,12 +13,20 @@ public final class Log {
     public static void i(String msg) {
         System.out.println("[hilight] " + msg);
         System.out.flush();
-        android.util.Log.i(TAG, msg);
+        try {
+            android.util.Log.i(TAG, msg);
+        } catch (RuntimeException ignored) {
+            // The local JVM test stub intentionally throws; stdout remains the helper log there.
+        }
     }
 
     public static void w(String msg) {
         System.out.println("[hilight] WARN " + msg);
         System.out.flush();
-        android.util.Log.w(TAG, msg);
+        try {
+            android.util.Log.w(TAG, msg);
+        } catch (RuntimeException ignored) {
+            // See i(String): real Android provides this API, host tests do not.
+        }
     }
 }

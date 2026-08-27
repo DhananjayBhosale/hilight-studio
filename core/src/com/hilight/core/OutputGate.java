@@ -33,11 +33,11 @@ final class OutputGate {
     /** true once a blank frame has been pushed for the current dark period */
     private boolean blanked;
 
-    /** Takes the array for [durationMs], starting now. */
-    void startAlert(long now, long durationMs) {
+    /** Takes the array for {@code durationMs}, starting at this monotonic elapsed time. */
+    void startAlert(long elapsedRealtime, long durationMs) {
         alertHeld = true;
-        alertStart = now;
-        alertEnd = now + durationMs;
+        alertStart = elapsedRealtime;
+        alertEnd = deadlineAfter(elapsedRealtime, durationMs);
     }
 
     /**
@@ -55,8 +55,8 @@ final class OutputGate {
     }
 
     /** Starts a fresh auto-off window. Only a deliberate user action should call this. */
-    void armAmbient(long now, long timeoutMs) {
-        ambientDeadline = now + timeoutMs;
+    void armAmbient(long elapsedRealtime, long timeoutMs) {
+        ambientDeadline = deadlineAfter(elapsedRealtime, timeoutMs);
         blanked = false;
     }
 
@@ -65,7 +65,8 @@ final class OutputGate {
      *
      * Privacy output may begin after this gate has already latched the array as blank. Clearing the
      * latch makes the first inactive frame return BLANK instead of IDLE, so the external output is
-     * physically cleared and its session released when the microphone or camera stops.
+     * sent through the bounded framework cleanup path and its session released when the microphone
+     * or camera stops. Physical darkness still requires observation on affected hardware.
      */
     void noteExternalOutput() {
         blanked = false;
@@ -75,12 +76,12 @@ final class OutputGate {
         return alertHeld;
     }
 
-    long alertElapsed(long now) {
-        return now - alertStart;
+    long alertElapsed(long elapsedRealtime) {
+        return Math.max(0, elapsedRealtime - alertStart);
     }
 
-    long ambientRemainingMs(long now) {
-        return Math.max(0, ambientDeadline - now);
+    long ambientRemainingMs(long elapsedRealtime) {
+        return Math.max(0, ambientDeadline - elapsedRealtime);
     }
 
     /** True while the auto-off window has expired and the array is being held dark. */
@@ -89,16 +90,22 @@ final class OutputGate {
     }
 
     /** The layer for this frame. Expires the alert and takes the blank latch as a side effect. */
-    Layer next(long now) {
+    Layer next(long elapsedRealtime) {
         if (alertHeld) {
-            if (now < alertEnd) return Layer.ALERT;
+            if (elapsedRealtime < alertEnd) return Layer.ALERT;
             clearAlert();
         }
-        if (now > ambientDeadline) {
+        if (elapsedRealtime >= ambientDeadline) {
             if (blanked) return Layer.IDLE;
             blanked = true;
             return Layer.BLANK;
         }
         return Layer.AMBIENT;
+    }
+
+    private static long deadlineAfter(long elapsedRealtime, long durationMs) {
+        if (durationMs <= 0) return elapsedRealtime;
+        if (elapsedRealtime > Long.MAX_VALUE - durationMs) return Long.MAX_VALUE;
+        return elapsedRealtime + durationMs;
     }
 }
