@@ -20,17 +20,17 @@ fun signingValue(key: String, env: String): String? =
     releaseKeystore.getProperty(key) ?: System.getenv(env)
 
 android {
-    namespace = "com.hilight.studio"
+    namespace = "com.grimxero.hilightplus"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.hilight.studio"
+        applicationId = "com.grimxero.hilightplus"
         // HiLight is a Pixel 11 / Android 17 feature. Keeping this floor aligned with the
         // supported hardware prevents installation on devices the renderer cannot support.
         minSdk = 37
         targetSdk = 37
-        versionCode = 9
-        versionName = "1.0.8"
+        versionCode = 10
+        versionName = "1.0.0"
     }
 
     signingConfigs {

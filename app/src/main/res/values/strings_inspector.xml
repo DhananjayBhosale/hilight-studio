@@ -80,7 +80,7 @@
          service_watcher_title repeats app_name deliberately rather than pointing at it, so this
          notification can be reworded without renaming the app. -->
     <string name="service_watcher_channel_name">HiLight app watcher</string>
-    <string name="service_watcher_title">HiLight Studio</string>
+    <string name="service_watcher_title">HiLight+</string>
     <string name="service_watcher_text">Watching for apps with light rules</string>
 
 </resources>

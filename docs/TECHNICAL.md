@@ -4,7 +4,7 @@ This is the implementation detail that doesn't belong in the main [README](../RE
 the renderer gets privileged access, what the hardware actually is, and what's been verified on a
 real device.
 
-## What HiLight actually is
+## What HiLight+ actually is
 
 Findings from the device itself, not from the marketing pages:
 
@@ -54,10 +54,10 @@ The renderer core (`core/src`) is shared. It can run as root, or as the shell UI
 ADB.
 
 ```
-HiLight Studio (normal app)                    privileged renderer (uid 0 or 2000)
+HiLight+ (normal app)                    privileged renderer (uid 0 or 2000)
 ┌─────────────────────────────────┐            ┌────────────────────────────────────┐
 │ Compose UI: Live/Ambient/Apps   │  binder    │ Shizuku: HiLightUserService        │
-│ NotificationTrigger (listener)  │ ─────────► │   com.hilight.studio:hilight       │
+│ NotificationTrigger (listener)  │ ─────────► │   com.grimxero.hilightplus:hilight │
 │ ForegroundWatcher (UsageStats)  │            ├────────────────────────────────────┤
 │ Store: layering + rules         │  2 JSON    │ ADB: com.hilight.core.AdbHelper    │
 │ Transport: Auto/Root/Shizuku/ADB│ ◄────────► │   run from the installed APK       │
@@ -247,7 +247,7 @@ silence a configured microphone rule.
 - Root startup is covered by deterministic host tests but is not maintainer-device verified because
   the maintainer's Pixel is intentionally unrooted. Root support is best effort across `su -c`
   compatible root managers; community device reports are welcome.
-- If Shizuku is (re)started while HiLight Studio is already running, reopen the app so Shizuku can hand
+- If Shizuku is (re)started while HiLight+ is already running, reopen the app so Shizuku can hand
   it access. Shizuku's own "Authorized applications" count also resets when its server restarts, so it
   may ask for approval again.
 - While our session is open the system's own HiLight effects (calls, Gemini) are suppressed, so the

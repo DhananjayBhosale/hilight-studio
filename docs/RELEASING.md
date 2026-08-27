@@ -1,6 +1,6 @@
-# Releasing HiLight Studio
+# Releasing HiLight+
 
-GitHub releases are experimental prereleases signed with HiLight Studio's permanent release
+GitHub releases are experimental prereleases signed with HiLight+'s permanent release
 certificate.
 
 Keep signing files, passwords, and APKs out of Git. Android installs an update only when both APKs use
@@ -24,13 +24,13 @@ the same application ID and signing identity.
    ```
 
 6. Refuse the release if Gradle produced `app-release-unsigned.apk`. Copy the signed APK outside the
-   repository and name it `HiLight-Studio-v<version>-experimental-signed.apk`.
+   repository and name it `HiLight-Studio-v<version>.apk`.
 7. Verify the certificate, privileged entry points, and SHA-256 digest:
 
    ```bash
-   apksigner verify --verbose --print-certs HiLight-Studio-v<version>-experimental-signed.apk
-   "$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer" dex packages HiLight-Studio-v<version>-experimental-signed.apk | grep -E 'com.hilight.core.AdbHelper|com.hilight.studio.HiLightUserService'
-   shasum -a 256 HiLight-Studio-v<version>-experimental-signed.apk
+   apksigner verify --verbose --print-certs HiLight-v<version>.apk
+   "$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer" dex packages HiLight-v<version>.apk | grep -E 'com.hilight.core.AdbHelper|com.grimxero.hilightplus.HiLightUserService'
+   shasum -a 256 HiLight-v<version>.apk
    ```
 
 8. Install it over the previous permanently signed release on a supported Pixel. Verify root when a

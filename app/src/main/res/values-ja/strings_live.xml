@@ -92,8 +92,8 @@
     <string name="live_rules_title">アプリ別ルール</string>
     <!-- "%1$d on" -->
     <string name="live_rules_on_count">%1$d 件オン</string>
-    <!-- "Nothing yet. Add per-app colours in the Apps tab." -->
-    <string name="live_rules_empty">まだありません。アプリタブでアプリ別の色を追加できます。</string>
+    <!-- "Nothing yet. Add per-app colours in the Rules tab." -->
+    <string name="live_rules_empty">まだありません。ルールタブでアプリ別の色を追加できます。</string>
     <!-- "%1$s · %2$s" -->
     <string name="live_rule_summary">%1$s · %2$s</string>
     <!-- "random" -->

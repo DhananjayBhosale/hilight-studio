@@ -69,8 +69,6 @@
     <string name="setup_privileged_title">特権アクセス</string>
     <!-- "The renderer needs shell-UID privileges. Choose how it starts." -->
     <string name="setup_privileged_body">レンダラーには shell UID の権限が必要です。起動方法を選んでください。</string>
-    <!-- "Prefers Shizuku, falls back to ADB." -->
-    <string name="setup_transport_auto_note">Shizuku を優先し、使えない場合は ADB を使います。</string>
 
     <!-- The Shizuku card. The pill words describe the connection, so they stay short. -->
     <!-- "connected" -->
@@ -184,12 +182,6 @@
     <!-- "Open usage access" -->
     <string name="setup_open_usage_access">使用状況へのアクセスを開く</string>
 
-    <!-- Appearance -->
-    <!-- "Appearance" -->
-    <string name="setup_appearance_title">外観</string>
-    <!-- "Wallpaper colours" -->
-    <string name="setup_wallpaper_colours">壁紙の色</string>
-
     <!-- Manual GitHub update check -->
     <!-- "Updates" -->
     <string name="setup_updates_title">アップデート</string>
@@ -217,8 +209,8 @@
     <!-- The self test. The channel name is also seen in the system's notification settings. -->
     <!-- "End-to-end test" -->
     <string name="setup_test_title">通し動作テスト</string>
-    <!-- "Posts a notification from this app. Add a rule for HiLight Studio first." -->
-    <string name="setup_test_body">このアプリから通知を送信します。先に HiLight Studio のルールを追加してください。</string>
+    <!-- "Posts a notification from this app. Add a rule for HiLight+ first." -->
+    <string name="setup_test_body">このアプリから通知を送信します。先に HiLight+ のルールを追加してください。</string>
     <!-- "Post test notification" -->
     <string name="setup_test_button">テスト通知を送信</string>
     <!-- "Self test" -->
@@ -245,5 +237,14 @@
     <string name="setup_root_active_body">HiLight は Root を直接使用しています。Shizuku や ADB の設定は不要です。</string>
     <string name="setup_root_error_body">Root を起動できませんでした。再試行するか、別の設定方法を使用できます。</string>
     <string name="setup_root_retry">Root を再試行</string>
+
+    <!-- Onboarding -->
+    <!-- "Welcome to HiLight+" -->
+    <string name="onboarding_title">HiLight+ へようこそ</string>
+    <!-- "HiLight+ needs a privileged renderer to drive your LEDs. Choose your preferred setup
+         method to get started." -->
+    <string name="onboarding_body">HiLight+ が LED を制御するには、権限を持つレンダラーが必要です。まずはセットアップ方法を選択してください。</string>
+    <!-- "Get started" -->
+    <string name="onboarding_finish">はじめる</string>
 
 </resources>

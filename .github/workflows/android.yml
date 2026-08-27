@@ -32,4 +32,4 @@ jobs:
           test -n "$release_apk"
           "$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer" dex packages "$release_apk" > "$RUNNER_TEMP/dex-packages.txt"
           grep -q 'com.hilight.core.AdbHelper' "$RUNNER_TEMP/dex-packages.txt"
-          grep -q 'com.hilight.studio.HiLightUserService' "$RUNNER_TEMP/dex-packages.txt"
+          grep -q 'com.grimxero.hilightplus.HiLightUserService' "$RUNNER_TEMP/dex-packages.txt"

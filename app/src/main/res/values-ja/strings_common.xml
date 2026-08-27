@@ -16,8 +16,8 @@
     <string name="tab_live">ライブ</string>
     <!-- "Style" -->
     <string name="tab_style">スタイル</string>
-    <!-- "Apps" -->
-    <string name="tab_apps">アプリ</string>
+    <!-- "Rules" -->
+    <string name="tab_rules">ルール</string>
     <!-- "Setup" -->
     <string name="tab_setup">設定</string>
 
@@ -76,8 +76,6 @@
     <string name="suppression_screen_on">画面消灯時のみ</string>
 
     <!-- How the renderer is reached -->
-    <!-- "Auto" -->
-    <string name="transport_auto">自動</string>
     <!-- "Shizuku" — product name, not translated -->
     <string name="transport_shizuku">Shizuku</string>
     <!-- "ADB helper" -->

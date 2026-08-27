@@ -4,7 +4,7 @@
 }
 
 # Instantiated by Shizuku using the configured class name and no-argument constructor.
--keep class com.hilight.studio.HiLightUserService {
+-keep class com.grimxero.hilightplus.HiLightUserService {
     public <init>();
     public *;
 }

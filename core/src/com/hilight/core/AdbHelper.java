@@ -13,7 +13,7 @@ import org.json.JSONObject;
  * This class ships inside the APK, so it can be started straight out of the installed app with no
  * file to push:
  *
- *   adb shell "CLASSPATH=$(pm path com.hilight.studio | head -1 | cut -d: -f2) \
+ *   adb shell "CLASSPATH=$(pm path com.grimxero.hilightplus | head -1 | cut -d: -f2) \
  *              app_process / com.hilight.core.AdbHelper"
  *
  * The app cannot bind a cross-UID binder to us (a shell-UID process is killed by ActivityManager as
@@ -27,7 +27,7 @@ public final class AdbHelper {
     private static final long POLL_MS = 100;
     private static final long STATUS_MS = 1000;
     private static final String DEFAULT_DIR =
-            "/storage/emulated/0/Android/data/com.hilight.studio/files/hilight";
+            "/storage/emulated/0/Android/data/com.grimxero.hilightplus/files/hilight";
 
     private final File stateFile;
     private final File statusFile;
@@ -53,7 +53,7 @@ public final class AdbHelper {
 
     private AdbHelper(File dir, String owner) {
         if (!dir.isDirectory()) {
-            Log.w("no " + dir + " yet — open HiLight Studio once so it can create the bridge files");
+            Log.w("no " + dir + " yet — open HiLight+ once so it can create the bridge files");
         }
         stateFile = new File(dir, "state.json");
         statusFile = new File(dir, "helper_status.json");
@@ -100,7 +100,7 @@ public final class AdbHelper {
         if (!statusFile.exists()) {
             if (now - lastStatusWarn > 10_000) {
                 lastStatusWarn = now;
-                Log.w("no " + statusFile.getName() + " — open HiLight Studio once");
+                Log.w("no " + statusFile.getName() + " — open HiLight+ once");
             }
             return;
         }

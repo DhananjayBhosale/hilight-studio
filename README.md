@@ -1,6 +1,9 @@
-<img src="docs/media/hilight-studio-logo.png" alt="HiLight Studio logo" width="112" align="right">
+<img src="docs/media/hilight-studio-logo.png" alt="HiLight+ logo" width="112" align="right">
 
-# HiLight Studio
+# HiLight+
+
+> [!NOTE]
+> This project is a fork of the original [HiLight Studio](https://github.com/DhananjayBhosale/hilight-studio).
 
 Control the eight-LED HiLight array on Pixel 11 Pro devices.
 
@@ -9,7 +12,7 @@ Control the eight-LED HiLight array on Pixel 11 Pro devices.
 [![License: MIT](https://img.shields.io/badge/license-MIT-2f81f7.svg)](LICENSE)
 
 > [!IMPORTANT]
-> HiLight Studio is experimental and supports only the Pixel 11 Pro, Pixel 11 Pro XL, and Pixel 11 Pro Fold on Android 17 (API 37). It is not affiliated with or endorsed by Google.
+> HiLight+ is experimental and supports only the Pixel 11 Pro, Pixel 11 Pro XL, and Pixel 11 Pro Fold on Android 17 (API 37). It is not affiliated with or endorsed by Google.
 
 <p align="center">
   <img src="docs/media/screen-live.png" alt="Live tab controlling the HiLight array on a Pixel 11 Pro XL" width="420">
@@ -29,12 +32,20 @@ Control the eight-LED HiLight array on Pixel 11 Pro devices.
 - Automatic root access when available, with Shizuku and ADB as fallbacks
 - Manual update checks against the project's GitHub releases
 
+## Changes in this fork
+
+Compared to the original HiLight Studio, this fork includes:
+
+- **Separate conversation picker for messaging apps**
+- **Modern pill-shaped navigation bar**
+- **User-friendly onboarding experience**
+
 ## Screenshots
 
 <table>
 <tr>
 <td width="33%"><img src="docs/media/screen-style.png" alt="Style tab with presets, patterns, and colour controls"></td>
-<td width="33%"><img src="docs/media/screen-apps.png" alt="Apps tab with per-app rules"></td>
+<td width="33%"><img src="docs/media/screen-apps.png" alt="Rules tab with per-app rules"></td>
 <td width="33%"><img src="docs/media/screen-setup.png" alt="Setup tab with access and safety controls"></td>
 </tr>
 <tr>
@@ -46,30 +57,30 @@ Control the eight-LED HiLight array on Pixel 11 Pro devices.
 
 ## Install
 
-For now, install HiLight Studio with ADB. Play Protect may block direct installs from a browser or file manager because the app uses notification access for LED alerts.
+For now, install HiLight+ with ADB. Play Protect may block direct installs from a browser or file manager because the app uses notification access for LED alerts.
 
 1. Download the signed APK from the [latest GitHub prerelease](https://github.com/DhananjayBhosale/hilight-studio/releases) to your computer.
 2. Connect a supported Pixel with USB debugging enabled and approve the computer on the phone.
 3. From the folder containing the APK, run:
 
 ```bash
-adb install -r HiLight-Studio-v1.0.6-experimental-signed.apk
+adb install -r HiLight-Studio-v1.0.0.apk
 ```
 
 If you previously installed v1.0.3 or an older debug-signed build, uninstall it once before installing a permanently signed release because the signing certificates are different:
 
 ```bash
-adb uninstall com.hilight.studio
-adb install HiLight-Studio-v1.0.6-experimental-signed.apk
+adb uninstall com.grimxero.hilightplus
+adb install HiLight-Studio-v1.0.0.apk
 ```
 
-The published APK is an experimental release signed with HiLight Studio's permanent release certificate. v1.0.6 updates v1.0.5 normally, and future signed releases can do the same.
+The published APK is an experimental release signed with HiLight Studio's permanent release certificate. v1.0.0 updates previous experimental versions normally, and future signed releases can do the same.
 
 HiLight Studio needs privileged access to the Android lights service. The renderer must be restarted after every reboot.
 
 ### Root
 
-If the phone is rooted, open HiLight Studio and turn it on. The app detects root automatically and
+If the phone is rooted, open HiLight+ and turn it on. The app detects root automatically and
 uses it instead of Shizuku or ADB. Approve the one-time request from your root manager when it
 appears; no other setup is needed.
 
@@ -77,28 +88,28 @@ appears; no other setup is needed.
 
 1. Install [Shizuku](https://shizuku.rikka.app/).
 2. Start it using Wireless debugging.
-3. Open HiLight Studio, go to **Setup**, tap **Request access**, and approve the request.
+3. Open HiLight+, go to **Setup**, tap **Request access**, and approve the request.
 
-Restart Shizuku after each reboot, then reopen HiLight Studio.
+Restart Shizuku after each reboot, then reopen HiLight+.
 
 ### ADB
 
 1. Enable **Developer options** and **USB debugging** on the phone.
-2. Install and open HiLight Studio once so it can create its state files.
+2. Install and open HiLight+ once so it can create its state files.
 3. Run both commands below. The first stops any existing renderer. The second starts a fresh ADB helper.
 
 macOS, Linux, or PowerShell (verified):
 
 ```bash
-adb shell "pkill -f 'com.hilight.(core.AdbHelper|studio:hilight)'"
-adb shell 'CLASSPATH=$(pm path com.hilight.studio | head -1 | cut -d: -f2) nohup app_process / com.hilight.core.AdbHelper > /data/local/tmp/hilight.log 2>&1 &'
+adb shell "pkill -f 'com.hilight.core.AdbHelper|com.grimxero.hilightplus:hilight'"
+adb shell 'CLASSPATH=$(pm path com.grimxero.hilightplus | head -1 | cut -d: -f2) nohup app_process / com.hilight.core.AdbHelper > /data/local/tmp/hilight.log 2>&1 &'
 ```
 
 Windows Command Prompt (Unverified):
 
 ```bat
-adb shell "pkill -f 'com.hilight.(core.AdbHelper|studio:hilight)'"
-adb shell "CLASSPATH=$(pm path com.hilight.studio | head -1 | cut -d: -f2) nohup app_process / com.hilight.core.AdbHelper > /data/local/tmp/hilight.log 2>&1 &"
+adb shell "pkill -f 'com.hilight.core.AdbHelper|com.grimxero.hilightplus:hilight'"
+adb shell "CLASSPATH=$(pm path com.grimxero.hilightplus | head -1 | cut -d: -f2) nohup app_process / com.hilight.core.AdbHelper > /data/local/tmp/hilight.log 2>&1 &"
 ```
 
 Keep the two commands separate. The `pkill -f` pattern can match the shell that starts the helper if both operations are merged.
@@ -148,7 +159,7 @@ See [Technical details](docs/TECHNICAL.md) for the renderer architecture, hardwa
 
 ## Privacy
 
-HiLight Studio has no analytics, account system, or telemetry. It uses the internet only when you
+HiLight+ has no analytics, account system, or telemetry. It uses the internet only when you
 tap **Check for updates** under Setup, which fetches public release information from GitHub. No app
 rules, notification data, or settings are sent. App rules and presets stay on the device.
 Notification and usage access are optional and are used locally for the rules you enable. Privacy

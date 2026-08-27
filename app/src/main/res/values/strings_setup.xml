@@ -48,7 +48,6 @@
     <!-- Privileged access. The three transport names themselves are in strings_common.xml. -->
     <string name="setup_privileged_title">Privileged access</string>
     <string name="setup_privileged_body">The renderer needs shell-UID privileges. Choose how it starts.</string>
-    <string name="setup_transport_auto_note">Prefers Shizuku, falls back to ADB.</string>
 
     <!-- The Shizuku card. Its title reuses transport_shizuku: the card is named after the transport.
          The pill words describe the connection, not the app, so they are lower case. -->
@@ -117,10 +116,6 @@
     <string name="setup_usage_body">Only for \"while open\" rules.</string>
     <string name="setup_open_usage_access">Open usage access</string>
 
-    <!-- Appearance -->
-    <string name="setup_appearance_title">Appearance</string>
-    <string name="setup_wallpaper_colours">Wallpaper colours</string>
-
     <!-- Manual GitHub update check -->
     <string name="setup_updates_title">Updates</string>
     <string name="setup_updates_installed">Installed %1$s</string>
@@ -137,7 +132,7 @@
     <!-- The self test posts a real notification from this app, so the channel name is seen in the
          system's own notification settings as well. -->
     <string name="setup_test_title">End-to-end test</string>
-    <string name="setup_test_body">Posts a notification from this app. Add a rule for HiLight Studio first.</string>
+    <string name="setup_test_body">Posts a notification from this app. Add a rule for HiLight+ first.</string>
     <string name="setup_test_button">Post test notification</string>
     <string name="setup_selftest_channel">Self test</string>
     <string name="setup_selftest_title">HiLight self test</string>
@@ -157,5 +152,10 @@
     <string name="setup_root_active_body">HiLight is using root directly. No Shizuku or ADB setup is needed.</string>
     <string name="setup_root_error_body">Root could not be started. You can retry or use another setup method.</string>
     <string name="setup_root_retry">Retry root</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title">Welcome to HiLight+</string>
+    <string name="onboarding_body">HiLight+ needs a privileged renderer to drive your LEDs. Choose your preferred setup method to get started.</string>
+    <string name="onboarding_finish">Get started</string>
 
 </resources>

@@ -3,8 +3,8 @@
 <resources>
 
     <!-- Top bar -->
-    <!-- "%1$d LEDs · %2$s" -->
-    <string name="main_connected_pill">LED %1$d 個 · %2$s</string>
+    <!-- "%1$s" -->
+    <string name="main_connected_pill">%1$s</string>
     <!-- "not connected" -->
     <string name="main_not_connected">未接続</string>
 

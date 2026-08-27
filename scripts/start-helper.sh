@@ -5,7 +5,7 @@
 # reboot: the shell UID is only reachable while adb has a session.
 set -euo pipefail
 
-PKG="com.hilight.studio"
+PKG="com.grimxero.hilightplus"
 ADB="${ADB:-adb}"
 
 APK="$($ADB shell pm path $PKG | head -1 | tr -d '\r' | cut -d: -f2)"

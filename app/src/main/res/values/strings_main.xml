@@ -2,8 +2,8 @@
 <!-- The app bar, the device illustration, and the Quick Settings tile. -->
 <resources>
 
-    <!-- Top bar. %1$d is the number of LEDs the renderer reported, %2$s how it is reached. -->
-    <string name="main_connected_pill">%1$d LEDs · %2$s</string>
+    <!-- Top bar. %1$s is the method used for privileged access (how it is reached). -->
+    <string name="main_connected_pill">%1$s</string>
     <string name="main_not_connected">not connected</string>
 
     <!-- Spoken descriptions of the device illustration. Never seen, only read aloud, so they are

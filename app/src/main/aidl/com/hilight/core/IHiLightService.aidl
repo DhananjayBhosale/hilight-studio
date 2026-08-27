@@ -13,4 +13,12 @@ interface IHiLightService {
 
     /** Number of addressable HiLight LEDs the service found. */
     int ledCount() = 3;
+
+    /**
+     * Lists the app's conversation shortcuts the shell can see.
+     *
+     * Used to populate the chat picker without waiting for a notification to arrive. Returns a JSON
+     * array of ConversationRef objects.
+     */
+    String getConversations(String pkg) = 4;
 }

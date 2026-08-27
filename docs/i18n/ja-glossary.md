@@ -1,4 +1,4 @@
-# Japanese glossary — HiLight Studio
+# Japanese glossary — HiLight+
 
 Fixed translations for the terms that recur across the app. The point of a glossary is consistency:
 the same English term must not appear as two different Japanese words on two screens.
@@ -17,7 +17,7 @@ the same English term must not appear as two different Japanese words on two scr
 
 | Term | Why |
 |---|---|
-| HiLight, HiLight Studio | Product name. Also the Google feature name on the phone |
+| HiLight, HiLight+ | Product name. Also the Google feature name on the phone |
 | Shizuku | Product name |
 | ADB, adb | Command name, and the command text itself is untranslated |
 | LED | Used as-is in Japanese technical writing |

@@ -1,4 +1,4 @@
-# Japanese review — HiLight Studio
+# Japanese review — HiLight+
 
 Every user-visible string in the app, English beside Japanese, grouped by the resource file it
 lives in. Generated from the resources themselves, so it cannot drift from what the app shows.
@@ -26,7 +26,7 @@ Leave Latin as-is: HiLight, Shizuku, ADB, LED, JSON, MessagingStyle, shortcutId,
 |---|---|---|
 | `tab_live` | Live | ライブ |
 | `tab_style` | Style | スタイル |
-| `tab_apps` | Apps | アプリ |
+| `tab_rules` | Rules | ルール |
 | `tab_setup` | Setup | 設定 |
 | `pattern_off` | Off | オフ |
 | `pattern_solid` | Solid | 点灯 |
@@ -103,7 +103,7 @@ Leave Latin as-is: HiLight, Shizuku, ADB, LED, JSON, MessagingStyle, shortcutId,
 | `inspector_group_summary` | Group summary, which HiLight ignores so a chat cannot fire twice. | グループ通知のまとめです。同じチャットで 2 回点灯しないよう、HiLight は無視します。 |
 | `inspector_no_name_note` | This app gave no name to match on, so no per-chat rule can be written from it. A rule for the whole app still works. | このアプリは一致に使える名前を渡していないため、この通知から連絡先別ルールを作ることはできません。アプリ全体のルールならそのまま使えます。 |
 | `service_watcher_channel_name` | HiLight app watcher | HiLight のアプリ監視 |
-| `service_watcher_title` | HiLight Studio | HiLight Studio |
+| `service_watcher_title` | HiLight+ | HiLight+ |
 | `service_watcher_text` | Watching for apps with light rules | 点灯ルールのあるアプリを監視中 |
 
 ## `strings_live.xml`
@@ -135,7 +135,7 @@ Leave Latin as-is: HiLight, Shizuku, ADB, LED, JSON, MessagingStyle, shortcutId,
 | `live_test_random` | Random | ランダム |
 | `live_rules_title` | App rules | アプリ別ルール |
 | `live_rules_on_count` | %1$d on | %1$d 件オン |
-| `live_rules_empty` | Nothing yet. Add per-app colours in the Apps tab. | まだありません。アプリタブでアプリ別の色を追加できます。 |
+| `live_rules_empty` | Nothing yet. Add per-app colours in the Rules tab. | まだありません。ルールタブでアプリ別の色を追加できます。 |
 | `live_rule_summary` | %1$s · %2$s | %1$s · %2$s |
 | `live_rule_random` | random | ランダム |
 | `live_rule_notify` | notify | 通知 |
@@ -324,8 +324,6 @@ Leave Latin as-is: HiLight, Shizuku, ADB, LED, JSON, MessagingStyle, shortcutId,
 | `setup_state_optional` | optional | 任意 |
 | `setup_usage_body` | Only for \"while open\" rules. | 「アプリ表示中」ルールにのみ使用します。 |
 | `setup_open_usage_access` | Open usage access | 使用状況へのアクセスを開く |
-| `setup_appearance_title` | Appearance | 外観 |
-| `setup_wallpaper_colours` | Wallpaper colours | 壁紙の色 |
 | `setup_updates_title` | Updates | アップデート |
 | `setup_updates_installed` | Installed %1$s | インストール済み %1$s |
 | `setup_updates_body` | Check GitHub for a newer experimental release. | GitHub で新しい試験版リリースを確認します。 |
@@ -338,7 +336,7 @@ Leave Latin as-is: HiLight, Shizuku, ADB, LED, JSON, MessagingStyle, shortcutId,
 | `setup_updates_none` | No published releases were found. | 公開済みのリリースが見つかりません。 |
 | `setup_updates_failed` | Could not check for updates. Check your connection and try again. | アップデートを確認できませんでした。接続を確認して、もう一度お試しください。 |
 | `setup_test_title` | End-to-end test | 通し動作テスト |
-| `setup_test_body` | Posts a notification from this app. Add a rule for HiLight Studio first. | このアプリから通知を送信します。先に HiLight Studio のルールを追加してください。 |
+| `setup_test_body` | Posts a notification from this app. Add a rule for HiLight+ first. | このアプリから通知を送信します。先に HiLight+ のルールを追加してください。 |
 | `setup_test_button` | Post test notification | テスト通知を送信 |
 | `setup_selftest_channel` | Self test | セルフテスト |
 | `setup_selftest_title` | HiLight self test | HiLight セルフテスト |

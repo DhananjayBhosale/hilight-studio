@@ -55,7 +55,7 @@
          pattern and %2$s is what sets the rule off. -->
     <string name="live_rules_title">App rules</string>
     <string name="live_rules_on_count">%1$d on</string>
-    <string name="live_rules_empty">Nothing yet. Add per-app colours in the Apps tab.</string>
+    <string name="live_rules_empty">Nothing yet. Add per-app colours in the Rules tab.</string>
     <string name="live_rule_summary">%1$s · %2$s</string>
     <string name="live_rule_random">random</string>
     <string name="live_rule_notify">notify</string>
