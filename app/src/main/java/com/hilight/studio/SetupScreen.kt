@@ -334,7 +334,10 @@ fun SetupScreen(store: Store) {
         }
     }
 
-    PixelCard {
+    // Only where the build is allowed to look up its own releases. The Play build has neither this
+    // card nor the INTERNET permission behind it, because an app distributed through Play may not
+    // point users at another source for its own updates.
+    if (BuildConfig.UPDATE_CHECK) PixelCard {
         SectionTitle(
             stringResource(R.string.setup_updates_title),
             trailing = {

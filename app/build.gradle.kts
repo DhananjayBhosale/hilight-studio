@@ -45,6 +45,28 @@ android {
         }
     }
 
+    /**
+     * Where the build is going, which decides one thing: whether it can look up its own updates.
+     *
+     * Play forbids an app it distributes from updating itself, or steering users to another source
+     * for the same app, so the Play flavour ships without the update check and without the INTERNET
+     * permission that serves it. Removing the capability rather than hiding it behind a flag is
+     * deliberate: a reviewer, and anyone reading the manifest, can see the absence.
+     */
+    flavorDimensions += "store"
+
+    productFlavors {
+        create("github") {
+            dimension = "store"
+            // The default, and what the F-Droid metadata under fastlane/ describes.
+            buildConfigField("boolean", "UPDATE_CHECK", "true")
+        }
+        create("play") {
+            dimension = "store"
+            buildConfigField("boolean", "UPDATE_CHECK", "false")
+        }
+    }
+
     buildTypes {
         release {
             optimization {

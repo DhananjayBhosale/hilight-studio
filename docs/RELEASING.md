@@ -20,10 +20,13 @@ the same application ID and signing identity.
 5. Build the optimized, signed release APK:
 
    ```bash
-   ./gradlew --no-daemon :app:assembleRelease
+   # The github flavour is what ships on GitHub and F-Droid: it is the one that can look up its own
+   # releases. Use :app:assemblePlayRelease (or :app:bundlePlayRelease) for a Play upload, which has
+   # neither the update check nor the INTERNET permission.
+   ./gradlew --no-daemon :app:assembleGithubRelease
    ```
 
-6. Refuse the release if Gradle produced `app-release-unsigned.apk`. Copy the signed APK outside the
+6. Refuse the release if Gradle produced `app-github-release-unsigned.apk`. Copy the signed APK outside the
    repository and name it `HiLight-Studio-v<version>-experimental-signed.apk`.
 7. Verify the certificate, privileged entry points, and SHA-256 digest:
 

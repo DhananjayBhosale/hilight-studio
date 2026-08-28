@@ -148,9 +148,10 @@ See [Technical details](docs/TECHNICAL.md) for the renderer architecture, hardwa
 
 ## Privacy
 
-HiLight Studio has no analytics, account system, or telemetry. It uses the internet only when you
-tap **Check for updates** under Setup, which fetches public release information from GitHub. No app
-rules, notification data, or settings are sent. App rules and presets stay on the device.
+HiLight Studio has no analytics, account system, or telemetry. The GitHub and F-Droid builds use the
+internet only when you tap **Check for updates** under Setup, which fetches public release
+information from GitHub; no app rules, notification data, or settings are sent. A Play build has no
+update check and no `INTERNET` permission at all, so it makes no network requests of any kind. App rules and presets stay on the device.
 Notification and usage access are optional and are used locally for the rules you enable. Privacy
 activity rules observe only whether Android reports the microphone or camera as active; HiLight never
 reads or records audio, video, or their contents.
@@ -174,10 +175,10 @@ cd hilight-studio
 Build an installable developer APK with:
 
 ```bash
-./gradlew :app:assembleDebug
+./gradlew :app:assembleGithubDebug
 ```
 
-The APK is written under `app/build/outputs/apk/debug/`. You may fork the repository, change the source, and build your own version under the terms of the MIT License.
+The APK is written under `app/build/outputs/apk/github/debug/`. The `github` flavour is the one that can check GitHub for its own updates; `play` is the same app without that feature and without the INTERNET permission, because an app distributed through Play may not point users at another source for its updates. You may fork the repository, change the source, and build your own version under the terms of the MIT License.
 
 ## Contributing
 

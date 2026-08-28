@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The GitHub and F-Droid builds can look up the project's own releases, which is the only reason
+    this app ever touches the network. The Play build has no such feature and therefore no INTERNET
+    permission: an app distributed through Play may not point users at another source for its own
+    updates, so the capability is removed rather than merely hidden.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+</manifest>

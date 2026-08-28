@@ -9,12 +9,7 @@
         tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-    <!-- Used only after the user taps Check for updates; there is no background network check. -->
-    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission
-        android:name="android.permission.QUERY_ALL_PACKAGES"
-        tools:ignore="QueryAllPackagesPermission" />
 
     <!-- Shizuku transport: the user starts Shizuku once per boot, on-device via wireless
          debugging or from adb, and approves this app in Shizuku's own dialog. -->
@@ -22,9 +17,29 @@
 
     <queries>
         <package android:name="moe.shizuku.privileged.api" />
+        <!--
+            The rule picker lists apps the user could write a rule for, which means apps with a
+            launcher entry and nothing more. Declaring that intent is enough for
+            queryIntentActivities to return them, so the app does not need QUERY_ALL_PACKAGES —
+            a restricted permission Play grants only to a short list of app types, none of which
+            this is. Notification rules do not depend on visibility at all: a listener is handed the
+            posting package whether or not the app can see it.
+        -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
     </queries>
 
+    <!--
+        Backup is off deliberately. Everything this app stores is either device-specific — which
+        renderer reached the array, what the LEDs were last told to show — or the names of chats
+        seen on this phone, and the default backup would carry those names into a Google account
+        backup and onto the next device. Nothing here is worth restoring elsewhere, and "stays on
+        the device" should be true rather than nearly true.
+    -->
     <application
+        android:allowBackup="false"
         android:icon="@mipmap/ic_hilight_studio"
         android:roundIcon="@mipmap/ic_hilight_studio"
         android:label="@string/app_name"
