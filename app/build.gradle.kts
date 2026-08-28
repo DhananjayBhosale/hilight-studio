@@ -60,10 +60,13 @@ android {
             dimension = "store"
             // The default, and what the F-Droid metadata under fastlane/ describes.
             buildConfigField("boolean", "UPDATE_CHECK", "true")
+            // Holds QUERY_ALL_PACKAGES, so the picker can list apps with no launcher icon.
+            buildConfigField("boolean", "FULL_APP_LIST", "true")
         }
         create("play") {
             dimension = "store"
             buildConfigField("boolean", "UPDATE_CHECK", "false")
+            buildConfigField("boolean", "FULL_APP_LIST", "false")
         }
     }
 

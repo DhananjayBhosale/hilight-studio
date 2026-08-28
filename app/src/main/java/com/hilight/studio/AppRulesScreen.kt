@@ -427,14 +427,32 @@ fun AppPickerDialog(onDismiss: () -> Unit, onPick: (InstalledApp) -> Unit) {
     val apps by produceState(initialValue = emptyList<InstalledApp>()) {
         value = withContext(Dispatchers.IO) {
             val pm = ctx.packageManager
+            // Apps with a launcher icon, which is what almost everybody is looking for, and what the
+            // scoped <queries> declaration in the main manifest is enough to see.
             val launchable = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-            pm.queryIntentActivities(launchable, 0)
+            val fromLauncher = pm.queryIntentActivities(launchable, 0)
                 .mapNotNull { ri ->
                     val ai = ri.activityInfo?.applicationInfo ?: return@mapNotNull null
                     InstalledApp(ai.packageName, pm.getApplicationLabel(ai).toString(), ai)
                 }
+
+            // Plenty of things notify without ever appearing in the launcher — carrier services, a
+            // watch companion, parts of the system itself — and a rule for one of those is perfectly
+            // reasonable. Seeing them needs QUERY_ALL_PACKAGES, which only the build that is not
+            // going to Play holds, so the picker offers them there and nowhere else. Listed after the
+            // launcher apps rather than mixed in: this is the long tail, not the answer.
+            val rest = if (BuildConfig.FULL_APP_LIST) {
+                runCatching {
+                    pm.getInstalledApplications(0).map { ai ->
+                        InstalledApp(ai.packageName, pm.getApplicationLabel(ai).toString(), ai)
+                    }
+                }.getOrDefault(emptyList())
+            } else {
+                emptyList()
+            }
+
+            (fromLauncher.sortedBy { it.label.lowercase() } + rest.sortedBy { it.label.lowercase() })
                 .distinctBy { it.pkg }
-                .sortedBy { it.label.lowercase() }
         }
     }
 

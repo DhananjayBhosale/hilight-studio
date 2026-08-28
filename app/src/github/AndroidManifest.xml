@@ -5,6 +5,18 @@
     permission: an app distributed through Play may not point users at another source for its own
     updates, so the capability is removed rather than merely hidden.
 -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
+        Full package visibility, so the rule picker can offer apps that notify without having a
+        launcher icon — carrier services, system components, a watch companion. The scoped launcher
+        query in the main manifest cannot see those, and Play grants this permission only to a short
+        list of app types this is not one of, which is why it lives here and not there.
+    -->
+    <uses-permission
+        android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
 </manifest>
