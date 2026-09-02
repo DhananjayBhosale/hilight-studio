@@ -12,6 +12,10 @@
 -->
 <resources>
 
+    <!-- Compact project attribution at the top of Settings. The whole card opens the profile. -->
+    <string name="setup_attribution">Made with passion and care by Dhananjay Tech</string>
+    <string name="setup_attribution_external">Opens Dhananjay Tech on X</string>
+
     <!-- Auto-off. The trailing readout and the slider badge both come from the shared duration
          strings, so only the prose is here. -->
     <string name="setup_auto_off_title">Auto-off</string>
@@ -27,9 +31,9 @@
     <string name="setup_warn_long_confirm_title">Are you sure?</string>
     <string name="setup_warn_long_confirm_body">Up to 5 minutes of continuous illumination will cost battery, and animations freeze lit if the phone sleeps. You can turn this back down at any time.</string>
 
-    <!-- When to stay dark. The "Quiet hours" toggle reuses suppression_quiet_hours, which is the
-         same words said of the same thing. -->
-    <string name="setup_dark_title">When to stay dark</string>
+    <!-- Conditions that enable a glow are distinct from conditions that pause output. -->
+    <string name="setup_glow_conditions_title">When HiLight can glow</string>
+    <string name="setup_pause_conditions_title">When HiLight should pause</string>
     <string name="setup_screen_off_only">Only while the screen is off</string>
     <string name="setup_face_down_only">Only while the phone is face down</string>
     <!-- Both take a 24-hour clock time, which is formatted in code because it carries no words. -->
@@ -143,6 +147,7 @@
     <string name="setup_test_button">Post test notification</string>
     <string name="setup_test_delay_button">Post in 5 seconds</string>
     <string name="setup_test_countdown">Posting in %1$ds…</string>
+    <string name="setup_test_blocked_hilight_off">HiLight is off. Turn it on before posting a test notification.</string>
     <string name="setup_selftest_channel">Self test</string>
     <string name="setup_selftest_title">HiLight self test</string>
     <string name="setup_selftest_body">If a rule exists for this app, the LEDs just fired</string>

@@ -93,6 +93,7 @@ private fun tileAccent(pattern: Pattern, color: Int): Color = when {
 /** Home surface: the phone itself, the master switch, and one-tap effects. */
 @Composable
 fun LiveScreen(store: Store) {
+    val launchPreview = rememberPreviewLauncher(store)
     val enabled by store.enabled.collectAsStateWithLifecycle()
     val ambient by store.ambient.collectAsStateWithLifecycle()
     val status by store.status.collectAsStateWithLifecycle()
@@ -211,7 +212,7 @@ fun LiveScreen(store: Store) {
                             accent = tileAccent(spec.first, spec.second),
                             enabled = enabled && status.alive,
                             modifier = Modifier.weight(1f),
-                        ) { store.preview(spec.first, spec.second, 1200, 1f) }
+                        ) { launchPreview(spec.first, spec.second, 1200, 1f, 4_000) }
                     }
                 }
             }

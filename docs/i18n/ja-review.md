@@ -48,6 +48,7 @@ Leave Latin as-is: HiLight, Shizuku, ADB, LED, JSON, MessagingStyle, shortcutId,
 | `cycle_wave` | One wave travelling once across the array. | 波が LED アレイを 1 回横切ります。 |
 | `cycle_rainbow` | One trip through every hue, back to the start. | すべての色相を一巡して元に戻ります。 |
 | `suppression_quiet_hours` | Quiet hours | サイレント時間 |
+| `test_blocked_by_guard` | Test blocked: %1$s | テストは実行できません：%1$s |
 | `suppression_low_battery` | Low battery | 電池残量が少ない |
 | `suppression_power_saver` | Battery Saver | バッテリーセーバー |
 | `suppression_screen_on` | Screen-off only | 画面消灯時のみ |
@@ -250,6 +251,8 @@ Leave Latin as-is: HiLight, Shizuku, ADB, LED, JSON, MessagingStyle, shortcutId,
 
 | name | English | Japanese |
 |---|---|---|
+| `setup_attribution` | Made with passion and care by Dhananjay Tech | Dhananjay Tech が情熱と心を込めて作りました |
+| `setup_attribution_external` | Opens Dhananjay Tech on X | X で Dhananjay Tech を開きます |
 | `setup_auto_off_title` | Auto-off | 自動オフ |
 | `setup_auto_off_body` | The always-on look switches itself off after this. App rules still work. | 常時点灯スタイルはこの時間が過ぎると自動でオフになります。アプリ別ルールはそのまま動作します。 |
 | `setup_auto_off_protection` | Hardware protection is always on: brightness eases down after 10s of unbroken light, and the array rests if it has been lit for more than half of the last 10 minutes. | ハードウェア保護は常に有効です。10 秒続けて点灯すると明るさが徐々に下がり、直近 10 分のうち半分以上点灯していた場合は LED アレイが休止します。 |
@@ -259,7 +262,8 @@ Leave Latin as-is: HiLight, Shizuku, ADB, LED, JSON, MessagingStyle, shortcutId,
 | `setup_warn_long_body` | The LEDs draw power the whole time they are lit, and stock HiLight only flashes for a moment — nothing about the hardware is built for minutes of continuous light. | LED は点灯している間ずっと電力を消費します。標準の HiLight は一瞬光るだけで、このハードウェアは数分間の連続点灯を想定して作られていません。 |
 | `setup_warn_long_confirm_title` | Are you sure? | 本当に設定しますか |
 | `setup_warn_long_confirm_body` | Up to 5 minutes of continuous illumination will cost battery, and animations freeze lit if the phone sleeps. You can turn this back down at any time. | 最大 5 分の連続点灯は電池を消費します。端末がスリープに入るとアニメーションは点灯したまま停止します。設定はいつでも戻せます。 |
-| `setup_dark_title` | When to stay dark | 消灯する条件 |
+| `setup_glow_conditions_title` | When HiLight can glow | HiLight が点灯できる条件 |
+| `setup_pause_conditions_title` | When HiLight should pause | HiLight を一時停止する条件 |
 | `setup_screen_off_only` | Only while the screen is off | 画面消灯時のみ |
 | `setup_quiet_from` | From %1$s | 開始 %1$s |
 | `setup_quiet_until` | Until %1$s | 終了 %1$s |
@@ -340,6 +344,7 @@ Leave Latin as-is: HiLight, Shizuku, ADB, LED, JSON, MessagingStyle, shortcutId,
 | `setup_test_title` | End-to-end test | 通し動作テスト |
 | `setup_test_body` | Posts a notification from this app. Add a rule for HiLight Studio first. | このアプリから通知を送信します。先に HiLight Studio のルールを追加してください。 |
 | `setup_test_button` | Post test notification | テスト通知を送信 |
+| `setup_test_blocked_hilight_off` | HiLight is off. Turn it on before posting a test notification. | HiLight はオフです。テスト通知を送る前にオンにしてください。 |
 | `setup_selftest_channel` | Self test | セルフテスト |
 | `setup_selftest_title` | HiLight self test | HiLight セルフテスト |
 | `setup_selftest_body` | If a rule exists for this app, the LEDs just fired | このアプリのルールがあれば、今 LED が点灯しました |

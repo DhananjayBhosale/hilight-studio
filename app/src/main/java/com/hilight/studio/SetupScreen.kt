@@ -36,7 +36,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -76,6 +81,8 @@ private const val ADB_PHONE_RESET =
         "kill -TERM ${'$'}p 2>/dev/null || exit 1; live=1; fi; done; " +
         "[ -n \"${'$'}live\" ] && sleep 0.1; i=${'$'}((i + 1)); done; " +
         "[ -z \"${'$'}live\" ] || exit 1"
+
+private const val DHANANJAY_TECH_URL = "https://twitter.com/Dhananjay_Tech"
 
 private const val ADB_PHONE_RESET_CMD =
     "live=1; i=0; while [ ${'$'}i -lt 65 ] && [ ${'$'}live = 1 ]; do live=0; " +
@@ -128,6 +135,7 @@ const val ADB_COMMAND_CMD =
 @Composable
 fun SetupScreen(store: Store) {
     val ctx = LocalContext.current
+    val resources = LocalResources.current
     val status by store.status.collectAsStateWithLifecycle()
     val masterEnabled by store.enabled.collectAsStateWithLifecycle()
     val manualCleanupPending by store.manualLedCleanupPending.collectAsStateWithLifecycle()
@@ -155,6 +163,12 @@ fun SetupScreen(store: Store) {
     val faceDownNoticeAccepted by store.faceDownNoticeAccepted.collectAsStateWithLifecycle()
     val faceDownState by store.faceDownState.collectAsStateWithLifecycle()
     val faceDownSensorAvailable = remember(ctx) { ForegroundWatcher.hasFaceDownSensor(ctx) }
+    val glowSuppression = suppression?.takeIf {
+        it.settingsSection() == SettingsSuppressionSection.GLOW
+    }
+    val pauseSuppression = suppression?.takeIf {
+        it.settingsSection() == SettingsSuppressionSection.PAUSE
+    }
 
     var notifAccess by remember { mutableStateOf(hasNotificationAccess(ctx)) }
     var usageAccess by remember { mutableStateOf(ForegroundWatcher.hasUsageAccess(ctx)) }
@@ -166,6 +180,28 @@ fun SetupScreen(store: Store) {
     var confirmingFaceDown by remember { mutableStateOf(false) }
     val updateScope = rememberCoroutineScope()
     val conversations by store.conversations.collectAsStateWithLifecycle()
+
+    val postSelfTest: () -> Unit = {
+        val reason = store.notificationTestSuppressionReason()
+        if (!store.enabled.value) {
+            Toast.makeText(
+                ctx.applicationContext,
+                R.string.setup_test_blocked_hilight_off,
+                Toast.LENGTH_SHORT,
+            ).show()
+        } else if (reason == null) {
+            postSelfTestNotification(ctx.applicationContext)
+        } else {
+            Toast.makeText(
+                ctx.applicationContext,
+                resources.getString(
+                    R.string.test_blocked_by_guard,
+                    resources.getString(reason.shortRes),
+                ),
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
+    }
 
     val checkForUpdates: () -> Unit = {
         checkingForUpdates = true
@@ -184,6 +220,20 @@ fun SetupScreen(store: Store) {
             store.shizuku.refresh()
             delay(1500)
         }
+    }
+
+    val attribution = stringResource(R.string.setup_attribution)
+    val attributionLink = stringResource(R.string.setup_attribution_external)
+    PixelCard(
+        modifier = Modifier.semantics(mergeDescendants = true) {
+            role = Role.Button
+            contentDescription = "$attribution. $attributionLink"
+        },
+        tone = 0,
+        onClick = { openExternalUrl(ctx, DHANANJAY_TECH_URL) },
+    ) {
+        SectionTitle(attribution)
+        Caption(attributionLink)
     }
 
     PixelCard(tone = 2) {
@@ -210,8 +260,10 @@ fun SetupScreen(store: Store) {
 
     PixelCard {
         SectionTitle(
-            stringResource(R.string.setup_dark_title),
-            trailing = { suppression?.let { LivePill(stringResource(it.shortRes), ok = false) } },
+            stringResource(R.string.setup_glow_conditions_title),
+            trailing = {
+                glowSuppression?.let { LivePill(stringResource(it.shortRes), ok = false) }
+            },
         )
         ToggleRow(stringResource(R.string.setup_screen_off_only), screenOffOnly) {
             store.setScreenOffOnly(it)
@@ -254,8 +306,15 @@ fun SetupScreen(store: Store) {
                 )
             }
         }
-        // The toggle and the suppression pill above say the same two words about the same thing, so
-        // they share the one string.
+    }
+
+    PixelCard {
+        SectionTitle(
+            stringResource(R.string.setup_pause_conditions_title),
+            trailing = {
+                pauseSuppression?.let { LivePill(stringResource(it.shortRes), ok = false) }
+            },
+        )
         ToggleRow(stringResource(R.string.suppression_quiet_hours), quietEnabled) {
             store.setQuietHours(it)
         }
@@ -467,7 +526,7 @@ fun SetupScreen(store: Store) {
         val available = updateResult as? UpdateCheckResult.Available
         if (available != null && !checkingForUpdates) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Button(onClick = { openRelease(ctx, available.release.pageUrl) }) {
+                Button(onClick = { openExternalUrl(ctx, available.release.pageUrl) }) {
                     ButtonLabel(stringResource(R.string.setup_updates_view_release))
                 }
                 TextButton(onClick = checkForUpdates) {
@@ -494,7 +553,7 @@ fun SetupScreen(store: Store) {
         Caption(stringResource(R.string.setup_test_body))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             FilledTonalButton(
-                onClick = { postSelfTestNotification(ctx.applicationContext) },
+                onClick = postSelfTest,
                 enabled = selfTestCountdown == 0,
                 modifier = Modifier.weight(1f),
             ) {
@@ -506,14 +565,13 @@ fun SetupScreen(store: Store) {
                     // before Compose has redrawn the disabled button.
                     if (selfTestCountdown != 0) return@TextButton
                     selfTestCountdown = 5
-                    val appContext = ctx.applicationContext
                     updateScope.launch {
                         try {
                             for (remaining in 5 downTo 1) {
                                 selfTestCountdown = remaining
                                 delay(1_000)
                             }
-                            postSelfTestNotification(appContext)
+                            postSelfTest()
                         } finally {
                             selfTestCountdown = 0
                         }
@@ -770,7 +828,7 @@ private fun openShizukuListing(ctx: Context) {
         .onFailure { Toast.makeText(ctx, R.string.setup_no_browser, Toast.LENGTH_SHORT).show() }
 }
 
-private fun openRelease(ctx: Context, pageUrl: String) {
+private fun openExternalUrl(ctx: Context, pageUrl: String) {
     val uri = Uri.parse(pageUrl)
     runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, uri)) }
         .onFailure { Toast.makeText(ctx, R.string.setup_no_browser, Toast.LENGTH_SHORT).show() }

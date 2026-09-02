@@ -4,6 +4,16 @@ All notable changes to HiLight Studio are documented here.
 
 ## [Unreleased]
 
+- Kept an ordinary notification alert running when the notification itself wakes the screen, while
+  still stopping it on unlock and still stopping per-rule **Only while the screen is off** alerts as
+  soon as the screen wakes. This addresses the lifecycle sequence reported for Discord's first alert
+  and still needs confirmation on the reporter's device.
+- Added a clear message when an in-app preview or end-to-end notification test is currently blocked
+  by quiet hours, Battery Saver, low battery, or the applicable face-down guard.
+- Split the former **When to stay dark** settings into **When HiLight can glow** and **When HiLight
+  should pause**, with each live suppression reason shown beside the section that controls it.
+- Added a compact Dhananjay Tech attribution link at the top of Settings.
+
 ## [1.0.10-experimental] - 2026-08-29
 
 - Bumped the privileged renderer implementation revision to 5 so Shizuku, ADB, and root restart an

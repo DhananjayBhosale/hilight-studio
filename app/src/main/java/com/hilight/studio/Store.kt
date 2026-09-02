@@ -257,6 +257,27 @@ internal fun canRetryLedCleanup(
     !status.sessionOpen && status.blackClearTerminal && !status.blackClearPending &&
     !status.privacyObserverEnabled
 
+internal enum class ScreenLifecycleAction {
+    ARM_AND_REFRESH,
+    CANCEL_AND_REFRESH,
+    REFRESH_ONLY,
+}
+
+/** Keeps ordinary alerts alive across a screen wake while preserving screen-off-only rules. */
+internal fun screenLifecycleAction(
+    action: String?,
+    alertScreenOffGated: Boolean,
+): ScreenLifecycleAction = when (action) {
+    Intent.ACTION_SCREEN_OFF -> ScreenLifecycleAction.ARM_AND_REFRESH
+    Intent.ACTION_USER_PRESENT -> ScreenLifecycleAction.CANCEL_AND_REFRESH
+    Intent.ACTION_SCREEN_ON -> if (alertScreenOffGated) {
+        ScreenLifecycleAction.CANCEL_AND_REFRESH
+    } else {
+        ScreenLifecycleAction.REFRESH_ONLY
+    }
+    else -> ScreenLifecycleAction.REFRESH_ONLY
+}
+
 /**
  * Single source of truth for the UI and the triggers, and the only thing that pushes to a [Backend].
  *
@@ -429,6 +450,7 @@ class Store private constructor(private val app: Context) {
     private var activeAlert: JSONObject? = null
     private var activeAlertSource: AlertSource? = null
     private var activeAlertFaceDownGated = false
+    private var activeAlertScreenOffGated = false
     private var alertExpiry: Runnable? = null
     private var stateRevision = SystemClock.elapsedRealtime()
     private var rootTransition = false
@@ -500,18 +522,18 @@ class Store private constructor(private val app: Context) {
         app.registerReceiver(
             object : android.content.BroadcastReceiver() {
                 override fun onReceive(c: Context?, i: Intent?) {
-                    when (i?.action) {
-                        Intent.ACTION_SCREEN_OFF -> refreshSuppression(armOnRelease = true)
-                        Intent.ACTION_SCREEN_ON, Intent.ACTION_USER_PRESENT -> {
-                            // The screen coming on, or the phone being unlocked, means the
-                            // notification has been seen — a rule's colour has no one left to tell,
-                            // so drop it now instead of burning the rest of its window.
+                    when (screenLifecycleAction(i?.action, activeAlertScreenOffGated)) {
+                        ScreenLifecycleAction.ARM_AND_REFRESH ->
+                            refreshSuppression(armOnRelease = true)
+                        ScreenLifecycleAction.CANCEL_AND_REFRESH -> {
+                            // Unlocking means the notification has been seen. A screen wake alone
+                            // cancels only a rule that explicitly requires the screen to stay off.
                             cancelAlert()
                             refreshSuppression()
                         }
-                        // plugging in, unplugging, or toggling Battery Saver: re-check, but a power
-                        // event is not the user looking at the phone, so any alert keeps running
-                        else -> refreshSuppression()
+                        // A plain wake, power connection change, or Battery Saver change re-checks
+                        // the guards without cutting short an ordinary notification alert.
+                        ScreenLifecycleAction.REFRESH_ONLY -> refreshSuppression()
                     }
                 }
             },
@@ -1288,6 +1310,7 @@ class Store private constructor(private val app: Context) {
             preview = null,
             source = AlertSource.NOTIFICATION,
             faceDownGated = rule.onlyWhenFaceDown,
+            screenOffGated = rule.onlyWhenScreenOff,
         )
     }
 
@@ -1306,10 +1329,12 @@ class Store private constructor(private val app: Context) {
         preview: Ambient?,
         source: AlertSource,
         faceDownGated: Boolean = false,
+        screenOffGated: Boolean = false,
     ) {
         activeAlert = alert
         activeAlertSource = source
         activeAlertFaceDownGated = faceDownGated
+        activeAlertScreenOffGated = screenOffGated
         alertIsPreview = preview != null
         _previewLook.value = preview
         // A preview is a deliberate "show me this now", so it lights the array even with the master
@@ -1330,6 +1355,7 @@ class Store private constructor(private val app: Context) {
         activeAlert = null
         activeAlertSource = null
         activeAlertFaceDownGated = false
+        activeAlertScreenOffGated = false
         alertIsPreview = false
         _previewLook.value = null
         pushCurrent(arm = false)       // handing the layer back must not extend the ambient window
@@ -1338,8 +1364,8 @@ class Store private constructor(private val app: Context) {
     /**
      * Drops a notification alert that is still running, restoring whatever sits underneath it.
      *
-     * Called when the user turns the screen on or unlocks: the alert exists to be noticed, so once it
-     * has been there is nothing to keep lit. No-op when no alert is in flight.
+     * Called when the user unlocks, a screen-off-only rule sees the screen wake, or a face-down gate
+     * is left. No-op when no alert is in flight.
      */
     fun cancelAlert() {
         if (activeAlert == null) return
@@ -1392,6 +1418,12 @@ class Store private constructor(private val app: Context) {
             source = AlertSource.PREVIEW,
         )
     }
+
+    /** The same preview guard decision the renderer will apply, excluding the deliberate face gate bypass. */
+    fun previewSuppressionReason(): Suppression? = guardState().previewSuppressionReason()
+
+    /** Current pre-check for a real notification self-test, which follows notification guards. */
+    fun notificationTestSuppressionReason(): Suppression? = guardState().alertSuppression()
 
     /**
      * Kills a running preview. Called when the app leaves the foreground: a test the user started by

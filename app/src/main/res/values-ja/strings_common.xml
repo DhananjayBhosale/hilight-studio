@@ -68,6 +68,8 @@
     <!-- Why the array is being held dark -->
     <!-- "Quiet hours" -->
     <string name="suppression_quiet_hours">サイレント時間</string>
+    <!-- "Test blocked: %1$s" -->
+    <string name="test_blocked_by_guard">テストは実行できません：%1$s</string>
     <!-- "Low battery" -->
     <string name="suppression_low_battery">電池残量が少ない</string>
     <!-- "Battery Saver" — Android's own Japanese for the system feature -->
