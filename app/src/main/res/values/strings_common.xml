@@ -46,6 +46,7 @@
 
     <!-- Why the array is being held dark -->
     <string name="suppression_quiet_hours">Quiet hours</string>
+    <string name="test_blocked_by_guard">Test blocked: %1$s</string>
     <string name="suppression_low_battery">Low battery</string>
     <string name="suppression_power_saver">Battery Saver</string>
     <string name="suppression_screen_on">Screen-off only</string>

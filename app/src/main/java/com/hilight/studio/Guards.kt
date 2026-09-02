@@ -55,6 +55,19 @@ data class GuardState(
     }
 }
 
+/** Manual previews intentionally bypass only the face-down gate, matching [outputSuppression]. */
+internal fun GuardState.previewSuppressionReason(): Suppression? =
+    copy(faceDownOnly = false).alertSuppression()
+
+internal enum class SettingsSuppressionSection { GLOW, PAUSE }
+
+/** Routes the live explanation to the settings group that owns the condition. */
+internal fun Suppression.settingsSection(): SettingsSuppressionSection = when (this) {
+    Suppression.SCREEN_ON, Suppression.NOT_FACE_DOWN -> SettingsSuppressionSection.GLOW
+    Suppression.QUIET_HOURS, Suppression.POWER_SAVER, Suppression.LOW_BATTERY ->
+        SettingsSuppressionSection.PAUSE
+}
+
 /** Manual finite previews bypass only the face-down gate; every power/safety guard still applies. */
 internal fun GuardState.outputSuppression(
     hasTransientAlert: Boolean,

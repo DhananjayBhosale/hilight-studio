@@ -83,6 +83,7 @@ private data class RuleEditorState(val rule: AppRule, val isNew: Boolean)
 @Composable
 fun AppRulesScreen(store: Store) {
     val ctx = LocalContext.current
+    val launchPreview = rememberPreviewLauncher(store)
     val rules by store.rules.collectAsStateWithLifecycle()
     val privacyRules by store.privacyRules.collectAsStateWithLifecycle()
     val conversations by store.conversations.collectAsStateWithLifecycle()
@@ -151,7 +152,7 @@ fun AppRulesScreen(store: Store) {
                     onEdit = { editing = RuleEditorState(rule, isNew = false) },
                     onTest = {
                         // test what the rule will actually do, including how long it stays lit
-                        store.preview(
+                        launchPreview(
                             rule.pattern, rule.color, rule.speedMs, rule.brightness, rule.durationMs,
                         )
                     },
@@ -169,7 +170,7 @@ fun AppRulesScreen(store: Store) {
         },
         onToggle = { store.upsertPrivacyRule(it.copy(enabled = !it.enabled), replacing = it) },
         onEdit = { editingPrivacy = it },
-        onTest = { store.preview(it.pattern, it.color, it.speedMs, it.brightness, it.lightMs) },
+        onTest = { launchPreview(it.pattern, it.color, it.speedMs, it.brightness, it.lightMs) },
         onDelete = store::removePrivacyRule,
     )
 
@@ -244,7 +245,9 @@ fun AppRulesScreen(store: Store) {
                 store.upsertRule(it, replacing = rule)
                 editing = null
             },
-            onTest = { store.preview(it.pattern, it.color, it.speedMs, it.brightness, it.durationMs) },
+            onTest = {
+                launchPreview(it.pattern, it.color, it.speedMs, it.brightness, it.durationMs)
+            },
             faceDownNoticeAccepted = faceDownNoticeAccepted,
             faceDownSensorAvailable = faceDownSensorAvailable,
             faceDownState = faceDownState,
@@ -317,7 +320,9 @@ fun AppRulesScreen(store: Store) {
                 store.upsertPrivacyRule(it, replacing = rule)
                 editingPrivacy = null
             },
-            onTest = { store.preview(it.pattern, it.color, it.speedMs, it.brightness, it.lightMs) },
+            onTest = {
+                launchPreview(it.pattern, it.color, it.speedMs, it.brightness, it.lightMs)
+            },
         )
     }
 }
