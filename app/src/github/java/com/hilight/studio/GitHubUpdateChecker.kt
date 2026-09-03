@@ -17,13 +17,7 @@ internal sealed interface UpdateCheckResult {
     data object Failed : UpdateCheckResult
 }
 
-/**
- * Manual update lookup for the project's public GitHub releases.
- *
- * GitHub's `releases/latest` endpoint excludes prereleases, and every HiLight build is intentionally
- * published as an experimental prerelease. The list endpoint includes them, so we resolve the
- * greatest semantic version ourselves and ignore drafts and non-version tags.
- */
+/** Manual update lookup included only in the GitHub distribution flavor. */
 internal object GitHubUpdateChecker {
     private const val RELEASES_API =
         "https://api.github.com/repos/DhananjayBhosale/hilight-studio/releases?per_page=10"
@@ -57,12 +51,8 @@ internal object GitHubUpdateChecker {
         }
     }
 
-    internal fun resolve(
-        currentVersionName: String,
-        response: String,
-    ): UpdateCheckResult = try {
-        val current = ReleaseVersion.parse(currentVersionName)
-            ?: return UpdateCheckResult.Failed
+    internal fun resolve(currentVersionName: String, response: String): UpdateCheckResult = try {
+        val current = ReleaseVersion.parse(currentVersionName) ?: return UpdateCheckResult.Failed
         val releases = JSONArray(response)
         var latest: ResolvedRelease? = null
 
@@ -71,9 +61,7 @@ internal object GitHubUpdateChecker {
             if (entry.optBoolean("draft", false)) continue
             val tag = entry.optString("tag_name")
             val version = ReleaseVersion.parse(tag) ?: continue
-            if (latest == null || version > latest.version) {
-                latest = ResolvedRelease(tag, version)
-            }
+            if (latest == null || version > latest.version) latest = ResolvedRelease(tag, version)
         }
 
         val published = latest ?: return UpdateCheckResult.NoPublishedRelease
@@ -92,10 +80,7 @@ internal object GitHubUpdateChecker {
         UpdateCheckResult.Failed
     }
 
-    private data class ResolvedRelease(
-        val tag: String,
-        val version: ReleaseVersion,
-    )
+    private data class ResolvedRelease(val tag: String, val version: ReleaseVersion)
 
     private data class ReleaseVersion(
         val major: Int,

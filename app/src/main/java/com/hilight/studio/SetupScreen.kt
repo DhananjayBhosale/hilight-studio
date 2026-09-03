@@ -104,6 +104,9 @@ private const val ADB_PHONE_RESET_CMD =
 const val ADB_RESET =
     "adb shell '$ADB_PHONE_RESET'"
 
+private const val PRIVACY_POLICY_URL =
+    "https://github.com/DhananjayBhosale/hilight-studio/blob/codex%2Fplay-store/PRIVACY.md"
+
 /**
  * Starts the renderer out of the installed APK.
  *
@@ -174,6 +177,7 @@ fun SetupScreen(store: Store) {
     var usageAccess by remember { mutableStateOf(ForegroundWatcher.hasUsageAccess(ctx)) }
     var inspecting by remember { mutableStateOf(false) }
     var forgetting by remember { mutableStateOf(false) }
+    var confirmingNotificationAccess by remember { mutableStateOf(false) }
     var checkingForUpdates by remember { mutableStateOf(false) }
     var updateResult by remember { mutableStateOf<UpdateCheckResult?>(null) }
     var selfTestCountdown by remember { mutableIntStateOf(0) }
@@ -447,7 +451,7 @@ fun SetupScreen(store: Store) {
         )
         Caption(stringResource(R.string.setup_notif_body))
         FilledTonalButton(
-            onClick = { ctx.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
+            onClick = { confirmingNotificationAccess = true },
         ) { ButtonLabel(stringResource(R.string.setup_open_notif_access)) }
         Caption(stringResource(R.string.setup_inspector_body))
         TextButton(onClick = { inspecting = true }) {
@@ -492,6 +496,14 @@ fun SetupScreen(store: Store) {
         SectionTitle(stringResource(R.string.setup_appearance_title))
         ToggleRow(stringResource(R.string.setup_wallpaper_colours), dynamicColor) {
             store.setDynamicColor(it)
+        }
+    }
+
+    PixelCard {
+        SectionTitle(stringResource(R.string.setup_privacy_policy_title))
+        Caption(stringResource(R.string.setup_privacy_policy_body))
+        TextButton(onClick = { openExternalUrl(ctx, PRIVACY_POLICY_URL) }) {
+            ButtonLabel(stringResource(R.string.setup_privacy_policy_open))
         }
     }
 
@@ -651,6 +663,16 @@ fun SetupScreen(store: Store) {
 
     if (inspecting) {
         NotificationInspectorDialog(store) { inspecting = false }
+    }
+
+    if (confirmingNotificationAccess) {
+        NotificationAccessDisclosureDialog(
+            onDismiss = { confirmingNotificationAccess = false },
+            onContinue = {
+                confirmingNotificationAccess = false
+                ctx.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+            },
+        )
     }
 
     if (forgetting) {

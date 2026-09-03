@@ -163,6 +163,14 @@
     <string name="setup_notif_body">どのアプリから通知が届いたかをルールが判別できるようになります。</string>
     <!-- "Open notification access" -->
     <string name="setup_open_notif_access">通知へのアクセスを開く</string>
+    <!-- "Allow HiLight to read notifications?" -->
+    <string name="notification_access_disclosure_title">HiLight に通知の読み取りを許可しますか</string>
+    <!-- Notification access disclosure. -->
+    <string name="notification_access_disclosure_body">通知ルールを動作させるには、すべてのアプリの通知へのアクセスが必要です。HiLight は通知元アプリ、タイトル、送信者名またはチャット名、固定チャット ID、メッセージ本文を読み取ります。これらはこの端末上でルールを照合するためだけに使用され、メッセージ本文が保存、ログ記録、収集、共有されることはありません。許可せずに続行できますが、通知ルールとチャット別ルールは動作しません。</string>
+    <!-- "Continue to Android settings" -->
+    <string name="notification_access_disclosure_continue">Android の設定へ進む</string>
+    <!-- "Not now" -->
+    <string name="notification_access_disclosure_cancel">今はしない</string>
     <!-- "Shows what HiLight reads from each notification. No message text." -->
     <string name="setup_inspector_body">HiLight が各通知から読み取った内容を表示します。メッセージ本文は含みません。</string>
     <!-- "Notification inspector" -->
@@ -201,6 +209,14 @@
     <string name="setup_appearance_title">外観</string>
     <!-- "Wallpaper colours" -->
     <string name="setup_wallpaper_colours">壁紙の色</string>
+
+    <!-- Privacy policy -->
+    <!-- "Privacy" -->
+    <string name="setup_privacy_policy_title">プライバシー</string>
+    <!-- "Read what HiLight accesses, keeps on this device, and never sends." -->
+    <string name="setup_privacy_policy_body">HiLight がアクセスする情報、この端末に保存する情報、外部へ送信しない情報を確認できます。</string>
+    <!-- "Privacy policy" -->
+    <string name="setup_privacy_policy_open">プライバシーポリシー</string>
 
     <!-- Manual GitHub update check -->
     <!-- "Updates" -->

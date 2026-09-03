@@ -292,6 +292,7 @@ fun ConversationPickerDialog(
 
     var contactFailed by remember { mutableStateOf(false) }
     var unusable by remember { mutableStateOf(false) }
+    var confirmingNotificationAccess by remember { mutableStateOf(false) }
 
     /*
      * Learn mode is a wait on the notification listener, so it can only ever finish while HiLight
@@ -437,11 +438,7 @@ fun ConversationPickerDialog(
                                     )
                                 } else if (!notifAccess) {
                                     NoAccessBlock(
-                                        onOpenSettings = {
-                                            ctx.startActivity(
-                                                Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
-                                            )
-                                        },
+                                        onOpenSettings = { confirmingNotificationAccess = true },
                                         // An armed wait is left armed on purpose. It costs nothing
                                         // while access is missing, and granting access makes it work
                                         // straight away rather than asking for another tap — so the
@@ -502,6 +499,16 @@ fun ConversationPickerDialog(
             }
         },
     )
+
+    if (confirmingNotificationAccess) {
+        NotificationAccessDisclosureDialog(
+            onDismiss = { confirmingNotificationAccess = false },
+            onContinue = {
+                confirmingNotificationAccess = false
+                ctx.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+            },
+        )
+    }
 }
 
 /** The two paths that do not need the learned list: wait for a message, or pick a contact. */

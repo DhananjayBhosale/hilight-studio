@@ -104,6 +104,10 @@
     <string name="setup_state_needed">needed</string>
     <string name="setup_notif_body">Lets rules see which app notified you.</string>
     <string name="setup_open_notif_access">Open notification access</string>
+    <string name="notification_access_disclosure_title">Allow HiLight to read notifications?</string>
+    <string name="notification_access_disclosure_body">Notification rules need access to notifications from every app. HiLight reads the posting app, title, sender or chat name, stable chat ID, and message text. It uses them only on this device to match rules; message text is never stored, logged, collected, or shared. You can continue without access, but notification and per-chat rules will not work.</string>
+    <string name="notification_access_disclosure_continue">Continue to Android settings</string>
+    <string name="notification_access_disclosure_cancel">Not now</string>
     <string name="setup_inspector_body">Shows what HiLight reads from each notification. No message text.</string>
     <string name="setup_inspector_button">Notification inspector</string>
 
@@ -126,6 +130,11 @@
     <!-- Appearance -->
     <string name="setup_appearance_title">Appearance</string>
     <string name="setup_wallpaper_colours">Wallpaper colours</string>
+
+    <!-- Privacy policy -->
+    <string name="setup_privacy_policy_title">Privacy</string>
+    <string name="setup_privacy_policy_body">Read what HiLight accesses, keeps on this device, and never sends.</string>
+    <string name="setup_privacy_policy_open">Privacy policy</string>
 
     <!-- Manual GitHub update check -->
     <string name="setup_updates_title">Updates</string>

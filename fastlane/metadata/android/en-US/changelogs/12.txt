@@ -1,0 +1,1 @@
+First Google Play release. Includes LED styles and previews, app and chat rules, microphone and camera activity rules, safety limits, Shizuku, ADB and existing-root setup, privacy-safe diagnostics, and stuck-LED cleanup hardening. The Play build has no updater, advertising, analytics, telemetry, or internet permission.

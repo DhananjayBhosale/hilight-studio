@@ -51,12 +51,10 @@ android {
         create("github") {
             dimension = "store"
             buildConfigField("boolean", "UPDATE_CHECK", "true")
-            buildConfigField("boolean", "FULL_APP_LIST", "true")
         }
         create("play") {
             dimension = "store"
             buildConfigField("boolean", "UPDATE_CHECK", "false")
-            buildConfigField("boolean", "FULL_APP_LIST", "false")
         }
     }
 

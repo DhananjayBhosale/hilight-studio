@@ -8,7 +8,7 @@ The Play Store build is a product flavour of the same app, not a separate codeba
 2. In the persistent `codex/play-store` worktree, fetch GitHub and merge `origin/main`.
 3. Increase `versionCode`, confirm the release notes, and review new permissions and SDKs.
 4. Run the Play tests, lint, release build, and merged-manifest policy checks.
-5. Build the signed App Bundle with `:app:bundlePlayRelease` and record its SHA-256.
+5. Run `./scripts/build-signed-play-release.sh` to produce and verify the signed APK and App Bundle.
 6. Test the bundle through Play Console's internal testing track before production rollout.
 7. Commit and push the Play preparation to `codex/play-store` with the verification evidence.
 
@@ -28,3 +28,6 @@ Everything else remains shared unless a specific Play policy decision is documen
 A successful local build is not Play approval. Production readiness also requires accurate Play
 Console declarations, an accessible hosted privacy policy, store listing assets, internal-track
 installation on supported hardware, and approval from Google Play review.
+
+The `.aab` is the Play upload artifact. The signed `.apk` is retained for local certificate,
+permission, upgrade, and supported-device checks; it is not a separate GitHub release.

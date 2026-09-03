@@ -44,10 +44,7 @@ class GitHubUpdateCheckerTest {
             response = releases(release("v1.0.5-experimental", prerelease = true)),
         )
         assertTrue(developerBuildAhead is UpdateCheckResult.Current)
-        assertEquals(
-            "1.0.5",
-            (developerBuildAhead as UpdateCheckResult.Current).latestVersionName,
-        )
+        assertEquals("1.0.5", (developerBuildAhead as UpdateCheckResult.Current).latestVersionName)
     }
 
     @Test
