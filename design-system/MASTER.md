@@ -1,4 +1,7 @@
-# HiLight Studio design system
+# OctaGlow design system
+
+OctaGlow is the Google Play distribution name. The GitHub flavor retains the HiLight Studio name;
+both distributions share the same visual system and package identity.
 
 ## Direction
 

@@ -1,4 +1,4 @@
-HiLight Studio is a controller for the eight-LED HiLight array on the Pixel 11 Pro, Pixel 11 Pro XL, and Pixel 11 Pro Fold running Android 17.
+OctaGlow is a controller for the eight-LED HiLight array on the Pixel 11 Pro, Pixel 11 Pro XL, and Pixel 11 Pro Fold running Android 17.
 
 Create solid colours and animated patterns, save presets, and let the array respond to notifications, foreground apps, selected contacts, microphone activity, or camera activity. Quiet hours, Do Not Disturb, Battery Saver, low-battery controls, and enforced runtime limits help prevent unwanted or excessive output.
 

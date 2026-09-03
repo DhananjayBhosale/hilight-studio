@@ -140,8 +140,8 @@ fi
 
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 DEST_DIR="$OUTPUT_ROOT/v$VERSION-code$VERSION_CODE"
-APK_DEST="$DEST_DIR/HiLight-Studio-v${VERSION}-play-signed-${STAMP}.apk"
-BUNDLE_DEST="$DEST_DIR/HiLight-Studio-v${VERSION}-play-upload-${STAMP}.aab"
+APK_DEST="$DEST_DIR/OctaGlow-v${VERSION}-play-signed-${STAMP}.apk"
+BUNDLE_DEST="$DEST_DIR/OctaGlow-v${VERSION}-play-upload-${STAMP}.aab"
 mkdir -p "$DEST_DIR"
 chmod 700 "$OUTPUT_ROOT" "$DEST_DIR"
 cp "$APK" "$APK_DEST"

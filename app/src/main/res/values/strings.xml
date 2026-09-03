@@ -3,4 +3,6 @@
     <!-- The product name, which is the same in every language. Marked untranslatable so that lint
          stops asking for a Japanese rendering of it, and so no future translator supplies one. -->
     <string name="app_name" translatable="false">HiLight Studio</string>
+    <string name="app_brand_short" translatable="false">HiLight</string>
+    <string name="app_logo_description">HiLight Studio logo</string>
 </resources>

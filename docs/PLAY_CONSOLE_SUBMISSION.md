@@ -5,7 +5,7 @@ network behavior changes.
 
 ## Store setup
 
-- App name: **HiLight Studio**
+- App name: **OctaGlow**
 - Package: `com.hilight.studio`
 - Category: **Tools**
 - App or game: **App**
@@ -28,7 +28,7 @@ There is no login, subscription, region lock, or account. Full function requires
 
 Reviewer note:
 
-> HiLight Studio controls the supported phone's eight-LED HiLight array. It does not root the device
+> OctaGlow controls the supported phone's eight-LED HiLight array. It does not root the device
 > or bypass a consent screen. The reviewer explicitly supplies access through Shizuku, ADB, or an
 > existing root manager. Without a supported device, the UI, presets, safety controls, disclosures,
 > and rule configuration remain reviewable, but physical LED output cannot be demonstrated.
@@ -50,7 +50,7 @@ Declared type: `specialUse`
 
 Function description:
 
-> When the user enables a "while this app is open" rule or a face-down condition, HiLight Studio runs
+> When the user enables a "while this app is open" rule or a face-down condition, OctaGlow runs
 > a visible foreground service that watches the selected foreground-app state or phone orientation.
 > It updates only user-created local LED rules. The persistent Android notification identifies the
 > active feature and lets the user return to the app and stop it.
@@ -87,7 +87,7 @@ itself exclude unsupported API 37 phones.
 ## Release sequence
 
 1. Enroll in Play App Signing. To preserve updates for users of existing signed builds, supply the
-   existing HiLight app-signing key rather than accepting an unrelated Google-generated app key.
+   existing app-signing key rather than accepting an unrelated Google-generated app key.
 2. Keep the private key and passwords outside the repository. A separate upload key can be registered
    after enrollment.
 3. Upload the signed `.aab` from the release evidence directory.

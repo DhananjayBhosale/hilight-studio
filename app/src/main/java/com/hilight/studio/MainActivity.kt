@@ -137,11 +137,14 @@ private fun App(store: Store) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Image(
                             painter = painterResource(R.drawable.hilight_logo),
-                            contentDescription = "HiLight Studio logo",
+                            contentDescription = stringResource(R.string.app_logo_description),
                             modifier = Modifier.size(32.dp),
                         )
                         Spacer(Modifier.width(8.dp))
-                        Text("HiLight", style = MaterialTheme.typography.titleLarge)
+                        Text(
+                            stringResource(R.string.app_brand_short),
+                            style = MaterialTheme.typography.titleLarge,
+                        )
                     }
                 },
                 actions = {

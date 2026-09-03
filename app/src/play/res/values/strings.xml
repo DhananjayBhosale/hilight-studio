@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Play Store branding is intentionally independent from the GitHub distribution name. -->
+    <string name="app_name" translatable="false">OctaGlow</string>
+    <string name="app_brand_short" translatable="false">OctaGlow</string>
+    <string name="app_logo_description">OctaGlow logo</string>
+    <string name="service_watcher_title" translatable="false">OctaGlow</string>
+    <string name="setup_test_body">Posts a notification from this app. Add a rule for OctaGlow first.</string>
+</resources>
