@@ -19,7 +19,7 @@ object Bridge {
 
     private const val TAG = "HiLightBridge"
     const val DIR_NAME = "hilight"
-    const val DEVICE_DIR = "/storage/emulated/0/Android/data/com.hilight.studio/files/hilight"
+    val DEVICE_DIR = "/storage/emulated/0/Android/data/${BuildConfig.APPLICATION_ID}/files/hilight"
     private val statusCache = BridgeStatusCache()
 
     private fun dir(ctx: Context): File =

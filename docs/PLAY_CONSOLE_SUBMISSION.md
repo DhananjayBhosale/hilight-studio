@@ -6,7 +6,7 @@ network behavior changes.
 ## Store setup
 
 - App name: **OctaGlow**
-- Package: `com.hilight.studio`
+- Package: `com.octaglow.studio`
 - Category: **Tools**
 - App or game: **App**
 - Free or paid: **Free**
@@ -85,6 +85,14 @@ XL, and Pixel 11 Pro Fold models. The API 37 minimum removes older Android versi
 itself exclude unsupported API 37 phones.
 
 ## Release sequence
+
+Reusable closed-test group:
+
+- Group: **Apps Beta Testing DhananjayTech**
+- Address: `apps-beta-testing-dhananjaytech@googlegroups.com`
+- Join page: <https://groups.google.com/g/apps-beta-testing-dhananjaytech>
+- Add this same group to each application's closed-test track. Testers join the group once, then use
+  each application's separate Play opt-in link.
 
 1. Enroll in Play App Signing. To preserve updates for users of existing signed builds, supply the
    existing app-signing key rather than accepting an unrelated Google-generated app key.

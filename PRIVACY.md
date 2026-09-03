@@ -1,7 +1,7 @@
 # OctaGlow privacy policy
 
 Effective 3 September 2026  
-Package: `com.hilight.studio`  
+Package: `com.octaglow.studio`
 Publisher: Dhananjay Bhosale  
 Privacy contact: [OctaGlow issue tracker](https://github.com/DhananjayBhosale/hilight-studio/issues)
 

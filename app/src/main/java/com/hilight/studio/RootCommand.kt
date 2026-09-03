@@ -4,7 +4,7 @@ package com.hilight.studio
 object RootCommand {
     fun start(bridgeDir: String, rendererInstanceId: String): String {
         require(validInstanceId(rendererInstanceId)) { "invalid renderer instance id" }
-        return "CLASSPATH=${'$'}(pm path com.hilight.studio | head -1 | cut -d: -f2) " +
+        return "CLASSPATH=${'$'}(pm path ${BuildConfig.APPLICATION_ID} | head -1 | cut -d: -f2) " +
             "nohup app_process / com.hilight.core.AdbHelper --owner root " +
             "--instance ${quote(rendererInstanceId)} --exclusive --dir ${quote(bridgeDir)} " +
             "> /data/local/tmp/hilight-root.log 2>&1 & echo ${'$'}!"

@@ -54,6 +54,7 @@ android {
         }
         create("play") {
             dimension = "store"
+            applicationId = "com.octaglow.studio"
             buildConfigField("boolean", "UPDATE_CHECK", "false")
         }
     }

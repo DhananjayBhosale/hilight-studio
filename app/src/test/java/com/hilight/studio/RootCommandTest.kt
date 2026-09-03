@@ -16,6 +16,7 @@ class RootCommandTest {
         assertTrue(start.contains("nohup app_process"))
         assertTrue(start.contains("--owner root"))
         assertTrue(start.contains("--instance 'root-instance-1'"))
+        assertTrue(start.contains("pm path ${BuildConfig.APPLICATION_ID}"))
         assertTrue(start.contains("& echo \$!"))
         assertFalse(start.contains("pkill"))
     }

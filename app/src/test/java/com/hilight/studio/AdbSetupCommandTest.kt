@@ -21,6 +21,8 @@ class AdbSetupCommandTest {
             assertTrue(command.indexOf(finalSurvivorGuard) < command.indexOf("nohup app_process"))
             assertTrue(command.contains("--instance"))
             assertTrue(command.contains("--exclusive"))
+            assertTrue(command.contains("pm path ${BuildConfig.APPLICATION_ID}"))
+            assertTrue(command.contains("--dir ${Bridge.DEVICE_DIR}"))
         }
     }
 

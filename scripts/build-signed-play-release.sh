@@ -117,6 +117,12 @@ VERSION_CODE="$($AAPT2 dump badging "$APK" \
 [ -n "$VERSION" ] && [ -n "$VERSION_CODE" ] \
   || { echo "could not read Play version" >&2; exit 1; }
 
+PACKAGE_NAME="$($AAPT2 dump badging "$APK" \
+  | sed -n "s/^package: name='\([^']*\)'.*/\1/p" \
+  | head -1)"
+[ "$PACKAGE_NAME" = "com.octaglow.studio" ] \
+  || { echo "unexpected Play package: $PACKAGE_NAME" >&2; exit 1; }
+
 PERMISSIONS="$($APKANALYZER manifest permissions "$APK")"
 if grep -Eq 'android.permission.(INTERNET|QUERY_ALL_PACKAGES)' <<<"$PERMISSIONS"; then
   echo "Play APK contains a forbidden distribution permission" >&2
