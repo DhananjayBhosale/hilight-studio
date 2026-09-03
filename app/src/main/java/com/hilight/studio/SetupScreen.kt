@@ -495,7 +495,7 @@ fun SetupScreen(store: Store) {
         }
     }
 
-    PixelCard {
+    if (BuildConfig.UPDATE_CHECK) PixelCard {
         SectionTitle(
             stringResource(R.string.setup_updates_title),
             trailing = {

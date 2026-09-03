@@ -500,7 +500,16 @@ fun AppPickerDialog(
                     InstalledApp(pkg, pm.getApplicationLabel(ai).toString(), ai)
                 }.getOrNull()
             }
-            (launcherApps + learnedOnly)
+            val nonLauncherApps = if (BuildConfig.FULL_APP_LIST) {
+                runCatching {
+                    pm.getInstalledApplications(0).map { ai ->
+                        InstalledApp(ai.packageName, pm.getApplicationLabel(ai).toString(), ai)
+                    }
+                }.getOrDefault(emptyList())
+            } else {
+                emptyList()
+            }
+            (launcherApps + learnedOnly + nonLauncherApps)
                 .distinctBy { it.pkg }
                 .filterNot { it.pkg == excludePackage }
                 .sortedBy { it.label.lowercase() }

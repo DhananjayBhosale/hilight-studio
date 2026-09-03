@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Distribution-only capabilities that must not be merged into the Play artifact. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Used only after the user explicitly taps Check for updates. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Retained for the GitHub build's complete advanced app-rule picker. -->
+    <uses-permission
+        android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+</manifest>

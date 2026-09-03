@@ -3,7 +3,7 @@ name: Android checks
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, codex/play-store]
   workflow_dispatch:
 
 permissions:
@@ -23,13 +23,20 @@ jobs:
         run: sdkmanager --channel=3 'platforms;android-37.0' 'build-tools;36.1.0'
       - uses: gradle/actions/setup-gradle@48b5f213c81028ace310571dc5ec0fbbca0b2947 # v4
       - name: Test, build, and lint
-        run: ./gradlew --no-daemon :app:testDebugUnitTest :app:build :app:lint
+        run: ./gradlew --no-daemon :app:testGithubDebugUnitTest :app:testPlayDebugUnitTest :app:build :app:lint
       - name: Build standalone helper
         run: ./scripts/build-helper.sh
       - name: Verify optimized privileged entry points
         run: |
-          release_apk=$(find app/build/outputs/apk/release -maxdepth 1 -name '*.apk' -print -quit)
+          release_apk=$(find app/build/outputs/apk/github/release -maxdepth 1 -name '*.apk' -print -quit)
           test -n "$release_apk"
           "$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer" dex packages "$release_apk" > "$RUNNER_TEMP/dex-packages.txt"
           grep -q 'com.hilight.core.AdbHelper' "$RUNNER_TEMP/dex-packages.txt"
           grep -q 'com.hilight.studio.HiLightUserService' "$RUNNER_TEMP/dex-packages.txt"
+      - name: Verify Play manifest restrictions
+        run: |
+          play_apk=$(find app/build/outputs/apk/play/release -maxdepth 1 -name '*.apk' -print -quit)
+          test -n "$play_apk"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer" manifest permissions "$play_apk" > "$RUNNER_TEMP/play-permissions.txt"
+          ! grep -q 'android.permission.INTERNET' "$RUNNER_TEMP/play-permissions.txt"
+          ! grep -q 'android.permission.QUERY_ALL_PACKAGES' "$RUNNER_TEMP/play-permissions.txt"

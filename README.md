@@ -161,9 +161,10 @@ See [Technical details](docs/TECHNICAL.md) for the renderer architecture, hardwa
 
 ## Privacy
 
-HiLight Studio has no analytics, account system, or telemetry. It uses the internet only when you
-tap **Check for updates** under Setup, which fetches public release information from GitHub. No app
-rules, notification data, or settings are sent. App rules and presets stay on the device.
+HiLight Studio has no analytics, account system, or telemetry. The GitHub build uses the internet
+only when you tap **Check for updates** under Setup, which fetches public release information from
+GitHub. The Play build has no update check or internet permission. No app rules, notification data,
+or settings are sent. App rules and presets stay on the device.
 Notification and usage access are optional and are used locally for the rules you enable. Privacy
 activity rules observe only whether Android reports the microphone or camera as active; HiLight never
 reads or records audio, video, or their contents.
@@ -185,16 +186,19 @@ Requirements:
 ```bash
 git clone https://github.com/DhananjayBhosale/hilight-studio.git
 cd hilight-studio
-./gradlew :app:testDebugUnitTest :app:build :app:lint
+./gradlew :app:testGithubDebugUnitTest :app:testPlayDebugUnitTest :app:build :app:lint
 ```
 
 Build an installable developer APK with:
 
 ```bash
-./gradlew :app:assembleDebug
+./gradlew :app:assembleGithubDebug
 ```
 
-The APK is written under `app/build/outputs/apk/debug/`. You may fork the repository, change the source, and build your own version under the terms of the MIT License.
+The APK is written under `app/build/outputs/apk/github/debug/`. The `github` flavour includes the
+manual GitHub update check and the complete advanced app picker. The `play` flavour contains the
+same core lighting features but excludes the updater, network permission, and broad app visibility.
+You may fork the repository, change the source, and build your own version under the terms of the MIT License.
 
 ## Contributing
 

@@ -11,7 +11,7 @@ the same application ID and signing identity.
 3. Run the release checks:
 
    ```bash
-   ./gradlew --no-daemon :app:testDebugUnitTest :app:build :app:lint
+   ./gradlew --no-daemon :app:testGithubDebugUnitTest :app:testPlayDebugUnitTest :app:build :app:lint
    ```
 
 4. On the maintainer Mac, build the optimized APK with the permanent keystore and passwords already
@@ -31,7 +31,7 @@ the same application ID and signing identity.
    A different machine can still provide an ignored `key.properties` file or the
    `HILIGHT_STORE_FILE`, `HILIGHT_STORE_PASSWORD`, `HILIGHT_KEY_ALIAS`, and
    `HILIGHT_KEY_PASSWORD` environment variables. Never paste their values into logs or commits.
-5. Refuse the release if Gradle produced `app-release-unsigned.apk`.
+5. Refuse the release if Gradle produced `app-github-release-unsigned.apk`.
 6. Verify the certificate, privileged entry points, and SHA-256 digest:
 
    ```bash

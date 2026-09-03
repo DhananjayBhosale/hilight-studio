@@ -9,12 +9,7 @@
         tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-    <!-- Used only after the user taps Check for updates; there is no background network check. -->
-    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission
-        android:name="android.permission.QUERY_ALL_PACKAGES"
-        tools:ignore="QueryAllPackagesPermission" />
 
     <!-- Shizuku transport: the user starts Shizuku once per boot, on-device via wireless
          debugging or from adb, and approves this app in Shizuku's own dialog. -->
@@ -22,9 +17,15 @@
 
     <queries>
         <package android:name="moe.shizuku.privileged.api" />
+        <!-- Enough visibility for the Play build's app picker without broad package inventory. -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
     </queries>
 
     <application
+        android:allowBackup="false"
         android:icon="@mipmap/ic_hilight_studio"
         android:roundIcon="@mipmap/ic_hilight_studio"
         android:label="@string/app_name"

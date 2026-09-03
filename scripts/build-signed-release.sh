@@ -71,11 +71,11 @@ HILIGHT_STORE_FILE="$KEYSTORE" \
 HILIGHT_STORE_PASSWORD="$STORE_PASSWORD" \
 HILIGHT_KEY_ALIAS="$KEY_ALIAS" \
 HILIGHT_KEY_PASSWORD="$KEY_PASSWORD" \
-  ./gradlew --no-daemon :app:assembleRelease
+  ./gradlew --no-daemon :app:assembleGithubRelease
 
 cleanup
 
-APK="$ROOT/app/build/outputs/apk/release/app-release.apk"
+APK="$ROOT/app/build/outputs/apk/github/release/app-github-release.apk"
 [ -f "$APK" ] || {
   echo "signed APK was not produced; refusing any unsigned release artifact" >&2
   exit 1

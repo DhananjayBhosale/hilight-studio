@@ -4,6 +4,6 @@
 
 ## Verification
 
-- [ ] `./gradlew :app:testDebugUnitTest :app:build :app:lint`
+- [ ] `./gradlew :app:testGithubDebugUnitTest :app:testPlayDebugUnitTest :app:build :app:lint`
 - [ ] Tested on a supported Pixel device, if renderer, transport, or timing changed
 - [ ] No notification contents or other personal data are included
