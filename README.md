@@ -11,6 +11,13 @@ Control the eight-LED HiLight array on Pixel 11 Pro devices.
 > [!IMPORTANT]
 > HiLight Studio is experimental and supports only the Pixel 11 Pro, Pixel 11 Pro XL, and Pixel 11 Pro Fold on Android 17 (API 37). It is not affiliated with or endorsed by Google.
 
+> [!TIP]
+> **Try Highlight Studio through Google Play closed testing.**
+> First [join the tester Google Group](https://groups.google.com/g/apps-beta-testing-dhananjaytech),
+> then [open the Play testing page](https://play.google.com/apps/testing/com.highlight.studio)
+> and opt in. The Play edition has a separate app identity from the experimental GitHub build, so
+> it installs separately and does not copy existing settings automatically.
+
 <p align="center">
   <img src="docs/media/screen-live.png" alt="Live tab controlling the HiLight array on a Pixel 11 Pro XL" width="420">
 </p>
@@ -49,25 +56,34 @@ Control the eight-LED HiLight array on Pixel 11 Pro devices.
 
 ## Install
 
-For now, install HiLight Studio with ADB. Play Protect may block direct installs from a browser or file manager because the app uses notification access for LED alerts.
+### Google Play closed test
+
+1. [Join the tester Google Group](https://groups.google.com/g/apps-beta-testing-dhananjaytech) with the Google account used on your supported Pixel.
+2. [Open the Play testing page](https://play.google.com/apps/testing/com.highlight.studio), opt in, and install Highlight Studio from Google Play.
+
+The Play edition installs separately from the experimental GitHub build and starts with its own settings.
+
+### GitHub experimental APK
+
+For manual installation, use ADB. Play Protect may block direct installs from a browser or file manager because the app uses notification access for LED alerts.
 
 1. Download the signed APK from the [latest GitHub prerelease](https://github.com/DhananjayBhosale/hilight-studio/releases) to your computer.
 2. Connect a supported Pixel with USB debugging enabled and approve the computer on the phone.
 3. From the folder containing the APK, run:
 
 ```bash
-adb install -r HiLight-Studio-v1.0.10-experimental-signed.apk
+adb install -r HiLight-Studio-v1.0.11-experimental-signed.apk
 ```
 
 If you previously installed v1.0.3 or an older debug-signed build, uninstall it once before installing a permanently signed release because the signing certificates are different:
 
 ```bash
 adb uninstall com.hilight.studio
-adb install HiLight-Studio-v1.0.10-experimental-signed.apk
+adb install HiLight-Studio-v1.0.11-experimental-signed.apk
 ```
 
 The published APK is an experimental release signed with HiLight Studio's permanent release
-certificate. v1.0.10 updates any release carrying that same certificate normally.
+certificate. v1.0.11 updates any release carrying that same certificate normally.
 
 HiLight Studio needs privileged access to the Android lights service. The renderer must be restarted after every reboot.
 
