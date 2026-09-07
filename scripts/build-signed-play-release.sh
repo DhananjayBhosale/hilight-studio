@@ -120,7 +120,7 @@ VERSION_CODE="$($AAPT2 dump badging "$APK" \
 PACKAGE_NAME="$($AAPT2 dump badging "$APK" \
   | sed -n "s/^package: name='\([^']*\)'.*/\1/p" \
   | head -1)"
-[ "$PACKAGE_NAME" = "com.octaglow.studio" ] \
+[ "$PACKAGE_NAME" = "com.highlight.studio" ] \
   || { echo "unexpected Play package: $PACKAGE_NAME" >&2; exit 1; }
 
 PERMISSIONS="$($APKANALYZER manifest permissions "$APK")"
@@ -146,8 +146,8 @@ fi
 
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 DEST_DIR="$OUTPUT_ROOT/v$VERSION-code$VERSION_CODE"
-APK_DEST="$DEST_DIR/OctaGlow-v${VERSION}-play-signed-${STAMP}.apk"
-BUNDLE_DEST="$DEST_DIR/OctaGlow-v${VERSION}-play-upload-${STAMP}.aab"
+APK_DEST="$DEST_DIR/Highlight-Studio-v${VERSION}-play-signed-${STAMP}.apk"
+BUNDLE_DEST="$DEST_DIR/Highlight-Studio-v${VERSION}-play-upload-${STAMP}.aab"
 mkdir -p "$DEST_DIR"
 chmod 700 "$OUTPUT_ROOT" "$DEST_DIR"
 cp "$APK" "$APK_DEST"

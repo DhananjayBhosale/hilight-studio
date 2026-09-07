@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#17161d">
+    <meta name="description" content="Privacy policy for the Highlight Studio Google Play app.">
+    <title>Privacy policy | Highlight Studio</title><link rel="icon" href="/assets/icon.png"><link rel="stylesheet" href="/assets/site.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header"><nav class="nav-shell" aria-label="Primary navigation"><a class="brand" href="/"><img src="/assets/icon.png" alt="">Highlight Studio</a><ul class="nav-links"><li><a href="/">Overview</a></li><li><a href="/privacy/" aria-current="page">Privacy</a></li><li><a href="/support/">Support</a></li><li><a href="/testing/">Testing</a></li></ul></nav></header>
+    <main id="main" class="shell">
+      <header class="page-hero"><p class="eyebrow">Effective 3 September 2026</p><h1>Privacy stays on the device.</h1><p class="lede">Package: <code>com.highlight.studio</code>. Publisher: Dhananjay Bhosale.</p></header>
+      <div class="document">
+        <aside><p>Canonical privacy policy for the Google Play build.</p><span class="status-pill">No data collection</span></aside>
+        <article>
+          <h2>Summary</h2>
+          <p>Highlight Studio controls the eight-LED HiLight array on supported Pixel 11 Pro devices. The Google Play build has no advertising, analytics, account system, telemetry, crash reporting, or internet permission. It does not collect or share user data with the publisher or another organization.</p>
+          <p>The app processes the information described below only on the user's device to provide features the user explicitly enables.</p>
+
+          <h2>Information processed on the device</h2>
+          <ul>
+            <li><strong>Notifications:</strong> If the user grants Android notification access, the app reads the posting app, title, sender or chat name, stable chat ID, notification structure, and message text. These fields are used to match user-created LED rules. Message text is used only for optional keyword matching and is never stored or logged.</li>
+            <li><strong>Foreground app:</strong> If the user grants Usage access and creates a while-open rule, the app checks which app is in the foreground so it can apply that rule.</li>
+            <li><strong>Microphone and camera activity:</strong> When the user enables a privacy-activity rule, the privileged renderer checks Android's active AppOps signal. The app does not open the microphone or camera and does not receive audio, video, or their contents.</li>
+            <li><strong>One selected contact:</strong> The Android contact picker may grant one-time access to the single contact selected by the user. The app reads that contact's display name only. It does not request contacts permission or read the address book.</li>
+            <li><strong>Installed apps:</strong> The Play build lists apps with launcher activities and apps learned from local notifications so the user can select a rule target. It does not request broad package visibility.</li>
+          </ul>
+
+          <h2>Information stored on the device</h2>
+          <p>The app stores settings, presets, LED rules, selected app package names, remembered chat names and stable chat IDs, and recent rule-match times in private app storage. A capped diagnostic list of recent notification metadata exists only in memory and disappears when the listener process stops. Message bodies are not persisted.</p>
+          <p>Android cloud backup and device-to-device transfer are disabled for the app. Users can delete remembered chats from Setup, delete individual rules in the app, or delete everything by clearing app storage or uninstalling the app.</p>
+
+          <h2>Information leaving the device</h2>
+          <p>The Google Play build has no internet permission and sends no app data to the publisher. The app can open Android's share sheet only after the user taps a Copy or Send action. The user chooses the destination and can review the diagnostic or setup text before sending it.</p>
+          <p>Shizuku, a root manager, and the Android Debug Bridge are optional user-controlled ways to provide the privileged access required by the LED renderer. Highlight Studio does not install them, root the device, collect their data, or grant itself access without the user's explicit action.</p>
+
+          <h2>Children</h2>
+          <p>Highlight Studio is a technical hardware utility intended for adults. It is not directed to children, does not contain child-focused content, and does not knowingly collect personal information from children or anyone else.</p>
+
+          <h2>Changes and questions</h2>
+          <p>Material changes to this policy will be published at this location with a new effective date before the corresponding app release. Privacy questions may be submitted through the <a href="https://github.com/DhananjayBhosale/hilight-studio/issues">Highlight Studio issue tracker</a>.</p>
+        </article>
+      </div>
+    </main>
+    <footer class="site-footer"><div class="footer-shell shell"><p>Highlight Studio is experimental software for supported Pixel 11 Pro hardware. It is not affiliated with or endorsed by Google.</p><nav class="footer-links" aria-label="Footer navigation"><a href="/">Overview</a><a href="/support/">Support</a><a href="/testing/">Testing</a></nav></div></footer>
+  </body>
+</html>

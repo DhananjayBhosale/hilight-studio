@@ -1,4 +1,4 @@
-OctaGlow は、Android 17 を搭載した Pixel 11 Pro、Pixel 11 Pro XL、Pixel 11 Pro Fold の 8 灯 HiLight LED アレイを制御するアプリです。
+Highlight Studio は、Android 17 を搭載した Pixel 11 Pro、Pixel 11 Pro XL、Pixel 11 Pro Fold の 8 灯 HiLight LED アレイを制御するアプリです。
 
 単色やアニメーションを作成してプリセットに保存できます。通知、フォアグラウンドアプリ、選択した連絡先、マイクやカメラの使用に合わせて LED を点灯できます。おやすみ時間、サイレント モード、バッテリー セーバー、低バッテリー時の制御、点灯時間の安全制限にも対応しています。
 

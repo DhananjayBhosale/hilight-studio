@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_logo_description">OctaGlow のロゴ</string>
-    <string name="service_watcher_title" translatable="false">OctaGlow</string>
-    <string name="setup_test_body">このアプリから通知を送信します。先に OctaGlow のルールを追加してください。</string>
+    <string name="app_logo_description">Highlight Studio のロゴ</string>
+    <string name="service_watcher_title" translatable="false">Highlight Studio</string>
+    <string name="setup_test_body">このアプリから通知を送信します。先に Highlight Studio のルールを追加してください。</string>
 </resources>

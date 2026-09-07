@@ -1,13 +1,13 @@
-# OctaGlow privacy policy
+# Highlight Studio privacy policy
 
 Effective 3 September 2026  
-Package: `com.octaglow.studio`
+Package: `com.highlight.studio`
 Publisher: Dhananjay Bhosale  
-Privacy contact: [OctaGlow issue tracker](https://github.com/DhananjayBhosale/hilight-studio/issues)
+Privacy contact: [Highlight Studio issue tracker](https://github.com/DhananjayBhosale/hilight-studio/issues)
 
 ## Summary
 
-OctaGlow controls the eight-LED HiLight array on supported Pixel 11 Pro devices. The Google
+Highlight Studio controls the eight-LED HiLight array on supported Pixel 11 Pro devices. The Google
 Play build has no advertising, analytics, account system, telemetry, crash reporting, or internet
 permission. It does not collect or share user data with the publisher or another organization.
 
@@ -49,12 +49,12 @@ open Android's share sheet only after the user taps a Copy or Send action. The u
 destination and can review the diagnostic or setup text before sending it.
 
 Shizuku, a root manager, and the Android Debug Bridge are optional user-controlled ways to provide
-the privileged access required by the LED renderer. OctaGlow does not install them, root the
+the privileged access required by the LED renderer. Highlight Studio does not install them, root the
 device, collect their data, or grant itself access without the user's explicit action.
 
 ## Children
 
-OctaGlow is a technical hardware utility intended for adults. It is not directed to children,
+Highlight Studio is a technical hardware utility intended for adults. It is not directed to children,
 does not contain child-focused content, and does not knowingly collect personal information from
 children or anyone else.
 

@@ -16,6 +16,7 @@ key.properties
 # Local agent tooling is not part of the Android project.
 .agents/
 skills-lock.json
+.wrangler/
 
 # Retain local logo explorations without publishing them.
 docs/media/hilight-studio-logo-v*.png

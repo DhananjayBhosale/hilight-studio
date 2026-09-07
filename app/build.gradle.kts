@@ -54,7 +54,7 @@ android {
         }
         create("play") {
             dimension = "store"
-            applicationId = "com.octaglow.studio"
+            applicationId = "com.highlight.studio"
             buildConfigField("boolean", "UPDATE_CHECK", "false")
         }
     }

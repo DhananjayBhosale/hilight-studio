@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#17161d">
+    <meta name="description" content="Setup and support information for Highlight Studio.">
+    <title>Support | Highlight Studio</title><link rel="icon" href="/assets/icon.png"><link rel="stylesheet" href="/assets/site.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header"><nav class="nav-shell" aria-label="Primary navigation"><a class="brand" href="/"><img src="/assets/icon.png" alt="">Highlight Studio</a><ul class="nav-links"><li><a href="/">Overview</a></li><li><a href="/privacy/">Privacy</a></li><li><a href="/support/" aria-current="page">Support</a></li><li><a href="/testing/">Testing</a></li></ul></nav></header>
+    <main id="main">
+      <header class="page-hero shell"><p class="eyebrow">Setup and troubleshooting</p><h1>Know what the renderer needs.</h1><p class="lede">Highlight Studio controls proprietary hardware through access you provide. Most setup issues come from the access method stopping after a reboot.</p></header>
+      <section class="section"><div class="shell"><div class="section-intro"><h2>Start with compatibility.</h2><p>Use Pixel 11 Pro, Pixel 11 Pro XL, or Pixel 11 Pro Fold running Android 17. Other devices and Android versions are not supported by this release.</p></div><ol class="support-list"><li><span class="index">01</span><div><h3>Choose an access method</h3><p>Approve Shizuku, start the ADB helper, or approve your existing root manager. Highlight Studio does not install or enable these tools for you.</p></div></li><li><span class="index">02</span><div><h3>Grant only the rules you use</h3><p>Notification access is needed for notification rules. Usage access is needed for while-open rules. Microphone and camera activity rules observe Android's active state and do not capture media.</p></div></li><li><span class="index">03</span><div><h3>Restart access after reboot</h3><p>Shizuku and the ADB helper do not survive a normal reboot. Restore your chosen method, reopen Highlight Studio, and confirm the Live screen reports a ready renderer.</p></div></li><li><span class="index">04</span><div><h3>Stop an unexpected light safely</h3><p>Turn Live off, wait for automatic cleanup, then use Retry LED cleanup in Setup. The retry sends black states only and does not flash colours.</p></div></li></ol></div></section>
+      <section class="route-cta shell"><div><h2>Still seeing a problem?</h2><p>Use Copy LED diagnostics in Setup before restarting anything. The allowlisted report excludes notification content, accounts, device identifiers, package names, and logcat.</p></div><div class="actions"><a class="button" href="https://github.com/DhananjayBhosale/hilight-studio/issues">Open the issue tracker</a></div></section>
+    </main>
+    <footer class="site-footer"><div class="footer-shell shell"><p>Highlight Studio is experimental software for supported Pixel 11 Pro hardware. It is not affiliated with or endorsed by Google.</p><nav class="footer-links" aria-label="Footer navigation"><a href="/">Overview</a><a href="/privacy/">Privacy</a><a href="/testing/">Testing</a></nav></div></footer>
+  </body>
+</html>

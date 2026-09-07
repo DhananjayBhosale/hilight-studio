@@ -1,7 +1,7 @@
-# OctaGlow design system
+# Highlight Studio design system
 
-OctaGlow is the Google Play distribution name. The GitHub flavor retains the HiLight Studio name;
-both distributions share the same visual system and package identity.
+Highlight Studio is the Google Play distribution name. The GitHub flavor retains the HiLight Studio name;
+both distributions share the same codebase and visual system while using separate package identities.
 
 ## Direction
 
@@ -28,3 +28,14 @@ both distributions share the same visual system and package identity.
 
 - Motion communicates state in 150 to 250ms; no decorative choreography.
 - Preserve Material touch targets, system theme, dynamic colour, and English/Japanese parity.
+
+## Public website
+
+- Treat the website as a dark hardware-instrument surface, not a generic app landing page.
+- Use `oklch(16% 0.018 285)` for the canvas, `oklch(94% 0.012 285)` for primary text,
+  and `oklch(76% 0.16 285)` for focus and primary actions.
+- The eight-LED sequence is the reusable brand signature. It may animate once, but all meaning must
+  remain available in text and motion must stop under `prefers-reduced-motion`.
+- Use asymmetric layouts, full-width bands, numbered steps, and verified product screenshots instead
+  of repeated marketing cards.
+- Website copy leads with supported hardware, experimental status, privacy, and setup requirements.
