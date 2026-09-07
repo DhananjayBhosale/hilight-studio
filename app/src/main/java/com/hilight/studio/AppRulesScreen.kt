@@ -85,6 +85,7 @@ fun AppRulesScreen(store: Store) {
     val ctx = LocalContext.current
     val launchPreview = rememberPreviewLauncher(store)
     val rules by store.rules.collectAsStateWithLifecycle()
+    val presets by store.presets.collectAsStateWithLifecycle()
     val privacyRules by store.privacyRules.collectAsStateWithLifecycle()
     val conversations by store.conversations.collectAsStateWithLifecycle()
     val lastMatch by store.lastMatch.collectAsStateWithLifecycle()
@@ -154,6 +155,7 @@ fun AppRulesScreen(store: Store) {
                         // test what the rule will actually do, including how long it stays lit
                         launchPreview(
                             rule.pattern, rule.color, rule.speedMs, rule.brightness, rule.durationMs,
+                            look = rule.effectiveLook(),
                         )
                     },
                     onDelete = { store.removeRule(rule) },
@@ -236,6 +238,8 @@ fun AppRulesScreen(store: Store) {
             // fields the editor can change, so only the list can say whether the rule being saved
             // is about to land on top of a different one.
             existing = rules,
+            presets = presets,
+            learnedPackages = learnedPackages,
             chatIsGroup = rule.conversationIsGroup ||
                 knownConversation(rule, conversations)?.isGroup == true,
             onDismiss = { editing = null },
@@ -246,7 +250,7 @@ fun AppRulesScreen(store: Store) {
                 editing = null
             },
             onTest = {
-                launchPreview(it.pattern, it.color, it.speedMs, it.brightness, it.durationMs)
+                launchPreview(it.pattern, it.color, it.speedMs, it.brightness, it.durationMs, look = it.effectiveLook())
             },
             faceDownNoticeAccepted = faceDownNoticeAccepted,
             faceDownSensorAvailable = faceDownSensorAvailable,
@@ -604,6 +608,8 @@ private fun RuleEditorDialog(
     rule: AppRule,
     isNew: Boolean,
     existing: List<AppRule>,
+    presets: List<Preset>,
+    learnedPackages: Set<String>,
     chatIsGroup: Boolean,
     onDismiss: () -> Unit,
     onSave: (AppRule) -> Unit,
@@ -617,6 +623,9 @@ private fun RuleEditorDialog(
 ) {
     var r by remember { mutableStateOf(rule) }
     var confirmingFaceDown by remember { mutableStateOf(false) }
+    var pickingPreset by remember { mutableStateOf(false) }
+    var pickingExcludedApp by remember { mutableStateOf(false) }
+    val ctx = LocalContext.current
 
     /*
      * Whether saving would land on a rule other than the one being edited.
@@ -660,12 +669,7 @@ private fun RuleEditorDialog(
             ) {
                 LedStrip(
                     r.pattern,
-                    Ambient(
-                        pattern = r.pattern,
-                        color = r.color,
-                        speedMs = r.speedMs,
-                        brightness = r.brightness,
-                    ),
+                    r.effectiveLook(),
                     heightDp = 38,
                 )
 
@@ -693,20 +697,71 @@ private fun RuleEditorDialog(
                     Caption(stringResource(R.string.rules_trigger_pair_hint))
                 }
 
+                TextButton(onClick = { pickingPreset = true }, modifier = Modifier.fillMaxWidth()) {
+                    ButtonLabel(stringResource(R.string.rules_use_saved_look))
+                }
                 PatternCarousel(
                     selected = r.pattern,
                     options = Pattern.entries.filter { it != Pattern.OFF && it != Pattern.CUSTOM },
                     onSelect = { r = r.copy(pattern = it) },
                 )
 
-                ToggleRow(
-                    stringResource(R.string.rules_random_colour_each_time), r.randomColor,
-                ) { r = r.copy(randomColor = it) }
-                if (!r.randomColor) {
+                if (r.pattern != Pattern.CUSTOM) {
+                    ToggleRow(
+                        stringResource(R.string.rules_random_colour_each_time), r.randomColor,
+                    ) { r = r.copy(randomColor = it) }
+                }
+                if (!r.randomColor && r.pattern != Pattern.CUSTOM) {
                     ColorPicker(r.color, { r = r.copy(color = it) })
+                    if (r.pattern == Pattern.GRADIENT) {
+                        Caption(stringResource(R.string.rules_gradient_second_colour))
+                        ColorPicker(r.effectiveLook().secondColor, {
+                            r = r.withLook(r.effectiveLook().copy(secondColor = it))
+                        })
+                    }
+                }
+                if (r.pattern == Pattern.CUSTOM) {
+                    Caption(stringResource(R.string.rules_custom_saved_look))
                 }
 
                 if (r.trigger == Trigger.NOTIFICATION) {
+                    ToggleRow(stringResource(R.string.rules_ignore_silent), r.ignoreSilent) {
+                        r = r.copy(ignoreSilent = it)
+                    }
+                    Caption(stringResource(R.string.rules_ignore_silent_hint))
+                    ToggleRow(stringResource(R.string.rules_repeat_pending), r.repeatWhilePending) {
+                        r = r.copy(repeatWhilePending = it)
+                    }
+                    if (r.repeatWhilePending) {
+                        Caption(stringResource(R.string.rules_repeat_pending_hint))
+                        PixelSlider(
+                            stringResource(R.string.rules_repeat_interval),
+                            r.repeatIntervalMs.toFloat(), 5_000f..60_000f,
+                            { r = r.copy(repeatIntervalMs = it.toInt()) },
+                            typeInSeconds = true,
+                        ) { formatDuration(it.toInt()) }
+                    }
+                    if (r.isCatchAll) {
+                        TextButton(onClick = { pickingExcludedApp = true }) {
+                            ButtonLabel(stringResource(R.string.rules_exclude_app))
+                        }
+                        Caption(stringResource(R.string.rules_exclude_app_hint))
+                        r.excludedPackages.sorted().forEach { pkg ->
+                            val label = remember(pkg) {
+                                runCatching {
+                                    ctx.packageManager.getApplicationLabel(
+                                        ctx.packageManager.getApplicationInfo(pkg, 0)
+                                    ).toString()
+                                }.getOrDefault(pkg)
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(label, modifier = Modifier.weight(1f))
+                                TextButton(onClick = {
+                                    r = r.copy(excludedPackages = r.excludedPackages - pkg)
+                                }) { ButtonLabel(stringResource(R.string.rules_remove_exclusion)) }
+                            }
+                        }
+                    }
                     if (r.isConversationRule) {
                         if (chatIsGroup) {
                             Caption(stringResource(R.string.rules_chat_is_group))
@@ -827,6 +882,46 @@ private fun RuleEditorDialog(
             }
         },
     )
+
+    if (pickingPreset) {
+        AlertDialog(
+            onDismissRequest = { pickingPreset = false },
+            title = { Text(stringResource(R.string.rules_use_saved_look)) },
+            confirmButton = {
+                TextButton(onClick = { pickingPreset = false }) {
+                    ButtonLabel(stringResource(R.string.common_cancel))
+                }
+            },
+            text = {
+                val available = presets.filter { it.ambient.pattern != Pattern.OFF }
+                if (available.isEmpty()) {
+                    Text(stringResource(R.string.rules_saved_look_empty))
+                } else {
+                    LazyColumn(Modifier.heightIn(max = 380.dp)) {
+                        items(available, key = { it.name }) { preset ->
+                            TextButton(onClick = {
+                                r = r.withLook(preset.ambient)
+                                pickingPreset = false
+                            }, modifier = Modifier.fillMaxWidth()) {
+                                Text(preset.name)
+                            }
+                        }
+                    }
+                }
+            },
+        )
+    }
+    if (pickingExcludedApp) {
+        AppPickerDialog(
+            alsoOffer = learnedPackages + r.excludedPackages,
+            excludePackage = AppRule.ANY_APP,
+            onDismiss = { pickingExcludedApp = false },
+            onPick = {
+                r = r.copy(excludedPackages = r.excludedPackages + it.pkg)
+                pickingExcludedApp = false
+            },
+        )
+    }
 
     if (confirmingFaceDown) {
         FaceDownConsentDialog(

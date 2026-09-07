@@ -2,12 +2,27 @@
 
 All notable changes to HiLight Studio are documented here.
 
-## [Unreleased]
+## [1.0.12-experimental] - 2026-09-07
+
+- Fixed helper heartbeat scheduling and freshness across wall-clock corrections, and added safe
+  retry for a disconnected root renderer. Renderer implementation revision is now 6.
+- Added complete saved presets and gradient endpoints to app rules, preserving existing rule looks.
+- Added silent-notification filtering and app exclusions for the Any app rule.
+- Added optional brief reminders for pending notifications, with dismissal/unlock cleanup and
+  existing quiet/battery guards. Device sleep may delay reminders.
+- Added optional day-specific quiet hours while retaining the existing daily schedule.
+- Added optional charging indicators and DND activation signals, plus incoming-call indication for
+  apps that supply Android's explicit incoming-call notification marker.
+- Made delayed notification tests report known blockers before their countdown, including DND.
+- Clarified that camera/microphone activity does not identify video recording. The one-minute
+  activity limit remains unchanged. See [the complete feedback audit](docs/FEEDBACK-2026-09.md).
+
+## [1.0.11-experimental] - 2026-09-02
 
 - Kept an ordinary notification alert running when the notification itself wakes the screen, while
   still stopping it on unlock and still stopping per-rule **Only while the screen is off** alerts as
   soon as the screen wakes. This addresses the lifecycle sequence reported for Discord's first alert
-  and still needs confirmation on the reporter's device.
+  and was confirmed working by the reporter on September 6.
 - Added a clear message when an in-app preview or end-to-end notification test is currently blocked
   by quiet hours, Battery Saver, low battery, or the applicable face-down guard.
 - Split the former **When to stay dark** settings into **When HiLight can glow** and **When HiLight

@@ -1,0 +1,7 @@
+<resources>
+    <string name="setup_test_blocked_dnd">The test is paused by Do Not Disturb.</string>
+    <string name="setup_quiet_by_day">Set hours for each day</string>
+    <string name="setup_quiet_by_day_note">Each window starts on its selected day. Overnight hours continue into the next morning, even if that day is off. Matching start and end times mean no quiet hours.</string>
+    <string name="setup_test_needs_listener">Enable notification access for HiLight before testing.</string>
+    <string name="setup_test_needs_notifications">Allow HiLight notifications and its Test notification channel before testing.</string>
+</resources>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="setup_test_blocked_dnd">サイレントモードによりテストは一時停止しています。</string>
+    <string name="setup_quiet_by_day">曜日ごとに時間を設定</string>
+    <string name="setup_quiet_by_day_note">各時間帯は、選択した曜日に始まります。日付をまたぐ場合は、翌日がオフでも翌朝まで続きます。開始時刻と終了時刻が同じ場合、サイレント時間はありません。</string>
+    <string name="setup_test_needs_listener">テスト前に、HiLightの通知へのアクセスを有効にしてください。</string>
+    <string name="setup_test_needs_notifications">テスト前に、HiLightの通知と「セルフテスト」通知チャンネルを許可してください。</string>
+</resources>
