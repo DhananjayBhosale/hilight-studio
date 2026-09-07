@@ -2,7 +2,10 @@ package com.hilight.studio
 
 import com.google.android.play.core.install.model.InstallStatus
 import com.google.android.play.core.install.model.UpdateAvailability
+import androidx.lifecycle.Lifecycle
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DistributionUpdateCardTest {
@@ -51,6 +54,27 @@ class DistributionUpdateCardTest {
                 installStatus = InstallStatus.UNKNOWN,
                 flexibleAllowed = false,
             ),
+        )
+    }
+
+    @Test
+    fun updateFlowLaunchRequiresLiveCompositionAndStartedActivity() {
+        assertTrue(canLaunchPlayUpdate(true, Lifecycle.State.STARTED))
+        assertTrue(canLaunchPlayUpdate(true, Lifecycle.State.RESUMED))
+        assertFalse(canLaunchPlayUpdate(false, Lifecycle.State.RESUMED))
+        assertFalse(canLaunchPlayUpdate(true, Lifecycle.State.CREATED))
+        assertFalse(canLaunchPlayUpdate(true, Lifecycle.State.DESTROYED))
+    }
+
+    @Test
+    fun returningFromBackgroundClearsAnIgnoredCheckingResult() {
+        assertEquals(
+            PlayUpdateState.IDLE,
+            playUpdateStateOnResume(PlayUpdateState.CHECKING),
+        )
+        assertEquals(
+            PlayUpdateState.DOWNLOADING,
+            playUpdateStateOnResume(PlayUpdateState.DOWNLOADING),
         )
     }
 }

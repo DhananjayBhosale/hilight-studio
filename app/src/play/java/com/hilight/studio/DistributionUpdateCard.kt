@@ -24,8 +24,9 @@ import com.google.android.play.core.install.InstallStateUpdatedListener
 import com.google.android.play.core.install.model.AppUpdateType
 import com.google.android.play.core.install.model.InstallStatus
 import com.google.android.play.core.install.model.UpdateAvailability
+import java.util.concurrent.atomic.AtomicBoolean
 
-private enum class PlayUpdateState {
+internal enum class PlayUpdateState {
     IDLE,
     CHECKING,
     DOWNLOADING,
@@ -54,6 +55,14 @@ internal fun resolvePlayUpdateDecision(
     else -> PlayUpdateDecision.UNAVAILABLE
 }
 
+internal fun canLaunchPlayUpdate(
+    compositionActive: Boolean,
+    lifecycleState: Lifecycle.State,
+): Boolean = compositionActive && lifecycleState.isAtLeast(Lifecycle.State.STARTED)
+
+internal fun playUpdateStateOnResume(state: PlayUpdateState): PlayUpdateState =
+    if (state == PlayUpdateState.CHECKING) PlayUpdateState.IDLE else state
+
 /** A user-triggered flexible update handled entirely by the Google Play Store. */
 @Composable
 internal fun DistributionUpdateCard() {
@@ -63,11 +72,12 @@ internal fun DistributionUpdateCard() {
     val manager = remember(context.applicationContext) {
         AppUpdateManagerFactory.create(context.applicationContext)
     }
+    val compositionActive = remember { AtomicBoolean(true) }
     var state by remember { mutableStateOf(PlayUpdateState.IDLE) }
 
     fun refreshDownloadedState() {
         manager.appUpdateInfo.addOnSuccessListener { info ->
-            if (info.installStatus() == InstallStatus.DOWNLOADED) {
+            if (compositionActive.get() && info.installStatus() == InstallStatus.DOWNLOADED) {
                 state = PlayUpdateState.DOWNLOADED
             }
         }
@@ -82,7 +92,9 @@ internal fun DistributionUpdateCard() {
     }
 
     DisposableEffect(manager, lifecycleOwner) {
+        compositionActive.set(true)
         val installListener = InstallStateUpdatedListener { installState ->
+            if (!compositionActive.get()) return@InstallStateUpdatedListener
             state = when (installState.installStatus()) {
                 InstallStatus.DOWNLOADING,
                 InstallStatus.PENDING,
@@ -95,11 +107,17 @@ internal fun DistributionUpdateCard() {
             }
         }
         val lifecycleObserver = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) refreshDownloadedState()
+            if (event == Lifecycle.Event.ON_RESUME) {
+                // A Play query that returned while the activity was stopped was deliberately not
+                // allowed to launch UI. Let the user retry instead of leaving the button spinning.
+                state = playUpdateStateOnResume(state)
+                refreshDownloadedState()
+            }
         }
         manager.registerListener(installListener)
         lifecycleOwner.lifecycle.addObserver(lifecycleObserver)
         onDispose {
+            compositionActive.set(false)
             lifecycleOwner.lifecycle.removeObserver(lifecycleObserver)
             manager.unregisterListener(installListener)
         }
@@ -118,6 +136,12 @@ internal fun DistributionUpdateCard() {
         state = PlayUpdateState.CHECKING
         manager.appUpdateInfo
             .addOnSuccessListener { info ->
+                if (
+                    !canLaunchPlayUpdate(
+                        compositionActive = compositionActive.get(),
+                        lifecycleState = lifecycleOwner.lifecycle.currentState,
+                    )
+                ) return@addOnSuccessListener
                 when (
                     resolvePlayUpdateDecision(
                         updateAvailability = info.updateAvailability(),
@@ -130,18 +154,24 @@ internal fun DistributionUpdateCard() {
                     }
                     PlayUpdateDecision.START_FLEXIBLE -> {
                         state = PlayUpdateState.DOWNLOADING
-                        val started = manager.startUpdateFlowForResult(
-                            info,
-                            updateLauncher,
-                            AppUpdateOptions.newBuilder(AppUpdateType.FLEXIBLE).build(),
-                        )
+                        val started = try {
+                            manager.startUpdateFlowForResult(
+                                info,
+                                updateLauncher,
+                                AppUpdateOptions.newBuilder(AppUpdateType.FLEXIBLE).build(),
+                            )
+                        } catch (_: IllegalStateException) {
+                            false
+                        }
                         if (!started) state = PlayUpdateState.FAILED
                     }
                     PlayUpdateDecision.CURRENT -> state = PlayUpdateState.CURRENT
                     PlayUpdateDecision.UNAVAILABLE -> state = PlayUpdateState.FAILED
                 }
             }
-            .addOnFailureListener { state = PlayUpdateState.FAILED }
+            .addOnFailureListener {
+                if (compositionActive.get()) state = PlayUpdateState.FAILED
+            }
     }
 
     PixelCard {
@@ -173,7 +203,7 @@ internal fun DistributionUpdateCard() {
             onClick = {
                 if (state == PlayUpdateState.DOWNLOADED) {
                     manager.completeUpdate().addOnFailureListener {
-                        state = PlayUpdateState.FAILED
+                        if (compositionActive.get()) state = PlayUpdateState.FAILED
                     }
                 } else {
                     checkForUpdate()
