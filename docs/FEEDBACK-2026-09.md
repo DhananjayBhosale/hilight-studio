@@ -115,3 +115,22 @@ fresh successor-cleanup gate and explicit transport choices. An independent revi
 additional issue; regression tests cover rejection cases. Renderer revision 7 forces a fresh
 replacement of the already installed development revision 6 for device verification without
 removing or downgrading user data. Final physical results are recorded with the release evidence.
+
+## Published GitHub result
+
+[v1.0.12 experimental](https://github.com/DhananjayBhosale/hilight-studio/releases/tag/v1.0.12-experimental)
+is published from `985cc7e90b61865d893009db2faa729a00f4887b`. Final verification passed
+323 tests, debug/release builds, lint (zero errors, 47 warnings), helper compilation and
+[hosted CI](https://github.com/DhananjayBhosale/hilight-studio/actions/runs/34143387587).
+The signed release retains the privileged entry points and the existing release certificate.
+The downloaded GitHub APK matches SHA-256
+`8efe199502b690cbc3364d25ba904e858d9ee6e9fd0ca97f534a2c8418ba7bf5`.
+
+On the connected Pixel 11 Pro XL, an in-place final update replaced a live revision-6 Shizuku
+renderer with revision 7 automatically, without force-stop or manual reconnection. The original
+Airtel rule and master/ambient settings survived. Wave animated and then the framework reported
+zero colors and no light sessions; scoped app/renderer crash buffers were empty. Temporary
+notification-test rule, notification and listener permission were removed/restored. A self-test
+matched its rule on the preceding revision-6 build. This does not prove physical darkness on
+the affected Pixel 11 Pro, actual calling-app coverage, or root/KernelSU recovery. The Play
+edition's release is tracked separately in the existing PlayStore Release task.

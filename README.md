@@ -69,18 +69,18 @@ For manual installation, use ADB. Play Protect may block direct installs from a 
 3. From the folder containing the APK, run:
 
 ```bash
-adb install -r HiLight-Studio-v1.0.11-experimental-signed.apk
+adb install -r HiLight-Studio-v1.0.12-experimental-signed.apk
 ```
 
 If you previously installed v1.0.3 or an older debug-signed build, uninstall it once before installing a permanently signed release because the signing certificates are different:
 
 ```bash
 adb uninstall com.hilight.studio
-adb install HiLight-Studio-v1.0.11-experimental-signed.apk
+adb install HiLight-Studio-v1.0.12-experimental-signed.apk
 ```
 
 The published APK is an experimental release signed with HiLight Studio's permanent release
-certificate. v1.0.11 updates any release carrying that same certificate normally.
+certificate. v1.0.12 updates any release carrying that same certificate normally.
 
 HiLight Studio needs privileged access to the Android lights service. The renderer must be restarted after every reboot.
 
