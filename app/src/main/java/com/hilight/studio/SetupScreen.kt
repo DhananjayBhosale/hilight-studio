@@ -151,6 +151,8 @@ fun SetupScreen(store: Store) {
     val quietEnabled by store.quietEnabled.collectAsStateWithLifecycle()
     val quietStart by store.quietStart.collectAsStateWithLifecycle()
     val quietEnd by store.quietEnd.collectAsStateWithLifecycle()
+    val quietByDay by store.quietByDay.collectAsStateWithLifecycle()
+    val quietDays by store.quietDays.collectAsStateWithLifecycle()
     val batteryGuard by store.batteryGuard.collectAsStateWithLifecycle()
     val batteryMinPct by store.batteryMinPct.collectAsStateWithLifecycle()
     val saverGuard by store.saverGuard.collectAsStateWithLifecycle()
@@ -177,30 +179,34 @@ fun SetupScreen(store: Store) {
     var checkingForUpdates by remember { mutableStateOf(false) }
     var updateResult by remember { mutableStateOf<UpdateCheckResult?>(null) }
     var selfTestCountdown by remember { mutableIntStateOf(0) }
+    var selfTestWarning by remember { mutableStateOf<String?>(null) }
     var confirmingFaceDown by remember { mutableStateOf(false) }
     val updateScope = rememberCoroutineScope()
     val conversations by store.conversations.collectAsStateWithLifecycle()
 
-    val postSelfTest: () -> Unit = {
-        val reason = store.notificationTestSuppressionReason()
-        if (!store.enabled.value) {
-            Toast.makeText(
-                ctx.applicationContext,
-                R.string.setup_test_blocked_hilight_off,
-                Toast.LENGTH_SHORT,
-            ).show()
-        } else if (reason == null) {
-            postSelfTestNotification(ctx.applicationContext)
-        } else {
-            Toast.makeText(
-                ctx.applicationContext,
-                resources.getString(
-                    R.string.test_blocked_by_guard,
-                    resources.getString(reason.shortRes),
-                ),
-                Toast.LENGTH_SHORT,
-            ).show()
+    val testWarning: (Boolean) -> String? = { scheduling ->
+        val reason = store.notificationTestSuppressionReason(scheduling)
+        val notificationManager = ctx.getSystemService(android.app.NotificationManager::class.java)
+        when {
+            !store.enabled.value -> resources.getString(R.string.setup_test_blocked_hilight_off)
+            !hasNotificationAccess(ctx) -> resources.getString(R.string.setup_test_needs_listener)
+            store.respectDnd.value && store.deviceSignals.inDoNotDisturb ->
+                resources.getString(R.string.setup_test_blocked_dnd)
+            !notificationManager.areNotificationsEnabled() ||
+                notificationManager.getNotificationChannel("selftest")?.importance ==
+                android.app.NotificationManager.IMPORTANCE_NONE ->
+                resources.getString(R.string.setup_test_needs_notifications)
+            reason != null -> resources.getString(
+                R.string.test_blocked_by_guard, resources.getString(reason.shortRes),
+            )
+            else -> null
         }
+    }
+    val postSelfTest: () -> Unit = {
+        val warning = testWarning(false)
+        selfTestWarning = warning
+        if (warning == null) postSelfTestNotification(ctx.applicationContext)
+        else Toast.makeText(ctx.applicationContext, warning, Toast.LENGTH_LONG).show()
     }
 
     val checkForUpdates: () -> Unit = {
@@ -319,15 +325,39 @@ fun SetupScreen(store: Store) {
             store.setQuietHours(it)
         }
         if (quietEnabled) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                FilledTonalButton(
-                    onClick = { pickTime(ctx, quietStart) { store.setQuietHours(true, startMin = it) } },
-                    modifier = Modifier.weight(1f),
-                ) { ButtonLabel(stringResource(R.string.setup_quiet_from, clock(quietStart))) }
-                FilledTonalButton(
-                    onClick = { pickTime(ctx, quietEnd) { store.setQuietHours(true, endMin = it) } },
-                    modifier = Modifier.weight(1f),
-                ) { ButtonLabel(stringResource(R.string.setup_quiet_until, clock(quietEnd))) }
+            ToggleRow(stringResource(R.string.setup_quiet_by_day), quietByDay, onChange = store::setQuietByDay)
+            if (quietByDay) {
+                Caption(stringResource(R.string.setup_quiet_by_day_note))
+                val dayNames = java.text.DateFormatSymbols.getInstance().weekdays
+                quietDays.forEachIndexed { day, window ->
+                    val calendarDay = (day + 1) % 7 + 1
+                    ToggleRow(dayNames[calendarDay], window.enabled) {
+                        store.setQuietDay(day, window.copy(enabled = it))
+                    }
+                    if (window.enabled) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            FilledTonalButton(
+                                onClick = { pickTime(ctx, window.startMin) { store.setQuietDay(day, window.copy(startMin = it)) } },
+                                modifier = Modifier.weight(1f),
+                            ) { ButtonLabel(stringResource(R.string.setup_quiet_from, clock(window.startMin))) }
+                            FilledTonalButton(
+                                onClick = { pickTime(ctx, window.endMin) { store.setQuietDay(day, window.copy(endMin = it)) } },
+                                modifier = Modifier.weight(1f),
+                            ) { ButtonLabel(stringResource(R.string.setup_quiet_until, clock(window.endMin))) }
+                        }
+                    }
+                }
+            } else {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    FilledTonalButton(
+                        onClick = { pickTime(ctx, quietStart) { store.setQuietHours(true, startMin = it) } },
+                        modifier = Modifier.weight(1f),
+                    ) { ButtonLabel(stringResource(R.string.setup_quiet_from, clock(quietStart))) }
+                    FilledTonalButton(
+                        onClick = { pickTime(ctx, quietEnd) { store.setQuietHours(true, endMin = it) } },
+                        modifier = Modifier.weight(1f),
+                    ) { ButtonLabel(stringResource(R.string.setup_quiet_until, clock(quietEnd))) }
+                }
             }
             ToggleRow(stringResource(R.string.setup_quiet_dim), quietDim) { store.setQuietDim(it) }
             if (quietDim) {
@@ -354,6 +384,8 @@ fun SetupScreen(store: Store) {
             Caption(stringResource(R.string.setup_battery_note))
         }
     }
+
+    DeviceSignalsSection(store)
 
     if (confirmingFaceDown) {
         FaceDownConsentDialog(
@@ -396,6 +428,12 @@ fun SetupScreen(store: Store) {
                     }
                 )
             )
+            if (rootState == RootBackend.State.RUNNING && !status.alive) {
+                Caption(stringResource(R.string.setup_led_cleanup_renderer_unavailable))
+                TextButton(onClick = store::retryRoot) {
+                    ButtonLabel(stringResource(R.string.setup_root_retry))
+                }
+            }
         }
     } else {
         PixelCard(tone = 2) {
@@ -551,6 +589,7 @@ fun SetupScreen(store: Store) {
     PixelCard {
         SectionTitle(stringResource(R.string.setup_test_title))
         Caption(stringResource(R.string.setup_test_body))
+        selfTestWarning?.let { Caption(it) }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             FilledTonalButton(
                 onClick = postSelfTest,
@@ -564,6 +603,12 @@ fun SetupScreen(store: Store) {
                     // State changes synchronously, so a second queued tap cannot launch another job
                     // before Compose has redrawn the disabled button.
                     if (selfTestCountdown != 0) return@TextButton
+                    val warning = testWarning(true)
+                    selfTestWarning = warning
+                    if (warning != null) {
+                        Toast.makeText(ctx.applicationContext, warning, Toast.LENGTH_LONG).show()
+                        return@TextButton
+                    }
                     selfTestCountdown = 5
                     updateScope.launch {
                         try {

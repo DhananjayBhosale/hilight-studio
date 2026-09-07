@@ -274,6 +274,7 @@ fun ToggleRow(
             style = MaterialTheme.typography.bodyLarge,
             color = if (enabled) MaterialTheme.colorScheme.onSurface
             else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f).padding(end = 12.dp),
         )
         Switch(
             checked = checked,
@@ -332,7 +333,11 @@ fun PixelSlider(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(label, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                label,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f).padding(end = 12.dp),
+            )
             Box(
                 modifier = if (typeInSeconds) {
                     Modifier

@@ -187,7 +187,7 @@
     <string name="privacy_cooldown">Rest time</string>
     <string name="privacy_cooldown_recommendation">A 10 to 20 second rest is recommended.</string>
     <string name="privacy_cooldown_short_warning">Less than 10 seconds gives the array very little rest. A 10 to 20 second rest is recommended.</string>
-    <string name="privacy_one_minute_cap">Stops immediately when use ends. One uninterrupted use can signal for at most 1 minute.</string>
     <string name="privacy_replace_warning">Saving will replace the existing rule for this activity and app.</string>
 
+    <string name="privacy_one_minute_cap">Stops immediately when camera or microphone use ends, and after at most 1 minute of uninterrupted use. Activity may start in the viewfinder before video recording. This does not detect the Record button.</string>
 </resources>

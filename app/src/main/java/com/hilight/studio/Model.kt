@@ -179,7 +179,24 @@ data class AppRule(
      * for a rule that already names a group.
      */
     val conversationIsGroup: Boolean = false,
+    /** Full saved look, copied into the rule so editing or deleting a preset cannot change it. */
+    val look: Ambient? = null,
+    val ignoreSilent: Boolean = false,
+    val repeatWhilePending: Boolean = false,
+    val repeatIntervalMs: Int = 15_000,
+    /** Exclusions apply only to catch-all rules, leaving explicit app rules independent. */
+    val excludedPackages: Set<String> = emptySet(),
 ) {
+    fun effectiveLook(colorOverride: Int = color): Ambient =
+        (look ?: Ambient(secondColor = colorOverride, randomIntervalMs = 500)).copy(
+        pattern = pattern, color = colorOverride, speedMs = speedMs, brightness = brightness,
+    )
+
+    fun withLook(value: Ambient): AppRule = copy(
+        look = value, pattern = value.pattern, color = value.color,
+        speedMs = value.speedMs, brightness = value.brightness, randomColor = false,
+    )
+
     /** The catch-all rule, which matches any app without one of its own. */
     val isCatchAll: Boolean get() = pkg == ANY_APP
 
@@ -213,6 +230,11 @@ data class AppRule(
         conversationName?.let { put("conversationName", it) }
         put("includeGroups", includeGroups)
         put("conversationIsGroup", conversationIsGroup)
+        look?.let { put("look", it.toPrefsJson()) }
+        put("ignoreSilent", ignoreSilent)
+        put("repeatWhilePending", repeatWhilePending)
+        put("repeatIntervalMs", repeatIntervalMs.coerceIn(5_000, 60_000))
+        put("excludedPackages", JSONArray().also { a -> excludedPackages.sorted().forEach(a::put) })
     }
 
     companion object {
@@ -238,6 +260,13 @@ data class AppRule(
             conversationName = o.optString("conversationName", "").takeIf { it.isNotEmpty() },
             includeGroups = o.optBoolean("includeGroups", false),
             conversationIsGroup = o.optBoolean("conversationIsGroup", false),
+            look = o.optJSONObject("look")?.let(Ambient::fromJson),
+            ignoreSilent = o.optBoolean("ignoreSilent", false),
+            repeatWhilePending = o.optBoolean("repeatWhilePending", false),
+            repeatIntervalMs = o.optInt("repeatIntervalMs", 15_000).coerceIn(5_000, 60_000),
+            excludedPackages = o.optJSONArray("excludedPackages")?.let { a ->
+                (0 until a.length()).mapNotNull { a.optString(it).takeIf(String::isNotBlank) }.toSet()
+            } ?: emptySet(),
         )
     }
 }

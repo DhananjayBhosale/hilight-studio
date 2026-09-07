@@ -125,7 +125,7 @@ class RendererCompatibilityTest {
     }
 
     @Test
-    fun `released v1_0_9 Shizuku renderer is removed before service 1105 is admitted`() {
+    fun `released v1_0_9 Shizuku renderer is removed before the current service is admitted`() {
         val expectedService = RendererContract.shizukuServiceVersion(11)
         val oldRenderer = currentJson()
             .put("rendererImplementationRevision", 4)
@@ -134,7 +134,7 @@ class RendererCompatibilityTest {
             .put("rendererServiceVersion", 1_004)
         val safeIdle = JSONObject(Bridge.incompatibleRendererSafeIdleJson(10L))
 
-        assertEquals(1_105, expectedService)
+        assertEquals(1_106, expectedService)
         assertEquals(
             ShizukuPeekAction.WAIT_FOR_CALLBACK,
             shizukuPeekAction(1_004, priorPeekReportedExisting = false, retry = false),

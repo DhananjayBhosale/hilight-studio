@@ -146,7 +146,7 @@ object Bridge {
         val raw = runCatching { f.takeIf(File::exists)?.readText() }
             .onFailure { Log.w(TAG, "unreadable status", it) }
             .getOrNull()
-        return statusCache.read(raw, System.currentTimeMillis())
+        return statusCache.read(raw, System.currentTimeMillis(), SystemClock.elapsedRealtime())
     }
 
     /** Used after an exact process-exit proof so a cached heartbeat cannot impersonate a successor. */
@@ -155,7 +155,11 @@ object Bridge {
     }
 
     internal class BridgeStatusCache {
-        private data class Good(val timestampMs: Long, val status: HelperStatus)
+        private data class Good(
+            val timestampMs: Long,
+            val status: HelperStatus,
+            val heartbeatElapsedRealtimeMs: Long? = null,
+        )
         private data class ProcessIdentity(
             val pid: Int,
             val owner: String,
@@ -169,7 +173,7 @@ object Bridge {
         private val forgotten = LinkedHashMap<ProcessIdentity, Long>()
 
         @Synchronized
-        fun read(raw: String?, nowMs: Long): HelperStatus {
+        fun read(raw: String?, nowMs: Long, nowElapsedMs: Long? = null): HelperStatus {
             val parsedFromDisk = parseGood(raw)
             val parsed = parsedFromDisk?.takeUnless {
                 val forgottenAt = forgotten[it.identity()]
@@ -181,7 +185,7 @@ object Bridge {
                 if (pinned != null && pinned.identity() == it.identity()) {
                     // A later heartbeat from the exact same process refreshes liveness, but even a
                     // success-shaped sample cannot erase the fatal status without verified exit.
-                    unreleasedFatal = Good(it.timestampMs, pinned.status)
+                    unreleasedFatal = it.copy(status = pinned.status)
                 } else if (pinned == null && it.status.blackClearUnreleasedFatal &&
                     validInstanceId(it.status.rendererInstanceId)
                 ) {
@@ -190,11 +194,15 @@ object Bridge {
             }
             val good = unreleasedFatal ?: lastGood
                 ?: return HelperStatus(alive = false, identityResolved = parsedFromDisk != null)
-            val age = nowMs - good.timestampMs
+            val monotonic = nowElapsedMs != null && good.heartbeatElapsedRealtimeMs != null
+            val age = if (monotonic) nowElapsedMs - good.heartbeatElapsedRealtimeMs
+                else nowMs - good.timestampMs
             return good.status.copy(
                 // The helper writes once a second. A torn read cannot erase its identity; only an
                 // explicitly old heartbeat crosses this dead threshold.
-                alive = age in -5_000..STATUS_STALE_AFTER_MS,
+                // A future elapsed timestamp can be left over from a previous boot. Retain its
+                // identity for exact stopping, but never accept it as a live renderer.
+                alive = age in (if (monotonic) 0L else -5_000L)..STATUS_STALE_AFTER_MS,
                 ageMs = age,
                 // Cached fields remain useful for fencing, but they do not turn a torn *fresh* read
                 // into a new process-identity proof. Store performs a bounded reread before acting.
@@ -333,6 +341,9 @@ object Bridge {
                     privacyObserverState = o.optString("privacyObserverState", "stopped"),
                     privacyPhase = o.optString("privacyPhase", "inactive"),
                 ),
+                heartbeatElapsedRealtimeMs = if (o.has("heartbeatElapsedRealtimeMs")) {
+                    o.optLong("heartbeatElapsedRealtimeMs", -1L).takeIf { it >= 0L }
+                } else null,
             )
         } catch (_: Throwable) {
             null
@@ -411,6 +422,15 @@ object Bridge {
         put("randomPerLed", true)
         put("randomSmooth", true)
     }
+
+    fun lookAlertJson(id: Long, look: Ambient, durationMs: Int, source: AlertSource): JSONObject =
+        look.toJson().apply {
+            remove("mode")
+            put("pattern", look.pattern.key)
+            put("id", id)
+            put("durationMs", durationMs)
+            put("source", source.key)
+        }
 
     /** Monotonic-ish alert ids so the renderer can tell a new alert from a re-push. */
     fun nextAlertId(): Long = SystemClock.elapsedRealtime()

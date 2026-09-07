@@ -292,7 +292,7 @@
     <string name="privacy_cooldown">休止時間</string>
     <string name="privacy_cooldown_recommendation">10〜20 秒の休止を推奨します。</string>
     <string name="privacy_cooldown_short_warning">10 秒未満では LED アレイの休止が短すぎます。10〜20 秒を推奨します。</string>
-    <string name="privacy_one_minute_cap">使用が終了するとすぐに停止します。連続した 1 回の使用で通知する時間は最大 1 分です。</string>
     <string name="privacy_replace_warning">保存すると、このアクティビティとアプリの既存のルールが置き換えられます。</string>
 
+    <string name="privacy_one_minute_cap">カメラまたはマイクの使用が終了するとすぐに停止し、連続使用は最大 1 分で停止します。動画の録画前に、撮影画面を開いただけで反応する場合があります。録画ボタンの操作は検出しません。</string>
 </resources>
