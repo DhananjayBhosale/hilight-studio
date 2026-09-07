@@ -221,6 +221,19 @@ internal fun shouldKeepRootDestinationAfterExactExit(
 ): Boolean = rootReadyOrAvailable &&
     (requestedDestination == Transport.ROOT || fencedDestination == Transport.ROOT)
 
+/** AUTO may prefer the validated replacement only before another destination owns cleanup. */
+internal fun shouldPreferReconnectedShizuku(
+    selected: Transport,
+    source: Transport?,
+    exactSourceExitConfirmed: Boolean,
+    destination: Transport?,
+    destinationCleanupStarted: Boolean,
+    shizukuConnected: Boolean,
+    unresolvedShizukuOwnership: Boolean,
+): Boolean = selected == Transport.AUTO && source == Transport.SHIZUKU &&
+    exactSourceExitConfirmed && destination == Transport.ADB && !destinationCleanupStarted &&
+    shizukuConnected && !unresolvedShizukuOwnership
+
 internal enum class RootStartCompletion {
     RESUME_DESTINATION_CLEANUP,
     WAIT_FOR_DESTINATION,
@@ -2043,6 +2056,21 @@ class Store private constructor(private val app: Context) {
     private fun beginPostExitDestinationCleanupIfPossible(): Boolean {
         if (!sourceExitConfirmed || pendingHandoff == null) return false
         if (postExitCleanupInFlight) return true
+        if (shouldPreferReconnectedShizuku(
+                selected = _transport.value,
+                source = handoffSource,
+                exactSourceExitConfirmed = sourceExitConfirmed,
+                destination = handoffTarget,
+                destinationCleanupStarted = postExitCleanupDestination != null,
+                shizukuConnected = shizuku.state.value == ShizukuBackend.State.CONNECTED,
+                unresolvedShizukuOwnership = shizuku.unresolvedIncompatibleRenderer.value,
+            )
+        ) {
+            // During an APK upgrade AUTO initially chooses ADB while the old Shizuku binder exits.
+            // A validated successor can arrive later. Keep the exact source-exit proof and run the
+            // normal fresh cleanup on that successor instead of waiting forever for absent ADB.
+            handoffTarget = Transport.SHIZUKU
+        }
         val to = handoffTarget ?: return true
 
         if (to == Transport.ROOT && root.state.value != RootBackend.State.RUNNING) {
