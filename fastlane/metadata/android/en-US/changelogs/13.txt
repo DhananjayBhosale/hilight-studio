@@ -1,0 +1,1 @@
+Added complete saved looks and gradients to app rules, per-day quiet hours, pending notification reminders, app exclusions, charging and DND signals, and partial incoming-call support. Improved renderer recovery, delayed-test guidance, and reliability. Highlight Studio can now check for and install updates through Google Play.
