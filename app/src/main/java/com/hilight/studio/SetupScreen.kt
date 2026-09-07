@@ -600,6 +600,8 @@ fun SetupScreen(store: Store) {
         }
     }
 
+    DistributionUpdateCard()
+
     PixelCard {
         SectionTitle(stringResource(R.string.setup_test_title))
         Caption(stringResource(R.string.setup_test_body))

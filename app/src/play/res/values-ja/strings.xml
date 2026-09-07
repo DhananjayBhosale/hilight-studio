@@ -3,4 +3,14 @@
     <string name="app_logo_description">Highlight Studio のロゴ</string>
     <string name="service_watcher_title" translatable="false">Highlight Studio</string>
     <string name="setup_test_body">このアプリから通知を送信します。先に Highlight Studio のルールを追加してください。</string>
+    <string name="setup_play_updates_title">Google Play のアップデート</string>
+    <string name="setup_play_updates_body">アプリを離れずに Google Play でアップデートを確認してインストールします。</string>
+    <string name="setup_play_updates_check">アップデートを確認</string>
+    <string name="setup_play_updates_checking">Google Play を確認中…</string>
+    <string name="setup_play_updates_downloading">Google Play がバックグラウンドでアップデートをダウンロードしています。</string>
+    <string name="setup_play_updates_downloading_button">ダウンロード中…</string>
+    <string name="setup_play_updates_downloaded">アップデートの準備ができました。アプリを再起動してインストールしてください。</string>
+    <string name="setup_play_updates_restart">再起動して更新</string>
+    <string name="setup_play_updates_canceled">アップデートはインストールされませんでした。もう一度お試しください。</string>
+    <string name="setup_play_updates_failed">Google Play でアップデートを確認できませんでした。しばらくしてからもう一度お試しください。</string>
 </resources>

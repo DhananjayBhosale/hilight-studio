@@ -6,4 +6,14 @@
     <string name="app_logo_description">Highlight Studio logo</string>
     <string name="service_watcher_title" translatable="false">Highlight Studio</string>
     <string name="setup_test_body">Posts a notification from this app. Add a rule for Highlight Studio first.</string>
+    <string name="setup_play_updates_title">Google Play updates</string>
+    <string name="setup_play_updates_body">Check Google Play and install an available update without leaving the app.</string>
+    <string name="setup_play_updates_check">Check for updates</string>
+    <string name="setup_play_updates_checking">Checking Google Play…</string>
+    <string name="setup_play_updates_downloading">Google Play is downloading the update in the background.</string>
+    <string name="setup_play_updates_downloading_button">Downloading…</string>
+    <string name="setup_play_updates_downloaded">The update is ready. Restart the app to install it.</string>
+    <string name="setup_play_updates_restart">Restart to update</string>
+    <string name="setup_play_updates_canceled">The update was not installed. You can try again.</string>
+    <string name="setup_play_updates_failed">Google Play could not check for an update. Try again later.</string>
 </resources>

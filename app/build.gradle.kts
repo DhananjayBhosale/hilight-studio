@@ -101,6 +101,8 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
+    add("playImplementation", "com.google.android.play:app-update:2.1.0")
+    add("playImplementation", "com.google.android.play:app-update-ktx:2.1.0")
     testImplementation("junit:junit:4.13.2")
     // Android's org.json methods are framework stubs in local JVM tests; this supplies the real
     // implementation for preference/state round-trip tests and is not packaged in the APK.
