@@ -32,7 +32,7 @@ retain their original verification boundaries.
 
 - Existing rules, master switch, daily quiet hours, privacy limits, renderer duty limits, and
   notification/while-open separation remain. New features default off.
-- Renderer implementation revision advances from 5 to 6 so old privileged processes cannot be
+- Renderer implementation revision advances from 5 to 7 so old privileged processes cannot be
   silently reused after installing this code. The release preparation bumps the APK to version 1.0.12, code 13.
 - The full repository gate is `./gradlew --no-daemon :app:testDebugUnitTest :app:build :app:lint`.
   Standalone helper compilation and optimized APK entry-point checks are separate gates.
@@ -104,3 +104,14 @@ physical darkness for the affected #28 hardware. New signed-build installation r
 
 No reply draft should direct users to v1.0.11 to test the new changes: they belong to v1.0.12. Once an exact signed build is available, link that build and its version in
 any testing request. No comments or issue-state changes were sent during this recheck.
+
+## Release upgrade correction
+
+The signed Pixel upgrade exposed an AUTO-routing defect after exact old Shizuku exit: a healthy
+successor connected, but the pending handoff still waited for the ADB fallback. Restarting only
+the app recovered it. A focused correction now prefers the validated Shizuku successor only
+after exact source exit and before any fallback cleanup has started. It retains the normal
+fresh successor-cleanup gate and explicit transport choices. An independent review found no
+additional issue; regression tests cover rejection cases. Renderer revision 7 forces a fresh
+replacement of the already installed development revision 6 for device verification without
+removing or downgrading user data. Final physical results are recorded with the release evidence.

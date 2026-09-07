@@ -5,7 +5,8 @@ All notable changes to HiLight Studio are documented here.
 ## [1.0.12-experimental] - 2026-09-07
 
 - Fixed helper heartbeat scheduling and freshness across wall-clock corrections, and added safe
-  retry for a disconnected root renderer. Renderer implementation revision is now 6.
+  retry for a disconnected root renderer. Renderer implementation revision is now 7.
+- Fixed automatic Shizuku routing after replacing an older renderer during an app update.
 - Added complete saved presets and gradient endpoints to app rules, preserving existing rule looks.
 - Added silent-notification filtering and app exclusions for the Any app rule.
 - Added optional brief reminders for pending notifications, with dismissal/unlock cleanup and

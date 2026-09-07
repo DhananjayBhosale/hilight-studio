@@ -9,6 +9,33 @@ import org.junit.Test
 class StoreLifecycleRecoveryTest {
 
     @Test
+    fun `auto upgrade selects returned Shizuku only after exact exit and before fallback cleanup`() {
+        fun prefers(
+            selected: Transport = Transport.AUTO,
+            source: Transport = Transport.SHIZUKU,
+            exited: Boolean = true,
+            destination: Transport = Transport.ADB,
+            cleanupStarted: Boolean = false,
+            connected: Boolean = true,
+            unresolved: Boolean = false,
+        ) = shouldPreferReconnectedShizuku(
+            selected, source, exited, destination, cleanupStarted, connected, unresolved,
+        )
+
+        assertTrue(prefers())
+        assertFalse(prefers(exited = false))
+        assertFalse(prefers(connected = false))
+        assertFalse(prefers(unresolved = true))
+        assertFalse(prefers(cleanupStarted = true))
+        assertFalse(prefers(selected = Transport.ADB))
+        assertFalse(prefers(destination = Transport.ROOT))
+        assertFalse(prefers(source = Transport.ADB))
+        assertFalse(prefers(source = Transport.ROOT))
+        // Selecting a successor is still only the first step: output requires its cleanup proof.
+        assertEquals(HandoffReplayStage.RUN_DESTINATION_CLEANUP, handoffReplayStage(true, false, false))
+    }
+
+    @Test
     fun `release fence covers source cleanup stop and destination cleanup but stays bounded`() {
         val requiredMs = 3_000L + 4_000L + 3_000L
         assertTrue(Store.RELEASE_FENCE_TIMEOUT_MS >= requiredMs)
