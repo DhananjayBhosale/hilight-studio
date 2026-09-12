@@ -15,7 +15,7 @@ public final class RendererContract {
     public static final int CONTRACT_VERSION = 1;
 
     /** Monotonic revision of code loaded into the privileged renderer process. */
-    public static final int IMPLEMENTATION_REVISION = 7;
+    public static final int IMPLEMENTATION_REVISION = 8;
 
     /** Version of the JSON status document emitted by {@link Engine#status()}. */
     public static final int STATUS_SCHEMA_VERSION = 6;

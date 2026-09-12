@@ -32,6 +32,13 @@
     <!-- Shown where a pattern name gets a third of a row: the Live tab's effect tiles and the
          per-LED fill buttons. Same word in English; Japanese needs a shorter one. -->
     <string name="pattern_rainbow_short">Rainbow</string>
+    <string name="pattern_meter">Meter</string>
+    <string name="pattern_strobe">Strobe</string>
+    <string name="pattern_heartbeat">Heartbeat</string>
+    <string name="pattern_bounce">Bounce</string>
+    <string name="pattern_radar">Radar</string>
+    <string name="pattern_converge">Converge</string>
+    <string name="pattern_glitch">Glitch</string>
     <string name="pattern_random">Random colours</string>
     <string name="pattern_custom">Per-LED custom</string>
 
@@ -43,6 +50,13 @@
     <string name="cycle_comet">One lap of the comet head, its tail trailing 3 LEDs.</string>
     <string name="cycle_wave">One wave travelling once across the array.</string>
     <string name="cycle_rainbow">One trip through every hue, back to the start.</string>
+    <string name="cycle_meter">One progressive fill from 1 to 8 LEDs, then resets.</string>
+    <string name="cycle_strobe">A rapid triplet strobe burst followed by a pause.</string>
+    <string name="cycle_heartbeat">One double-pulse heartbeat rhythm followed by a rest.</string>
+    <string name="cycle_bounce">One back-and-forth bounce across the LEDs.</string>
+    <string name="cycle_radar">One smooth rotational radar sweep around the array.</string>
+    <string name="cycle_converge">Two beams collide at the centre and burst outwards.</string>
+    <string name="cycle_glitch">Erratic digital micro-sparks and cybernetic flickers.</string>
 
     <!-- Why the array is being held dark -->
     <string name="suppression_quiet_hours">Quiet hours</string>

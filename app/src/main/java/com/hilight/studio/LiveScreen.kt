@@ -17,8 +17,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Casino
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Flare
+import androidx.compose.material.icons.rounded.FlashOn
 import androidx.compose.material.icons.rounded.Nightlight
+import androidx.compose.material.icons.rounded.Radar
 import androidx.compose.material.icons.rounded.Waves
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -189,11 +192,13 @@ fun LiveScreen(store: Store) {
     val tests: List<Triple<Int, ImageVector, Pair<Pattern, Int>>> = listOf(
         Triple(Pattern.RAINBOW.shortLabelRes, Icons.Rounded.AutoAwesome, Pattern.RAINBOW to 0xFFFFFFFF.toInt()),
         Triple(R.string.live_test_random, Icons.Rounded.Casino, Pattern.RANDOM to 0xFFFFFFFF.toInt()),
-        // tile accents are chosen for legibility; the effect colours themselves are above
+        Triple(Pattern.STROBE.shortLabelRes, Icons.Rounded.FlashOn, Pattern.STROBE to 0xFFFFFFFF.toInt()),
         Triple(Pattern.COMET.shortLabelRes, Icons.Rounded.Flare, Pattern.COMET to 0xFF00E5FF.toInt()),
         Triple(Pattern.PULSE.shortLabelRes, Icons.Rounded.Bolt, Pattern.PULSE to 0xFFFF1744.toInt()),
+        Triple(Pattern.HEARTBEAT.shortLabelRes, Icons.Rounded.Favorite, Pattern.HEARTBEAT to 0xFFFF1744.toInt()),
         Triple(Pattern.BREATHE.shortLabelRes, Icons.Rounded.Nightlight, Pattern.BREATHE to 0xFF7C4DFF.toInt()),
         Triple(Pattern.WAVE.shortLabelRes, Icons.Rounded.Waves, Pattern.WAVE to 0xFF00E676.toInt()),
+        Triple(Pattern.RADAR.shortLabelRes, Icons.Rounded.Radar, Pattern.RADAR to 0xFF00E5FF.toInt()),
     )
 
     PixelCard {

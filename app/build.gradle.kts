@@ -21,7 +21,8 @@ fun signingValue(key: String, env: String): String? =
 
 android {
     namespace = "com.hilight.studio"
-    compileSdk = 37
+    // Match the F-Droid build recipe even when a newer Android 37 minor SDK is installed locally.
+    compileSdk { version = release(37) { minorApiLevel = 0 } }
 
     defaultConfig {
         applicationId = "com.hilight.studio"
@@ -29,8 +30,8 @@ android {
         // supported hardware prevents installation on devices the renderer cannot support.
         minSdk = 37
         targetSdk = 37
-        versionCode = 13
-        versionName = "1.0.12"
+        versionCode = 14
+        versionName = "1.0.13"
     }
 
     signingConfigs {

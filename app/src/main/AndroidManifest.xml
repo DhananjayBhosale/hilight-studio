@@ -10,6 +10,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- One optional recovery notice after reboot, only for an opted-in Shizuku user. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- Shizuku transport: the user starts Shizuku once per boot, on-device via wireless
          debugging or from adb, and approves this app in Shizuku's own dialog. -->
@@ -57,6 +59,14 @@
             android:exported="true"
             android:multiprocess="false"
             android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
+
+        <receiver android:name=".ShizukuRecoveryBootReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+        <service android:name=".ShizukuRecoveryJob" android:exported="true"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
 
         <!-- Quick Settings tile: toggle the array without opening the app -->
         <service

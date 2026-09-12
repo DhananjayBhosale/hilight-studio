@@ -53,7 +53,10 @@ object RootCommand {
                 "[ \"${'$'}3\" = com.hilight.core.AdbHelper ]; then exit 1; fi; done"
         return "original=''; if [ -d /proc/$pid ]; then " +
             "original=${'$'}($readCmdline) || exit 1; [ -n \"${'$'}original\" ] || exit 1; " +
-            "( $identity ) || exit 1; kill -TERM $pid 2>/dev/null || exit 1; fi; " +
+            // A PID may be reused after the helper dies. Never signal its new owner. The final
+            // scan still rejects every surviving helper, including a different instance at this PID.
+            "if ( $identity ); then kill -TERM $pid 2>/dev/null || exit 1; " +
+            "else original=''; fi; fi; " +
             "if [ -n \"${'$'}original\" ]; then i=0; " +
             "while [ ${'$'}i -lt 65 ] && [ -d /proc/$pid ]; do " +
             "current=${'$'}($readCmdline) || current=''; " +

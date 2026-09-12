@@ -43,6 +43,13 @@ enum class Pattern(
         "rainbow", R.string.pattern_rainbow, cycleMeaningRes = R.string.cycle_rainbow,
         narrowLabelRes = R.string.pattern_rainbow_short,
     ),
+    METER("meter", R.string.pattern_meter, cycleMeaningRes = R.string.cycle_meter),
+    STROBE("strobe", R.string.pattern_strobe, cycleMeaningRes = R.string.cycle_strobe),
+    HEARTBEAT("heartbeat", R.string.pattern_heartbeat, cycleMeaningRes = R.string.cycle_heartbeat),
+    BOUNCE("bounce", R.string.pattern_bounce, cycleMeaningRes = R.string.cycle_bounce),
+    RADAR("radar", R.string.pattern_radar, cycleMeaningRes = R.string.cycle_radar),
+    CONVERGE("converge", R.string.pattern_converge, cycleMeaningRes = R.string.cycle_converge),
+    GLITCH("glitch", R.string.pattern_glitch, cycleMeaningRes = R.string.cycle_glitch),
     RANDOM("random", R.string.pattern_random, usesSpeed = false),
     CUSTOM("custom", R.string.pattern_custom, usesSpeed = false);
 

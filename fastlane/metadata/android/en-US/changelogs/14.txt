@@ -1,0 +1,1 @@
+Safer root reconnection after a renderer stops. Optional Shizuku-disconnect and reboot notification in Setup. Seven new animations: Meter, Strobe, Heartbeat, Bounce, Radar, Converge and Glitch. Existing rules and light-safety limits are preserved. Overnight root recovery still needs affected-device confirmation.
