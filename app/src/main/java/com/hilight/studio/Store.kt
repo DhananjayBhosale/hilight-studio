@@ -234,6 +234,18 @@ internal fun shouldPreferReconnectedShizuku(
     exactSourceExitConfirmed && destination == Transport.ADB && !destinationCleanupStarted &&
     shizukuConnected && !unresolvedShizukuOwnership
 
+/** Retry root may restore its destination only after exact source exit, before fallback cleanup. */
+internal fun shouldPreferRecoveredRoot(
+    selected: Transport,
+    source: Transport?,
+    exactSourceExitConfirmed: Boolean,
+    destination: Transport?,
+    destinationCleanupStarted: Boolean,
+    rootReadyOrAvailable: Boolean,
+): Boolean = selected == Transport.AUTO && source == Transport.ROOT &&
+    exactSourceExitConfirmed && destination == Transport.ADB && !destinationCleanupStarted &&
+    rootReadyOrAvailable
+
 internal enum class RootStartCompletion {
     RESUME_DESTINATION_CLEANUP,
     WAIT_FOR_DESTINATION,
@@ -307,6 +319,7 @@ class Store private constructor(private val app: Context) {
     private val main = Handler(Looper.getMainLooper())
 
     val deviceSignals = DeviceSignals(app, ::showDeviceSignal, ::cancelOwnedAlert)
+    val shizukuRecovery = ShizukuRecoveryNotification(app)
 
     private val adb = AdbBackend(app)
     val shizuku = ShizukuBackend(app)
@@ -584,18 +597,21 @@ class Store private constructor(private val app: Context) {
                         pushCurrent(arm = false)
                     }
                 }
+                updateShizukuRecoveryNotice()
                 HiLightTile.refresh(app)
             }
         }
         shizuku.onConfirmedServiceExit = { exit ->
             main.post {
                 handleConfirmedShizukuExit(exit)
+                updateShizukuRecoveryNotice()
                 HiLightTile.refresh(app)
             }
         }
         root.onStateChanged = {
             main.post {
                 if (resumeLifecycleIfPossible()) {
+                    updateShizukuRecoveryNotice()
                     HiLightTile.refresh(app)
                     return@post
                 }
@@ -611,6 +627,7 @@ class Store private constructor(private val app: Context) {
                     RootBackend.State.REQUESTING,
                     RootBackend.State.STARTING -> Unit
                 }
+                updateShizukuRecoveryNotice()
                 HiLightTile.refresh(app)
             }
         }
@@ -644,6 +661,7 @@ class Store private constructor(private val app: Context) {
     fun setTransport(t: Transport) {
         _transport.value = t
         prefs.edit().putString("transport", t.name).apply()
+        updateShizukuRecoveryNotice()
         if (t == Transport.SHIZUKU || t == Transport.AUTO) shizuku.refresh()
         if (sourceExitConfirmed && handoffTarget != null) {
             handoffTarget = destinationAfterSourceExit(handoffSource ?: Transport.AUTO)
@@ -666,6 +684,7 @@ class Store private constructor(private val app: Context) {
      * an idle revision; only confirmed binder death may advance to destination cleanup/fallback.
      */
     fun disconnectShizuku() {
+        shizukuRecovery.forgetConnection()
         if (handoffTarget != null) {
             if (handoffSource == Transport.SHIZUKU &&
                 handoffSourceStatus?.rendererStale == true
@@ -723,6 +742,11 @@ class Store private constructor(private val app: Context) {
         root.refreshPresence()
     }
 
+    fun setNotifyShizukuLoss(enabled: Boolean) {
+        shizukuRecovery.setEnabled(enabled)
+        refreshStatus()
+    }
+
     // ------------------------------------------------------------------ mutations
 
     fun setEnabled(v: Boolean) {
@@ -735,6 +759,7 @@ class Store private constructor(private val app: Context) {
             !shizuku.unresolvedIncompatibleRenderer.value
         ) beginRootStart()
         else pushCurrent()
+        updateShizukuRecoveryNotice()
         HiLightTile.refresh(app)
     }
 
@@ -2056,6 +2081,18 @@ class Store private constructor(private val app: Context) {
     private fun beginPostExitDestinationCleanupIfPossible(): Boolean {
         if (!sourceExitConfirmed || pendingHandoff == null) return false
         if (postExitCleanupInFlight) return true
+        if (shouldPreferRecoveredRoot(
+                selected = _transport.value,
+                source = handoffSource,
+                exactSourceExitConfirmed = sourceExitConfirmed,
+                destination = handoffTarget,
+                destinationCleanupStarted = postExitCleanupDestination != null,
+                rootReadyOrAvailable = root.state.value == RootBackend.State.AVAILABLE ||
+                    root.state.value == RootBackend.State.RUNNING,
+            )
+        ) {
+            handoffTarget = Transport.ROOT
+        }
         if (shouldPreferReconnectedShizuku(
                 selected = _transport.value,
                 source = handoffSource,
@@ -2864,6 +2901,7 @@ class Store private constructor(private val app: Context) {
         _status.value = next
         _activeTransport.value = active.transport
         reconcileManualCleanupRequest(next)
+        updateShizukuRecoveryNotice()
         if (resumeLifecycleIfPossible()) return
         val lifecycleBusy = rootTransition || handoffTarget != null ||
             coldDiscoveryPending != null || bridgeRepushInFlightInstanceId != null ||
@@ -2892,6 +2930,13 @@ class Store private constructor(private val app: Context) {
         lifecycleFenced = rootTransition || handoffTarget != null ||
             coldDiscoveryPending != null || shizuku.unresolvedIncompatibleRenderer.value,
     )
+
+    private fun updateShizukuRecoveryNotice() {
+        shizukuRecovery.observe(_enabled.value, _transport.value, _activeTransport.value,
+            isRendererConnectedForUi(_status.value), shizuku.state.value,
+            rootTransition || root.state.value in setOf(RootBackend.State.CHECKING,
+                RootBackend.State.REQUESTING, RootBackend.State.STARTING))
+    }
 
     /** Reads transport and renderer status together for one user-requested diagnostics capture. */
     fun freshRendererStatusSnapshot(): RendererStatusSnapshot {

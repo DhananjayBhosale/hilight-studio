@@ -69,7 +69,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val dynamic by store.dynamicColor.collectAsStateWithLifecycle()
             HiLightTheme(dynamicColor = dynamic) {
-                App(store)
+                App(store, startInSetup = intent?.action == OPEN_SETUP_ACTION)
             }
         }
     }
@@ -106,9 +106,9 @@ private enum class Tab(@StringRes val labelRes: Int, val icon: ImageVector) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun App(store: Store) {
+private fun App(store: Store, startInSetup: Boolean = false) {
     // saved, so a rotation or a recreated activity does not drop the user back on Live
-    var tabIndex by rememberSaveable { mutableIntStateOf(0) }
+    var tabIndex by rememberSaveable { mutableIntStateOf(if (startInSetup) Tab.SETUP.ordinal else 0) }
     val tab = Tab.entries[tabIndex.coerceIn(0, Tab.entries.lastIndex)]
     val status by store.status.collectAsStateWithLifecycle()
     val active by store.activeTransport.collectAsStateWithLifecycle()

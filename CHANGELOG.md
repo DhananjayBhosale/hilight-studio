@@ -2,6 +2,21 @@
 
 All notable changes to HiLight Studio are documented here.
 
+## [1.0.13-experimental] - 2026-09-12
+
+- Fixed two root-recovery blockers: a departed renderer's PID being reused by an unrelated process,
+  and AUTO remaining on an ADB fallback after the root renderer has safely exited and root is available
+  again. Exact process ownership and successor cleanup remain required. The overnight Magisk report
+  still needs confirmation on the affected phone.
+- Added an optional **Notify when Shizuku stops** setting. After a previously working connection is
+  lost, a notification opens Setup. An opted-in user can also receive a recovery notice after reboot;
+  this does not start a renderer or request root permission at boot. Notification permission is required.
+- Added Meter, Strobe, Heartbeat, Bounce, Radar, Converge and Glitch animations, adapted from
+  [PR #39](https://github.com/DhananjayBhosale/hilight-studio/pull/39) by @saboooor. Existing duration,
+  brightness, rest and cleanup limits still apply. Renderer implementation revision is now 8.
+- Preserved existing rules, saved looks, quiet hours and notification behavior. See the
+  [September 12 feedback audit](docs/FEEDBACK-2026-09-12.md) for reviewed requests and remaining limits.
+
 ## [1.0.12-experimental] - 2026-09-07
 
 - Fixed helper heartbeat scheduling and freshness across wall-clock corrections, and added safe

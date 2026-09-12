@@ -44,6 +44,20 @@
     <string name="pattern_rainbow">レインボー</string>
     <!-- "Rainbow" — the narrow form, for tiles and fill buttons where レインボー wraps and clips -->
     <string name="pattern_rainbow_short">虹</string>
+    <!-- "Meter" -->
+    <string name="pattern_meter">メーター</string>
+    <!-- "Strobe" -->
+    <string name="pattern_strobe">ストロボ</string>
+    <!-- "Heartbeat" -->
+    <string name="pattern_heartbeat">ハートビート</string>
+    <!-- "Bounce" -->
+    <string name="pattern_bounce">バウンス</string>
+    <!-- "Radar" -->
+    <string name="pattern_radar">レーダー</string>
+    <!-- "Converge" -->
+    <string name="pattern_converge">コンバージ</string>
+    <!-- "Glitch" -->
+    <string name="pattern_glitch">グリッチ</string>
     <!-- "Random colours" -->
     <string name="pattern_random">ランダムな色</string>
     <!-- "Per-LED custom" -->
@@ -64,6 +78,20 @@
     <string name="cycle_wave">波が LED アレイを 1 回横切ります。</string>
     <!-- "One trip through every hue, back to the start." -->
     <string name="cycle_rainbow">すべての色相を一巡して元に戻ります。</string>
+    <!-- "One progressive fill from 1 to 8 LEDs, then resets." -->
+    <string name="cycle_meter">LED が 1 個ずつ順番に点灯していき、全点灯したあとに消灯します。</string>
+    <!-- "A rapid triplet strobe burst followed by a pause." -->
+    <string name="cycle_strobe">素早い 3 連ストロボ点滅のあと、一時停止します。</string>
+    <!-- "One double-pulse heartbeat rhythm followed by a rest." -->
+    <string name="cycle_heartbeat">トントンと 2 回連続で拍動し、余韻を残して消えます。</string>
+    <!-- "One back-and-forth bounce across the LEDs." -->
+    <string name="cycle_bounce">光が LED の端から端まで往復します。</string>
+    <!-- "One smooth rotational radar sweep around the array." -->
+    <string name="cycle_radar">レーダーの光がアレイを滑らかに 1 周スイープします。</string>
+    <!-- "Two beams collide at the centre and burst outwards." -->
+    <string name="cycle_converge">両端から光が集まって衝突し、外側へ広がります。</string>
+    <!-- "Erratic digital micro-sparks and cybernetic flickers." -->
+    <string name="cycle_glitch">サイバー感のある不規則なデジタル微光とスパークです。</string>
 
     <!-- Why the array is being held dark -->
     <!-- "Quiet hours" -->

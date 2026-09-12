@@ -5,7 +5,9 @@ import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.exp
+import kotlin.math.floor
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.sin
 
 /**
@@ -71,6 +73,98 @@ object Renderer {
                 for (i in 0 until n) {
                     val h = (phase + if (cfg.rainbowSpread) i.toDouble() / n else 0.0) * 360.0
                     out[i] = hsv((h % 360).toFloat())
+                }
+            }
+
+            Pattern.METER -> {
+                val phase = (t % speed) / speed.toDouble()
+                if (phase < 0.75) {
+                    val progress = (phase / 0.75) * n
+                    val fullCount = floor(progress).toInt()
+                    val partial = progress - fullCount
+                    for (i in 0 until n) {
+                        if (i < fullCount) {
+                            out[i] = base
+                        } else if (i == fullCount) {
+                            out[i] = scale(base, partial)
+                        } else {
+                            out[i] = 0xFF000000.toInt()
+                        }
+                    }
+                } else if (phase < 0.88) {
+                    for (i in 0 until n) out[i] = base
+                } else {
+                    val fade = 1.0 - (phase - 0.88) / 0.12
+                    for (i in 0 until n) out[i] = scale(base, fade)
+                }
+            }
+
+            Pattern.STROBE -> {
+                val phase = (t % speed) / speed.toDouble()
+                if (phase < 0.45) {
+                    val subPhase = (phase / 0.45) * 3.0
+                    val frac = subPhase - floor(subPhase)
+                    if (frac < 0.55) {
+                        for (i in 0 until n) out[i] = base
+                    }
+                }
+            }
+
+            Pattern.HEARTBEAT -> {
+                val phase = (t % speed) / speed.toDouble()
+                val k = when {
+                    phase < 0.06 -> (phase / 0.06) * 0.75
+                    phase < 0.22 -> 0.75 * exp(-(phase - 0.06) * 16.0)
+                    phase < 0.28 -> ((phase - 0.22) / 0.06)
+                    phase < 0.60 -> exp(-(phase - 0.28) * 9.0)
+                    else -> 0.0
+                }
+                for (i in 0 until n) out[i] = scale(base, k)
+            }
+
+            Pattern.BOUNCE -> {
+                val phase = (t % speed) / speed.toDouble()
+                val pos = (if (phase < 0.5) (phase * 2.0) else ((1.0 - phase) * 2.0)) * (n - 1)
+                for (i in 0 until n) {
+                    val dist = abs(pos - i)
+                    out[i] = scale(base, max(0.0, 1.0 - dist / 1.5))
+                }
+            }
+
+            Pattern.RADAR -> {
+                val phase = (t % speed) / speed.toDouble()
+                val head = phase * n
+                for (i in 0 until n) {
+                    var d = head - i
+                    if (d < 0) d += n
+                    out[i] = scale(base, exp(-d * 0.55))
+                }
+            }
+
+            Pattern.CONVERGE -> {
+                val phase = (t % speed) / speed.toDouble()
+                val travel = if (phase < 0.5) (phase * 2.0) else ((1.0 - phase) * 2.0)
+                val centerDist = (n - 1) / 2.0
+                val p1 = travel * centerDist
+                val p2 = (n - 1) - travel * centerDist
+                val boost = if (travel > 0.85) (travel - 0.85) / 0.15 * 0.35 else 0.0
+                for (i in 0 until n) {
+                    val d1 = abs(p1 - i)
+                    val d2 = abs(p2 - i)
+                    val k = max(max(0.0, 1.0 - d1), max(0.0, 1.0 - d2)) + boost
+                    out[i] = scale(base, min(1.0, k))
+                }
+            }
+
+            Pattern.GLITCH -> {
+                for (i in 0 until n) {
+                    val seed = (i * 3 + 1) * 7
+                    val ledPeriod = max(80L, speed / 2 + (seed % 5) * 80L)
+                    val ledPhase = ((t + seed * 137L) % ledPeriod) / ledPeriod.toDouble()
+                    val spike = if (ledPhase < 0.15) (ledPhase / 0.15) else exp(-(ledPhase - 0.15) * 12.0)
+                    val jitter = if ((t / 40 + i * 5) % 3L == 0L && spike > 0.05) 0.3 else 0.0
+                    val k = (spike * 0.85 + jitter).coerceIn(0.0, 1.0)
+                    out[i] = scale(base, k)
                 }
             }
 

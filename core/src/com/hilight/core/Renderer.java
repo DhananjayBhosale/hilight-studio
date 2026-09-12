@@ -120,6 +120,110 @@ public final class Renderer {
                 break;
             }
 
+            case "meter": {
+                double phase = (t % speed) / (double) speed;
+                if (phase < 0.75) {
+                    double progress = (phase / 0.75) * n;
+                    int fullCount = (int) Math.floor(progress);
+                    double partial = progress - fullCount;
+                    for (int i = 0; i < n; i++) {
+                        if (i < fullCount) {
+                            out[i] = palette[i % palette.length];
+                        } else if (i == fullCount) {
+                            out[i] = scale(palette[i % palette.length], partial);
+                        } else {
+                            out[i] = 0xFF000000;
+                        }
+                    }
+                } else if (phase < 0.88) {
+                    for (int i = 0; i < n; i++) out[i] = palette[i % palette.length];
+                } else {
+                    double fade = 1.0 - (phase - 0.88) / 0.12;
+                    for (int i = 0; i < n; i++) out[i] = scale(palette[i % palette.length], fade);
+                }
+                break;
+            }
+
+            case "strobe": {
+                double phase = (t % speed) / (double) speed;
+                if (phase < 0.45) {
+                    double subPhase = (phase / 0.45) * 3.0;
+                    double frac = subPhase - Math.floor(subPhase);
+                    if (frac < 0.55) {
+                        for (int i = 0; i < n; i++) out[i] = palette[i % palette.length];
+                    }
+                }
+                break;
+            }
+
+            case "heartbeat": {
+                double phase = (t % speed) / (double) speed;
+                double k;
+                if (phase < 0.06) {
+                    k = (phase / 0.06) * 0.75;
+                } else if (phase < 0.22) {
+                    k = 0.75 * Math.exp(-(phase - 0.06) * 16.0);
+                } else if (phase < 0.28) {
+                    k = ((phase - 0.22) / 0.06);
+                } else if (phase < 0.60) {
+                    k = Math.exp(-(phase - 0.28) * 9.0);
+                } else {
+                    k = 0.0;
+                }
+                for (int i = 0; i < n; i++) out[i] = scale(palette[i % palette.length], k);
+                break;
+            }
+
+            case "bounce": {
+                double phase = (t % speed) / (double) speed;
+                double pos = (phase < 0.5 ? (phase * 2.0) : ((1.0 - phase) * 2.0)) * (n - 1);
+                for (int i = 0; i < n; i++) {
+                    double dist = Math.abs(pos - i);
+                    out[i] = scale(palette[i % palette.length], Math.max(0.0, 1.0 - dist / 1.5));
+                }
+                break;
+            }
+
+            case "radar": {
+                double phase = (t % speed) / (double) speed;
+                double head = phase * n;
+                for (int i = 0; i < n; i++) {
+                    double d = head - i;
+                    if (d < 0) d += n;
+                    out[i] = scale(palette[i % palette.length], Math.exp(-d * 0.55));
+                }
+                break;
+            }
+
+            case "converge": {
+                double phase = (t % speed) / (double) speed;
+                double travel = phase < 0.5 ? (phase * 2.0) : ((1.0 - phase) * 2.0);
+                double centerDist = (n - 1) / 2.0;
+                double p1 = travel * centerDist;
+                double p2 = (n - 1) - travel * centerDist;
+                double boost = travel > 0.85 ? (travel - 0.85) / 0.15 * 0.35 : 0.0;
+                for (int i = 0; i < n; i++) {
+                    double d1 = Math.abs(p1 - i);
+                    double d2 = Math.abs(p2 - i);
+                    double k = Math.max(Math.max(0.0, 1.0 - d1), Math.max(0.0, 1.0 - d2)) + boost;
+                    out[i] = scale(palette[i % palette.length], Math.min(1.0, k));
+                }
+                break;
+            }
+
+            case "glitch": {
+                for (int i = 0; i < n; i++) {
+                    int seed = (i * 3 + 1) * 7;
+                    long ledPeriod = Math.max(80, speed / 2 + (seed % 5) * 80);
+                    double ledPhase = ((t + seed * 137L) % ledPeriod) / (double) ledPeriod;
+                    double spike = ledPhase < 0.15 ? (ledPhase / 0.15) : Math.exp(-(ledPhase - 0.15) * 12.0);
+                    double jitter = ((t / 40 + i * 5) % 3 == 0 && spike > 0.05) ? 0.3 : 0.0;
+                    double k = clamp01(spike * 0.85 + jitter);
+                    out[i] = scale(palette[i % palette.length], k);
+                }
+                break;
+            }
+
             case "random": {
                 long interval = Math.max(120, cfg.optLong("randomIntervalMs", 1500));
                 boolean perLed = cfg.optBoolean("randomPerLed", true);

@@ -134,7 +134,7 @@ class RendererCompatibilityTest {
             .put("rendererServiceVersion", 1_004)
         val safeIdle = JSONObject(Bridge.incompatibleRendererSafeIdleJson(10L))
 
-        assertEquals(1_107, expectedService)
+        assertEquals(1_108, expectedService)
         assertEquals(
             ShizukuPeekAction.WAIT_FOR_CALLBACK,
             shizukuPeekAction(1_004, priorPeekReportedExisting = false, retry = false),

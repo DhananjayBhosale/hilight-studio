@@ -13,7 +13,7 @@ public final class RendererContractTest {
     public void compositeServiceVersionCannotReuseReleasedRenderer() {
         int serviceVersion = RendererContract.shizukuServiceVersion(11);
 
-        assertEquals(1107, serviceVersion);
+        assertEquals(1108, serviceVersion);
         assertNotEquals(1205, RendererContract.shizukuServiceVersion(12));
         assertNotEquals(1306, RendererContract.shizukuServiceVersion(13));
         assertNotEquals(1004, serviceVersion);

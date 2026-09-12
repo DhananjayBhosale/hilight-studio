@@ -73,6 +73,20 @@ Leave Latin as-is: HiLight, Shizuku, ADB, LED, JSON, MessagingStyle, shortcutId,
 | `common_off_lowercase` | off | オフ |
 | `common_percent` | %1$d%% | %1$d%% |
 | `device_generic` | this device | この端末 |
+| `pattern_meter` | Meter | メーター |
+| `pattern_strobe` | Strobe | ストロボ |
+| `pattern_heartbeat` | Heartbeat | ハートビート |
+| `pattern_bounce` | Bounce | バウンス |
+| `pattern_radar` | Radar | レーダー |
+| `pattern_converge` | Converge | コンバージ |
+| `pattern_glitch` | Glitch | グリッチ |
+| `cycle_meter` | One progressive fill from 1 to 8 LEDs, then resets. | LED が 1 個ずつ順番に点灯していき、全点灯したあとに消灯します。 |
+| `cycle_strobe` | A rapid triplet strobe burst followed by a pause. | 素早い 3 連ストロボ点滅のあと、一時停止します。 |
+| `cycle_heartbeat` | One double-pulse heartbeat rhythm followed by a rest. | トントンと 2 回連続で拍動し、余韻を残して消えます。 |
+| `cycle_bounce` | One back-and-forth bounce across the LEDs. | 光が LED の端から端まで往復します。 |
+| `cycle_radar` | One smooth rotational radar sweep around the array. | レーダーの光がアレイを滑らかに 1 周スイープします。 |
+| `cycle_converge` | Two beams collide at the centre and burst outwards. | 両端から光が集まって衝突し、外側へ広がります。 |
+| `cycle_glitch` | Erratic digital micro-sparks and cybernetic flickers. | サイバー感のある不規則なデジタル微光とスパークです。 |
 
 ## `strings_inspector.xml`
 
@@ -393,3 +407,13 @@ Leave Latin as-is: HiLight, Shizuku, ADB, LED, JSON, MessagingStyle, shortcutId,
 | `style_import_failed` | That JSON could not be read | その JSON は読み取れませんでした |
 | `style_import_count` | Imported %1$d | %1$d 件読み込みました |
 | `style_export_chooser` | Export presets | プリセットを書き出す |
+
+## `strings_recovery.xml`
+
+| name | English | Japanese |
+|---|---|---|
+| `shizuku_recovery_setting` | Notify when Shizuku stops | Shizuku の停止を通知 |
+| `shizuku_recovery_help` | Show a notification if your previously connected Shizuku renderer becomes unavailable, including after a restart. Requires notification permission. Opens Setup to help you reconnect. | 接続していた Shizuku レンダラーが利用できなくなった場合、再起動後も通知します。通知の許可が必要です。通知をタップすると、再接続のためにセットアップが開きます。 |
+| `shizuku_recovery_channel` | Shizuku connection | Shizuku の接続 |
+| `shizuku_recovery_title` | HiLight needs Shizuku | HiLight に Shizuku が必要です |
+| `shizuku_recovery_body` | Shizuku is unavailable to HiLight. Open Setup to start or reconnect it. | HiLight から Shizuku を利用できません。セットアップを開いて起動または再接続してください。 |

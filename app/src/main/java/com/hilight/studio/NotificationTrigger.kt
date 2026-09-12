@@ -112,7 +112,7 @@ class NotificationTrigger : NotificationListenerService() {
         Log.d(TAG, "posted by ${sbn.packageName}")
         // HiLight's own foreground-watcher notification, which would otherwise light the array through
         // the catch-all rule every time the watcher restarted.
-        if (sbn.packageName == packageName && sbn.notification.channelId == "fg_watch") return
+        if (isOwnStatusNotification(sbn)) return
 
         updateIncomingCall(sbn)
         if (store.deviceSignals.settings.value.callsEnabled && incoming(sbn)) return
@@ -234,6 +234,7 @@ class NotificationTrigger : NotificationListenerService() {
     private fun seedReminders() {
         val active = runCatching { activeNotifications?.sortedBy { it.postTime } }.getOrNull() ?: return
         for (sbn in active) {
+            if (isOwnStatusNotification(sbn)) continue
             runCatching {
                 val info = readMessage(sbn)
                 if (!info.isOngoing && !info.isGroupSummary) {
@@ -251,6 +252,10 @@ class NotificationTrigger : NotificationListenerService() {
         sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY == 0 &&
             isIncomingCallType(sbn.notification.extras.getInt(Notification.EXTRA_CALL_TYPE, 0))
     }.getOrDefault(false)
+
+    private fun isOwnStatusNotification(sbn: StatusBarNotification): Boolean =
+        sbn.packageName == packageName && sbn.notification.channelId in
+            setOf("fg_watch", SHIZUKU_RECOVERY_CHANNEL)
 
     private fun updateIncomingCall(sbn: StatusBarNotification) {
         if (store.deviceSignals.settings.value.callsEnabled && incoming(sbn)) {
