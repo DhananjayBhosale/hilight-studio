@@ -4,8 +4,6 @@
 
 Control the eight-LED HiLight array on Pixel 11 Pro devices.
 
-We use AI tools like Codex, Claude Code, Cursor, and Antigravity to help build HiLight Studio.
-
 [![Android checks](https://github.com/DhananjayBhosale/hilight-studio/actions/workflows/android.yml/badge.svg)](https://github.com/DhananjayBhosale/hilight-studio/actions/workflows/android.yml)
 [![Latest release](https://img.shields.io/github/v/release/DhananjayBhosale/hilight-studio?include_prereleases&label=release)](https://github.com/DhananjayBhosale/hilight-studio/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2f81f7.svg)](LICENSE)
@@ -208,6 +206,8 @@ Build an installable developer APK with:
 ```
 
 The APK is written under `app/build/outputs/apk/debug/`. You may fork the repository, change the source, and build your own version under the terms of the MIT License.
+
+I use AI tools like Codex, Claude Code, Cursor, and Antigravity to build HiLight Studio.
 
 ## Contributing
 
