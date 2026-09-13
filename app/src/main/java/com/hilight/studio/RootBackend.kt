@@ -56,6 +56,7 @@ class RootBackend(private val ctx: Context) : Backend {
     @Volatile private var ownedPid = -1
     @Volatile private var ownedInstanceId = ""
     @Volatile private var starting = false
+    @Volatile private var checkingPresence = false
     @Volatile private var lastError: String? = null
 
     var onStateChanged: (() -> Unit)? = null
@@ -79,10 +80,30 @@ class RootBackend(private val ctx: Context) : Backend {
     fun errorText(): String? = lastError
 
     fun refreshPresence() {
-        if (starting || _state.value == State.RUNNING) return
+        if (starting || checkingPresence) return
+        checkingPresence = true
         Thread({
-            val available = runPlain("command -v su").code == 0
-            update(if (available) State.AVAILABLE else State.UNAVAILABLE)
+            try {
+                if (_state.value == State.RUNNING) {
+                    // An explicit retry may recover a lost renderer without force-closing the app.
+                    // A torn read or a returning heartbeat cancels recovery; AVAILABLE delegates
+                    // restart to Store's existing staged-idle and exact PID/instance stop fence.
+                    repeat(COLD_STATUS_SAMPLES) { sample ->
+                        val current = status()
+                        if (current.alive || !current.identityResolved) return@Thread
+                        if (sample + 1 < COLD_STATUS_SAMPLES) {
+                            Thread.sleep(COLD_STATUS_SAMPLE_INTERVAL_MS)
+                        }
+                    }
+                }
+                val available = runPlain("command -v su").code == 0
+                update(if (available) State.AVAILABLE else State.UNAVAILABLE)
+            } catch (t: Throwable) {
+                lastError = t.message ?: t.javaClass.simpleName
+                update(State.ERROR)
+            } finally {
+                checkingPresence = false
+            }
         }, "hilight-root-check").apply { isDaemon = true }.start()
     }
 

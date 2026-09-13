@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="rules_use_saved_look">保存済みプリセットを使用</string>
+    <string name="rules_saved_look_empty">まずスタイルタブでスタイルを保存してから、ここで選択してください。</string>
+    <string name="rules_gradient_second_colour">グラデーションの2色目</string>
+    <string name="rules_custom_saved_look">LEDごとの色には、保存済みプリセットの色を使用します。</string>
+    <string name="rules_ignore_silent">サイレント通知を無視</string>
+    <string name="rules_ignore_silent_hint">Androidがサイレントまたは重要度が低いと判定した通知をスキップします。</string>
+    <string name="rules_exclude_app">アプリを除外</string>
+    <string name="rules_exclude_app_hint">除外したアプリには、この「すべてのアプリ」ルールを適用しません。アプリ別ルールによる点灯は引き続き可能です。</string>
+    <string name="rules_remove_exclusion">削除</string>
+    <string name="rules_repeat_pending">未確認の通知を繰り返しお知らせ</string>
+    <string name="rules_repeat_pending_hint">通知を消すか端末のロックを解除するまで、短い点灯を繰り返します。サイレント時間と電池に関する制限は引き続き適用されます。端末のスリープ中は、お知らせが遅れることがあります。</string>
+    <string name="rules_repeat_interval">お知らせの間隔</string>
+</resources>

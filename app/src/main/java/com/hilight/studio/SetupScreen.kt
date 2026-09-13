@@ -36,7 +36,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -76,6 +81,8 @@ private const val ADB_PHONE_RESET =
         "kill -TERM ${'$'}p 2>/dev/null || exit 1; live=1; fi; done; " +
         "[ -n \"${'$'}live\" ] && sleep 0.1; i=${'$'}((i + 1)); done; " +
         "[ -z \"${'$'}live\" ] || exit 1"
+
+private const val DHANANJAY_TECH_URL = "https://twitter.com/Dhananjay_Tech"
 
 private const val ADB_PHONE_RESET_CMD =
     "live=1; i=0; while [ ${'$'}i -lt 65 ] && [ ${'$'}live = 1 ]; do live=0; " +
@@ -128,6 +135,7 @@ const val ADB_COMMAND_CMD =
 @Composable
 fun SetupScreen(store: Store) {
     val ctx = LocalContext.current
+    val resources = LocalResources.current
     val status by store.status.collectAsStateWithLifecycle()
     val masterEnabled by store.enabled.collectAsStateWithLifecycle()
     val manualCleanupPending by store.manualLedCleanupPending.collectAsStateWithLifecycle()
@@ -136,6 +144,7 @@ fun SetupScreen(store: Store) {
     val transport by store.transport.collectAsStateWithLifecycle()
     val active by store.activeTransport.collectAsStateWithLifecycle()
     val shizukuState by store.shizuku.state.collectAsStateWithLifecycle()
+    val notifyShizukuLoss by store.shizukuRecovery.enabled.collectAsStateWithLifecycle()
     val rootState by store.root.state.collectAsStateWithLifecycle()
     val priority by store.priority.collectAsStateWithLifecycle()
     val dynamicColor by store.dynamicColor.collectAsStateWithLifecycle()
@@ -143,6 +152,8 @@ fun SetupScreen(store: Store) {
     val quietEnabled by store.quietEnabled.collectAsStateWithLifecycle()
     val quietStart by store.quietStart.collectAsStateWithLifecycle()
     val quietEnd by store.quietEnd.collectAsStateWithLifecycle()
+    val quietByDay by store.quietByDay.collectAsStateWithLifecycle()
+    val quietDays by store.quietDays.collectAsStateWithLifecycle()
     val batteryGuard by store.batteryGuard.collectAsStateWithLifecycle()
     val batteryMinPct by store.batteryMinPct.collectAsStateWithLifecycle()
     val saverGuard by store.saverGuard.collectAsStateWithLifecycle()
@@ -155,6 +166,12 @@ fun SetupScreen(store: Store) {
     val faceDownNoticeAccepted by store.faceDownNoticeAccepted.collectAsStateWithLifecycle()
     val faceDownState by store.faceDownState.collectAsStateWithLifecycle()
     val faceDownSensorAvailable = remember(ctx) { ForegroundWatcher.hasFaceDownSensor(ctx) }
+    val glowSuppression = suppression?.takeIf {
+        it.settingsSection() == SettingsSuppressionSection.GLOW
+    }
+    val pauseSuppression = suppression?.takeIf {
+        it.settingsSection() == SettingsSuppressionSection.PAUSE
+    }
 
     var notifAccess by remember { mutableStateOf(hasNotificationAccess(ctx)) }
     var usageAccess by remember { mutableStateOf(ForegroundWatcher.hasUsageAccess(ctx)) }
@@ -163,9 +180,35 @@ fun SetupScreen(store: Store) {
     var checkingForUpdates by remember { mutableStateOf(false) }
     var updateResult by remember { mutableStateOf<UpdateCheckResult?>(null) }
     var selfTestCountdown by remember { mutableIntStateOf(0) }
+    var selfTestWarning by remember { mutableStateOf<String?>(null) }
     var confirmingFaceDown by remember { mutableStateOf(false) }
     val updateScope = rememberCoroutineScope()
     val conversations by store.conversations.collectAsStateWithLifecycle()
+
+    val testWarning: (Boolean) -> String? = { scheduling ->
+        val reason = store.notificationTestSuppressionReason(scheduling)
+        val notificationManager = ctx.getSystemService(android.app.NotificationManager::class.java)
+        when {
+            !store.enabled.value -> resources.getString(R.string.setup_test_blocked_hilight_off)
+            !hasNotificationAccess(ctx) -> resources.getString(R.string.setup_test_needs_listener)
+            store.respectDnd.value && store.deviceSignals.inDoNotDisturb ->
+                resources.getString(R.string.setup_test_blocked_dnd)
+            !notificationManager.areNotificationsEnabled() ||
+                notificationManager.getNotificationChannel("selftest")?.importance ==
+                android.app.NotificationManager.IMPORTANCE_NONE ->
+                resources.getString(R.string.setup_test_needs_notifications)
+            reason != null -> resources.getString(
+                R.string.test_blocked_by_guard, resources.getString(reason.shortRes),
+            )
+            else -> null
+        }
+    }
+    val postSelfTest: () -> Unit = {
+        val warning = testWarning(false)
+        selfTestWarning = warning
+        if (warning == null) postSelfTestNotification(ctx.applicationContext)
+        else Toast.makeText(ctx.applicationContext, warning, Toast.LENGTH_LONG).show()
+    }
 
     val checkForUpdates: () -> Unit = {
         checkingForUpdates = true
@@ -184,6 +227,20 @@ fun SetupScreen(store: Store) {
             store.shizuku.refresh()
             delay(1500)
         }
+    }
+
+    val attribution = stringResource(R.string.setup_attribution)
+    val attributionLink = stringResource(R.string.setup_attribution_external)
+    PixelCard(
+        modifier = Modifier.semantics(mergeDescendants = true) {
+            role = Role.Button
+            contentDescription = "$attribution. $attributionLink"
+        },
+        tone = 0,
+        onClick = { openExternalUrl(ctx, DHANANJAY_TECH_URL) },
+    ) {
+        SectionTitle(attribution)
+        Caption(attributionLink)
     }
 
     PixelCard(tone = 2) {
@@ -210,8 +267,10 @@ fun SetupScreen(store: Store) {
 
     PixelCard {
         SectionTitle(
-            stringResource(R.string.setup_dark_title),
-            trailing = { suppression?.let { LivePill(stringResource(it.shortRes), ok = false) } },
+            stringResource(R.string.setup_glow_conditions_title),
+            trailing = {
+                glowSuppression?.let { LivePill(stringResource(it.shortRes), ok = false) }
+            },
         )
         ToggleRow(stringResource(R.string.setup_screen_off_only), screenOffOnly) {
             store.setScreenOffOnly(it)
@@ -254,21 +313,52 @@ fun SetupScreen(store: Store) {
                 )
             }
         }
-        // The toggle and the suppression pill above say the same two words about the same thing, so
-        // they share the one string.
+    }
+
+    PixelCard {
+        SectionTitle(
+            stringResource(R.string.setup_pause_conditions_title),
+            trailing = {
+                pauseSuppression?.let { LivePill(stringResource(it.shortRes), ok = false) }
+            },
+        )
         ToggleRow(stringResource(R.string.suppression_quiet_hours), quietEnabled) {
             store.setQuietHours(it)
         }
         if (quietEnabled) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                FilledTonalButton(
-                    onClick = { pickTime(ctx, quietStart) { store.setQuietHours(true, startMin = it) } },
-                    modifier = Modifier.weight(1f),
-                ) { ButtonLabel(stringResource(R.string.setup_quiet_from, clock(quietStart))) }
-                FilledTonalButton(
-                    onClick = { pickTime(ctx, quietEnd) { store.setQuietHours(true, endMin = it) } },
-                    modifier = Modifier.weight(1f),
-                ) { ButtonLabel(stringResource(R.string.setup_quiet_until, clock(quietEnd))) }
+            ToggleRow(stringResource(R.string.setup_quiet_by_day), quietByDay, onChange = store::setQuietByDay)
+            if (quietByDay) {
+                Caption(stringResource(R.string.setup_quiet_by_day_note))
+                val dayNames = java.text.DateFormatSymbols.getInstance().weekdays
+                quietDays.forEachIndexed { day, window ->
+                    val calendarDay = (day + 1) % 7 + 1
+                    ToggleRow(dayNames[calendarDay], window.enabled) {
+                        store.setQuietDay(day, window.copy(enabled = it))
+                    }
+                    if (window.enabled) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            FilledTonalButton(
+                                onClick = { pickTime(ctx, window.startMin) { store.setQuietDay(day, window.copy(startMin = it)) } },
+                                modifier = Modifier.weight(1f),
+                            ) { ButtonLabel(stringResource(R.string.setup_quiet_from, clock(window.startMin))) }
+                            FilledTonalButton(
+                                onClick = { pickTime(ctx, window.endMin) { store.setQuietDay(day, window.copy(endMin = it)) } },
+                                modifier = Modifier.weight(1f),
+                            ) { ButtonLabel(stringResource(R.string.setup_quiet_until, clock(window.endMin))) }
+                        }
+                    }
+                }
+            } else {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    FilledTonalButton(
+                        onClick = { pickTime(ctx, quietStart) { store.setQuietHours(true, startMin = it) } },
+                        modifier = Modifier.weight(1f),
+                    ) { ButtonLabel(stringResource(R.string.setup_quiet_from, clock(quietStart))) }
+                    FilledTonalButton(
+                        onClick = { pickTime(ctx, quietEnd) { store.setQuietHours(true, endMin = it) } },
+                        modifier = Modifier.weight(1f),
+                    ) { ButtonLabel(stringResource(R.string.setup_quiet_until, clock(quietEnd))) }
+                }
             }
             ToggleRow(stringResource(R.string.setup_quiet_dim), quietDim) { store.setQuietDim(it) }
             if (quietDim) {
@@ -295,6 +385,8 @@ fun SetupScreen(store: Store) {
             Caption(stringResource(R.string.setup_battery_note))
         }
     }
+
+    DeviceSignalsSection(store)
 
     if (confirmingFaceDown) {
         FaceDownConsentDialog(
@@ -337,6 +429,12 @@ fun SetupScreen(store: Store) {
                     }
                 )
             )
+            if (rootState == RootBackend.State.RUNNING && !status.alive) {
+                Caption(stringResource(R.string.setup_led_cleanup_renderer_unavailable))
+                TextButton(onClick = store::retryRoot) {
+                    ButtonLabel(stringResource(R.string.setup_root_retry))
+                }
+            }
         }
     } else {
         PixelCard(tone = 2) {
@@ -372,6 +470,12 @@ fun SetupScreen(store: Store) {
                 if (t != Transport.SHIZUKU) AdbCard(ctx)
             }
         }
+    }
+
+    PixelCard {
+        ToggleRow(stringResource(R.string.shizuku_recovery_setting), notifyShizukuLoss,
+            onChange = store::setNotifyShizukuLoss)
+        Caption(stringResource(R.string.shizuku_recovery_help))
     }
 
     PixelCard {
@@ -467,7 +571,7 @@ fun SetupScreen(store: Store) {
         val available = updateResult as? UpdateCheckResult.Available
         if (available != null && !checkingForUpdates) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Button(onClick = { openRelease(ctx, available.release.pageUrl) }) {
+                Button(onClick = { openExternalUrl(ctx, available.release.pageUrl) }) {
                     ButtonLabel(stringResource(R.string.setup_updates_view_release))
                 }
                 TextButton(onClick = checkForUpdates) {
@@ -492,9 +596,10 @@ fun SetupScreen(store: Store) {
     PixelCard {
         SectionTitle(stringResource(R.string.setup_test_title))
         Caption(stringResource(R.string.setup_test_body))
+        selfTestWarning?.let { Caption(it) }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             FilledTonalButton(
-                onClick = { postSelfTestNotification(ctx.applicationContext) },
+                onClick = postSelfTest,
                 enabled = selfTestCountdown == 0,
                 modifier = Modifier.weight(1f),
             ) {
@@ -505,15 +610,20 @@ fun SetupScreen(store: Store) {
                     // State changes synchronously, so a second queued tap cannot launch another job
                     // before Compose has redrawn the disabled button.
                     if (selfTestCountdown != 0) return@TextButton
+                    val warning = testWarning(true)
+                    selfTestWarning = warning
+                    if (warning != null) {
+                        Toast.makeText(ctx.applicationContext, warning, Toast.LENGTH_LONG).show()
+                        return@TextButton
+                    }
                     selfTestCountdown = 5
-                    val appContext = ctx.applicationContext
                     updateScope.launch {
                         try {
                             for (remaining in 5 downTo 1) {
                                 selfTestCountdown = remaining
                                 delay(1_000)
                             }
-                            postSelfTestNotification(appContext)
+                            postSelfTest()
                         } finally {
                             selfTestCountdown = 0
                         }
@@ -770,7 +880,7 @@ private fun openShizukuListing(ctx: Context) {
         .onFailure { Toast.makeText(ctx, R.string.setup_no_browser, Toast.LENGTH_SHORT).show() }
 }
 
-private fun openRelease(ctx: Context, pageUrl: String) {
+private fun openExternalUrl(ctx: Context, pageUrl: String) {
     val uri = Uri.parse(pageUrl)
     runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, uri)) }
         .onFailure { Toast.makeText(ctx, R.string.setup_no_browser, Toast.LENGTH_SHORT).show() }

@@ -1,0 +1,12 @@
+<resources>
+    <!-- "Notify when Shizuku stops" -->
+    <string name="shizuku_recovery_setting">Shizuku の停止を通知</string>
+    <!-- "Show a notification if your previously connected Shizuku renderer becomes unavailable, including after a restart. Requires notification permission. Opens Setup to help you reconnect." -->
+    <string name="shizuku_recovery_help">接続していた Shizuku レンダラーが利用できなくなった場合、再起動後も通知します。通知の許可が必要です。通知をタップすると、再接続のためにセットアップが開きます。</string>
+    <!-- "Shizuku connection" -->
+    <string name="shizuku_recovery_channel">Shizuku の接続</string>
+    <!-- "HiLight needs Shizuku" -->
+    <string name="shizuku_recovery_title">HiLight に Shizuku が必要です</string>
+    <!-- "Shizuku is unavailable to HiLight. Open Setup to start or reconnect it." -->
+    <string name="shizuku_recovery_body">HiLight から Shizuku を利用できません。セットアップを開いて起動または再接続してください。</string>
+</resources>

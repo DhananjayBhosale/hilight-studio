@@ -2,7 +2,48 @@
 
 All notable changes to HiLight Studio are documented here.
 
-## [Unreleased]
+## [1.0.13-experimental] - 2026-09-12
+
+- Fixed two root-recovery blockers: a departed renderer's PID being reused by an unrelated process,
+  and AUTO remaining on an ADB fallback after the root renderer has safely exited and root is available
+  again. Exact process ownership and successor cleanup remain required. The overnight Magisk report
+  still needs confirmation on the affected phone.
+- Added an optional **Notify when Shizuku stops** setting. After a previously working connection is
+  lost, a notification opens Setup. An opted-in user can also receive a recovery notice after reboot;
+  this does not start a renderer or request root permission at boot. Notification permission is required.
+- Added Meter, Strobe, Heartbeat, Bounce, Radar, Converge and Glitch animations, adapted from
+  [PR #39](https://github.com/DhananjayBhosale/hilight-studio/pull/39) by @saboooor. Existing duration,
+  brightness, rest and cleanup limits still apply. Renderer implementation revision is now 8.
+- Preserved existing rules, saved looks, quiet hours and notification behavior. See the
+  [September 12 feedback audit](docs/FEEDBACK-2026-09-12.md) for reviewed requests and remaining limits.
+
+## [1.0.12-experimental] - 2026-09-07
+
+- Fixed helper heartbeat scheduling and freshness across wall-clock corrections, and added safe
+  retry for a disconnected root renderer. Renderer implementation revision is now 7.
+- Fixed automatic Shizuku routing after replacing an older renderer during an app update.
+- Added complete saved presets and gradient endpoints to app rules, preserving existing rule looks.
+- Added silent-notification filtering and app exclusions for the Any app rule.
+- Added optional brief reminders for pending notifications, with dismissal/unlock cleanup and
+  existing quiet/battery guards. Device sleep may delay reminders.
+- Added optional day-specific quiet hours while retaining the existing daily schedule.
+- Added optional charging indicators and DND activation signals, plus incoming-call indication for
+  apps that supply Android's explicit incoming-call notification marker.
+- Made delayed notification tests report known blockers before their countdown, including DND.
+- Clarified that camera/microphone activity does not identify video recording. The one-minute
+  activity limit remains unchanged. See [the complete feedback audit](docs/FEEDBACK-2026-09.md).
+
+## [1.0.11-experimental] - 2026-09-02
+
+- Kept an ordinary notification alert running when the notification itself wakes the screen, while
+  still stopping it on unlock and still stopping per-rule **Only while the screen is off** alerts as
+  soon as the screen wakes. This addresses the lifecycle sequence reported for Discord's first alert
+  and was confirmed working by the reporter on September 6.
+- Added a clear message when an in-app preview or end-to-end notification test is currently blocked
+  by quiet hours, Battery Saver, low battery, or the applicable face-down guard.
+- Split the former **When to stay dark** settings into **When HiLight can glow** and **When HiLight
+  should pause**, with each live suppression reason shown beside the section that controls it.
+- Added a compact Dhananjay Tech attribution link at the top of Settings.
 
 ## [1.0.10-experimental] - 2026-08-29
 

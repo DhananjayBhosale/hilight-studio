@@ -1,5 +1,7 @@
 package com.hilight.core;
 
+import android.os.SystemClock;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -262,7 +264,8 @@ public final class AdbHelper {
             Log.i("watching bridge as " + owner);
             long lastStatus = 0;
             while (true) {
-                long now = System.currentTimeMillis();
+                // Wall-clock corrections must not suspend heartbeats until the old time catches up.
+                long now = SystemClock.elapsedRealtime();
                 reloadIfChanged();
                 if (now - lastStatus >= STATUS_MS) {
                     lastStatus = now;
@@ -371,6 +374,7 @@ public final class AdbHelper {
             JSONObject status = new JSONObject(engine.status());
             status.put("owner", owner);
             status.put("rendererInstanceId", instanceId);
+            status.put("heartbeatElapsedRealtimeMs", now);
             byte[] data = status.toString().getBytes(StandardCharsets.UTF_8);
             try (FileOutputStream f = new FileOutputStream(statusFile, false)) {
                 f.write(data);

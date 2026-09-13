@@ -11,6 +11,12 @@
 -->
 <resources>
 
+    <!-- Compact project attribution at the top of Settings. -->
+    <!-- "Made with passion and care by Dhananjay Tech" -->
+    <string name="setup_attribution">Dhananjay Tech が情熱と心を込めて作りました</string>
+    <!-- "Opens Dhananjay Tech on X" -->
+    <string name="setup_attribution_external">X で Dhananjay Tech を開きます</string>
+
     <!-- Auto-off -->
     <!-- "Auto-off" -->
     <string name="setup_auto_off_title">自動オフ</string>
@@ -36,9 +42,11 @@
          the phone sleeps. You can turn this back down at any time." -->
     <string name="setup_warn_long_confirm_body">最大 5 分の連続点灯は電池を消費します。端末がスリープに入るとアニメーションは点灯したまま停止します。設定はいつでも戻せます。</string>
 
-    <!-- When to stay dark -->
-    <!-- "When to stay dark" -->
-    <string name="setup_dark_title">消灯する条件</string>
+    <!-- Conditions that enable a glow are distinct from conditions that pause output. -->
+    <!-- "When HiLight can glow" -->
+    <string name="setup_glow_conditions_title">HiLight が点灯できる条件</string>
+    <!-- "When HiLight should pause" -->
+    <string name="setup_pause_conditions_title">HiLight を一時停止する条件</string>
     <!-- "Only while the screen is off" -->
     <string name="setup_screen_off_only">画面消灯時のみ</string>
     <!-- "Only while the phone is face down" -->
@@ -229,6 +237,8 @@
     <string name="setup_test_delay_button">5 秒後に送信</string>
     <!-- "Posting in %1$ds…" -->
     <string name="setup_test_countdown">あと%1$d秒で送信…</string>
+    <!-- "HiLight is off. Turn it on before posting a test notification." -->
+    <string name="setup_test_blocked_hilight_off">HiLight はオフです。テスト通知を送る前にオンにしてください。</string>
     <!-- "Self test" -->
     <string name="setup_selftest_channel">セルフテスト</string>
     <!-- "HiLight self test" -->

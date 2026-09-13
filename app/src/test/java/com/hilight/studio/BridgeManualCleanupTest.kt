@@ -70,6 +70,67 @@ class BridgeManualCleanupTest {
     }
 
     @Test
+    fun `monotonic heartbeat survives wall clock correction but expires without new writes`() {
+        val cache = Bridge.BridgeStatusCache()
+        val heartbeat = currentHeartbeat(timestampMs = 1_300_000_000L)
+            .put("heartbeatElapsedRealtimeMs", 50_000L)
+            .toString()
+
+        val backwards = cache.read(heartbeat, 96_566_118L, 50_100L)
+        val forwards = cache.read(heartbeat, 2_500_000_000L, 51_000L)
+        val torn = cache.read("{", 96_566_118L, 52_000L)
+        val expired = cache.read(heartbeat, 96_566_118L, 54_001L)
+
+        assertTrue(backwards.alive)
+        assertEquals(100L, backwards.ageMs)
+        assertTrue(forwards.alive)
+        assertEquals(1_000L, forwards.ageMs)
+        assertTrue(torn.alive)
+        assertFalse(torn.identityResolved)
+        assertFalse(expired.alive)
+        assertEquals("adb-instance-1", expired.rendererInstanceId)
+    }
+
+    @Test
+    fun `future monotonic heartbeat retains ownership without proving liveness after reboot`() {
+        val heartbeat = currentHeartbeat(timestampMs = 10_000L)
+            .put("heartbeatElapsedRealtimeMs", 50_000L)
+            .toString()
+        val previousBoot = Bridge.BridgeStatusCache().read(heartbeat, 10_100L, 1_000L)
+
+        assertFalse(previousBoot.alive)
+        assertEquals(4321, previousBoot.pid)
+        assertTrue(previousBoot.identityResolved)
+    }
+
+    @Test
+    fun `legacy heartbeat uses wall clock even when monotonic reader is available`() {
+        val heartbeat = currentHeartbeat(timestampMs = 10_000L).toString()
+        val status = Bridge.BridgeStatusCache().read(heartbeat, 10_100L, 1_000_000L)
+
+        assertTrue(status.alive)
+        assertEquals(100L, status.ageMs)
+    }
+
+    @Test
+    fun `monotonic heartbeat refresh cannot remove the pinned fatal cleanup fence`() {
+        val cache = Bridge.BridgeStatusCache()
+        val fatal = currentHeartbeat(timestampMs = 1_300_000_000L)
+            .put("heartbeatElapsedRealtimeMs", 50_000L)
+            .put("blackClearUnreleasedFatal", true)
+        cache.read(fatal.toString(), 1_300_000_100L, 50_100L)
+        val later = JSONObject(fatal.toString())
+            .put("ts", 100_000L)
+            .put("heartbeatElapsedRealtimeMs", 60_000L)
+            .put("blackClearUnreleasedFatal", false)
+        val retained = cache.read(later.toString(), 100_100L, 60_100L)
+
+        assertTrue(retained.alive)
+        assertTrue(retained.blackClearUnreleasedFatal)
+        assertEquals(100L, retained.ageMs)
+    }
+
+    @Test
     fun `torn status read retains last good process until heartbeat is explicitly stale`() {
         val cache = Bridge.BridgeStatusCache()
         val heartbeat = currentHeartbeat(timestampMs = 10_000L).toString()

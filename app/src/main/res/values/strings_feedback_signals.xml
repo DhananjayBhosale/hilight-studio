@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="device_signals_title">Device signals</string>
+    <string name="device_signals_description">Optional light signals. Quiet hours, battery limits and face-down restrictions still apply. Notification access is needed for DND and incoming calls.</string>
+    <string name="device_signals_charging">Charging indicator</string>
+    <string name="device_signals_charging_description">While plugged in, blink for 2 seconds every 15 seconds. At your charged level, show a steady color for 2 seconds instead. Signals may pause while the phone sleeps or another alert is playing. When Respect DND is enabled, charging signals pause until notification access supplies the current DND status.</string>
+    <string name="device_signals_charging_color">Charging color</string>
+    <string name="device_signals_charged_color">Charged color</string>
+    <string name="device_signals_full_percent">Charged level: %1$d%%</string>
+    <string name="device_signals_dnd">DND activation signal</string>
+    <string name="device_signals_dnd_description">Pulse for 2 seconds when Do Not Disturb switches on, including Flip to Shhh when it activates DND. This activation signal can play during DND.</string>
+    <string name="device_signals_calls">Incoming call signal</string>
+    <string name="device_signals_calls_description">Signal Android notifications explicitly marked as incoming calls. Support depends on the calling app; not every phone or internet calling app supplies this information.</string>
+</resources>

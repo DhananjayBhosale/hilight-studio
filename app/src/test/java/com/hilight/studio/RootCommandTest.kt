@@ -1,10 +1,78 @@
 package com.hilight.studio
 
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
+import java.util.concurrent.TimeUnit
 
 class RootCommandTest {
+
+    @get:Rule val temporary = TemporaryFolder()
+
+    private fun runStop(processes: Map<Int, List<String>>): Pair<Int, String> {
+        val proc = temporary.newFolder()
+        for ((pid, args) in processes) {
+            val dir = java.io.File(proc, pid.toString()).apply { mkdir() }
+            java.io.File(dir, "cmdline").writeBytes(
+                if (args.isEmpty()) byteArrayOf() else
+                    (args.joinToString("\u0000") + "\u0000").toByteArray(),
+            )
+        }
+        val signals = temporary.newFile()
+        // Exercise the actual phone-shell command against a private /proc fixture. The shell
+        // function records TERM and removes only the fixture; no host process can be signalled.
+        val script = "procRoot='${proc.absolutePath}'; signals='${signals.absolutePath}'; " +
+            "kill() { printf '%s\\n' \"\$*\" >> \"\$signals\"; " +
+            "rm -r \"\$procRoot/\$2\"; }; " +
+            RootCommand.stop(4321, "root", "root-1").replace("/proc/", "\"\$procRoot\"/")
+        val process = ProcessBuilder("sh", "-c", script).redirectErrorStream(true).start()
+        assertTrue("stop command must finish", process.waitFor(10, TimeUnit.SECONDS))
+        return process.exitValue() to signals.readText()
+    }
+
+    private fun helper(instance: String) = listOf(
+        "app_process", "/", "com.hilight.core.AdbHelper", "--owner", "root", "--instance", instance,
+    )
+
+    @Test
+    fun `expired renderer pid reused by an unrelated process is not killed or a permanent blocker`() {
+        val (code, signals) = runStop(mapOf(4321 to listOf("other-application")))
+        assertEquals(0, code)
+        assertEquals("", signals)
+    }
+
+    @Test
+    fun `reused pid does not authorize stopping a different helper instance`() {
+        val (code, signals) = runStop(mapOf(4321 to helper("root-10")))
+        assertEquals(1, code)
+        assertEquals("", signals)
+    }
+
+    @Test
+    fun `a different surviving helper still blocks recovery after pid reuse`() {
+        val (code, signals) = runStop(mapOf(
+            4321 to listOf("other-application"), 9876 to helper("root-2"),
+        ))
+        assertEquals(1, code)
+        assertEquals("", signals)
+    }
+
+    @Test
+    fun `an unreadable or empty identity cannot prove exit`() {
+        val (code, signals) = runStop(mapOf(4321 to emptyList()))
+        assertEquals(1, code)
+        assertEquals("", signals)
+    }
+
+    @Test
+    fun `the exact renderer receives term before recovery succeeds`() {
+        val (code, signals) = runStop(mapOf(4321 to helper("root-1")))
+        assertEquals(0, code)
+        assertEquals("-TERM 4321\n", signals)
+    }
 
     @Test
     fun `root launch is detached and explicitly owned`() {

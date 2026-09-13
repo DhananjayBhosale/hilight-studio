@@ -103,6 +103,8 @@ data class MessageInfo(
      * actually a bug worth reporting.
      */
     val readFailed: Boolean = false,
+    /** Set from Android notification ranking; unknown ranking preserves existing behavior. */
+    val isSilent: Boolean = false,
 ) {
     /**
      * True when this looks like a chat the user could write a per-contact rule for.
@@ -268,7 +270,12 @@ object ConversationMatch {
      */
     fun resolveWith(rules: List<AppRule>, info: MessageInfo): Pair<AppRule, MatchStrength>? {
         if (info.isGroupSummary) return null
-        val candidates = rules.filter { it.enabled && it.trigger == Trigger.NOTIFICATION }
+        val candidates = rules.filter {
+            it.enabled && it.trigger == Trigger.NOTIFICATION &&
+                !(it.isCatchAll && info.pkg in it.excludedPackages)
+        }
+        fun accepted(rule: AppRule, strength: MatchStrength): Pair<AppRule, MatchStrength>? =
+            if (rule.ignoreSilent && info.isSilent) null else rule to strength
 
         // A conversation rule on the catch-all package means "this person, in whichever app they
         // reach me" — worth having, since the same person turns up on WhatsApp and on SMS. A rule
@@ -279,16 +286,16 @@ object ConversationMatch {
                 strength(rule, info)?.let { s -> Triple(rule, s, if (rule.pkg == info.pkg) 1 else 0) }
             }
             .maxWithOrNull(compareBy({ it.second.score }, { it.third }))
-        if (best != null) return best.first to best.second
+        if (best != null) return accepted(best.first, best.second)
 
         candidates.firstOrNull { it.pkg == info.pkg && !it.isConversationRule }
-            ?.let { return it to MatchStrength.APP }
+            ?.let { return accepted(it, MatchStrength.APP) }
 
         // Note that a catch-all rule still fires for everything this app's conversation rules did not
         // match. That is intended — the catch-all is the "everything else" colour — but it does make a
         // per-chat rule look as though it fires for everyone until the catch-all is turned off.
         return candidates.firstOrNull { it.isCatchAll && !it.isConversationRule }
-            ?.let { it to MatchStrength.CATCH_ALL }
+            ?.let { accepted(it, MatchStrength.CATCH_ALL) }
     }
 
     /**

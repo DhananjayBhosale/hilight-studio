@@ -1,0 +1,14 @@
+<resources>
+    <string name="rules_use_saved_look">Use saved preset</string>
+    <string name="rules_saved_look_empty">Save a look in the Style tab first, then choose it here.</string>
+    <string name="rules_gradient_second_colour">Second gradient colour</string>
+    <string name="rules_custom_saved_look">Per-LED colours come from your saved preset.</string>
+    <string name="rules_ignore_silent">Ignore silent notifications</string>
+    <string name="rules_ignore_silent_hint">Skip notifications Android marks as silent or low importance.</string>
+    <string name="rules_exclude_app">Exclude an app</string>
+    <string name="rules_exclude_app_hint">Excluded apps skip this Any app rule. Their own rules can still light up.</string>
+    <string name="rules_remove_exclusion">Remove</string>
+    <string name="rules_repeat_pending">Remind while notification is pending</string>
+    <string name="rules_repeat_pending_hint">Show brief reminders until the notification is dismissed or you unlock the phone. Quiet hours and battery limits still apply. Reminders may be delayed while the phone sleeps.</string>
+    <string name="rules_repeat_interval">Time between reminders</string>
+</resources>

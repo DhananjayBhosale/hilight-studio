@@ -55,6 +55,40 @@ class GuardStateTest {
             Suppression.LOW_BATTERY,
             batteryGate.outputSuppression(true, AlertSource.PREVIEW),
         )
+        assertNull(faceGate.previewSuppressionReason())
+        assertEquals(Suppression.LOW_BATTERY, batteryGate.previewSuppressionReason())
+    }
+
+    @Test
+    fun `preview warnings cover quiet hours saver and low battery`() {
+        assertEquals(
+            Suppression.QUIET_HOURS,
+            GuardState(quietEnabled = true, inQuietWindow = true).previewSuppressionReason(),
+        )
+        assertEquals(
+            Suppression.POWER_SAVER,
+            GuardState(powerSaveMode = true).previewSuppressionReason(),
+        )
+        assertEquals(
+            Suppression.LOW_BATTERY,
+            GuardState(batteryPct = 1).previewSuppressionReason(),
+        )
+        assertNull(
+            GuardState(
+                quietEnabled = true,
+                quietDim = true,
+                inQuietWindow = true,
+            ).previewSuppressionReason(),
+        )
+    }
+
+    @Test
+    fun `settings suppression reasons route to their owning section`() {
+        assertEquals(SettingsSuppressionSection.GLOW, Suppression.SCREEN_ON.settingsSection())
+        assertEquals(SettingsSuppressionSection.GLOW, Suppression.NOT_FACE_DOWN.settingsSection())
+        assertEquals(SettingsSuppressionSection.PAUSE, Suppression.QUIET_HOURS.settingsSection())
+        assertEquals(SettingsSuppressionSection.PAUSE, Suppression.POWER_SAVER.settingsSection())
+        assertEquals(SettingsSuppressionSection.PAUSE, Suppression.LOW_BATTERY.settingsSection())
     }
 
     @Test
@@ -139,6 +173,7 @@ class GuardStateTest {
         val s = GuardState(screenOffOnly = true, screenOn = true)
         assertEquals(Suppression.SCREEN_ON, s.suppression())
         assertNull(s.alertSuppression())
+        assertNull(s.outputSuppression(true, AlertSource.NOTIFICATION))
     }
 
     @Test

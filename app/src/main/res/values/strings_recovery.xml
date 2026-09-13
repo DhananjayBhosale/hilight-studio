@@ -1,0 +1,7 @@
+<resources>
+    <string name="shizuku_recovery_setting">Notify when Shizuku stops</string>
+    <string name="shizuku_recovery_help">Show a notification if your previously connected Shizuku renderer becomes unavailable, including after a restart. Requires notification permission. Opens Setup to help you reconnect.</string>
+    <string name="shizuku_recovery_channel">Shizuku connection</string>
+    <string name="shizuku_recovery_title">HiLight needs Shizuku</string>
+    <string name="shizuku_recovery_body">Shizuku is unavailable to HiLight. Open Setup to start or reconnect it.</string>
+</resources>

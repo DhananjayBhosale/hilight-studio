@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="device_signals_title">端末の状態を光で通知</string>
+    <string name="device_signals_description">必要に応じて有効にできる光の通知です。サイレント時間、電池に関する制限、端末を伏せたときのみの制限は引き続き適用されます。サイレントモードと着信の通知には、通知へのアクセスが必要です。</string>
+    <string name="device_signals_charging">充電状態の通知</string>
+    <string name="device_signals_charging_description">電源に接続している間、15秒ごとに2秒間点滅します。設定した充電残量に達すると、代わりに指定した色で2秒間点灯します。端末のスリープ中や他の通知の点灯中は、一時停止する場合があります。サイレントモードに従う設定が有効な場合、通知へのアクセスで現在のサイレントモードの状態を確認できるまで、充電状態の通知は停止します。</string>
+    <string name="device_signals_charging_color">充電中の色</string>
+    <string name="device_signals_charged_color">充電完了時の色</string>
+    <string name="device_signals_full_percent">充電完了とする残量：%1$d%%</string>
+    <string name="device_signals_dnd">サイレントモード開始時の通知</string>
+    <string name="device_signals_dnd_description">サイレントモードがオンになると、2秒間脈打つように点灯します。「ふせるだけでサイレント」がサイレントモードを有効にした場合も対象です。この開始時の通知は、サイレントモード中も点灯できます。</string>
+    <string name="device_signals_calls">着信の通知</string>
+    <string name="device_signals_calls_description">Androidで着信として明示されている通知を光で知らせます。対応状況は通話アプリによって異なり、電話やインターネット通話のアプリがすべてこの情報を提供するとは限りません。</string>
+</resources>
