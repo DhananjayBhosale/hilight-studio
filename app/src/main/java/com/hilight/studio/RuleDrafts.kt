@@ -5,8 +5,9 @@ internal fun nextWholeAppRule(
     pkg: String,
     label: String,
     existing: List<AppRule>,
+    initialColor: Int = AppRule.DEFAULT_COLOR,
 ): AppRule? {
-    val notification = AppRule(pkg = pkg, label = label, trigger = Trigger.NOTIFICATION)
+    val notification = AppRule(pkg = pkg, label = label, trigger = Trigger.NOTIFICATION, color = initialColor)
     val foreground = notification.copy(trigger = Trigger.FOREGROUND)
     return listOf(notification, foreground).firstOrNull { candidate ->
         existing.none { it.id == candidate.id }

@@ -4,6 +4,7 @@ import android.widget.Toast
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,8 +17,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -30,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalContext
@@ -89,6 +95,10 @@ fun ColorPicker(
     // Callers editing a named colour pass their own heading, so this stays a String. The default is
     // read from resources, which a composable default expression is allowed to do.
     label: String = stringResource(R.string.widget_colour),
+    appColor: Int? = null,
+    appIcon: ImageBitmap? = null,
+    isAppColorSelected: Boolean = false,
+    onSelectAppColor: (() -> Unit)? = null,
 ) {
     val hsv = FloatArray(3).also { android.graphics.Color.colorToHSV(color, it) }
     val haptics = LocalHapticFeedback.current
@@ -99,7 +109,19 @@ fun ColorPicker(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(label, style = MaterialTheme.typography.bodyLarge)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(label, style = MaterialTheme.typography.bodyLarge)
+                if (isAppColorSelected || (appColor != null && color == appColor)) {
+                    Text(
+                        stringResource(R.string.rules_app_colour),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
             Box(
                 Modifier
                     .size(30.dp)
@@ -111,9 +133,62 @@ fun ColorPicker(
         Row(
             Modifier.horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
+            if (appColor != null) {
+                val selected = isAppColorSelected || (onSelectAppColor == null && appColor == color)
+                val scale by animateFloatAsState(
+                    if (selected) 1.16f else 1f,
+                    spring(dampingRatio = 0.42f, stiffness = Spring.StiffnessMedium),
+                    label = "swatch_app",
+                )
+                Box(
+                    Modifier
+                        .scale(scale)
+                        .size(34.dp)
+                        .background(Color(appColor), CircleShape)
+                        .border(
+                            if (selected) 3.dp else 1.dp,
+                            if (selected) MaterialTheme.colorScheme.onSurface
+                            else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+                            CircleShape,
+                        )
+                        .clickable {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            if (onSelectAppColor != null) onSelectAppColor() else onColor(appColor)
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (appIcon != null) {
+                        Image(
+                            bitmap = appIcon,
+                            contentDescription = stringResource(R.string.rules_app_colour),
+                            modifier = Modifier.size(20.dp),
+                        )
+                    } else {
+                        val r = (appColor shr 16) and 0xFF
+                        val g = (appColor shr 8) and 0xFF
+                        val b = appColor and 0xFF
+                        val isDark = (0.299 * r + 0.587 * g + 0.114 * b) < 140
+                        Icon(
+                            Icons.Rounded.Apps,
+                            contentDescription = stringResource(R.string.rules_app_colour),
+                            modifier = Modifier.size(18.dp),
+                            tint = if (isDark) Color.White else Color.Black,
+                        )
+                    }
+                }
+
+                Box(
+                    Modifier
+                        .height(24.dp)
+                        .width(1.dp)
+                        .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                )
+            }
+
             PRESET_COLORS.forEach { c ->
-                val selected = c == color
+                val selected = !isAppColorSelected && c == color && (appColor == null || c != appColor)
                 val scale by animateFloatAsState(
                     if (selected) 1.16f else 1f,
                     spring(dampingRatio = 0.42f, stiffness = Spring.StiffnessMedium),

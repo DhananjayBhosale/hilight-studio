@@ -248,6 +248,7 @@ fun LiveScreen(store: Store) {
                         stringResource(
                             R.string.live_rule_summary,
                             if (r.randomColor) stringResource(R.string.live_rule_random)
+                            else if (r.appColor && r.isCatchAll) stringResource(R.string.rules_app_colour)
                             else stringResource(r.pattern.labelRes),
                             stringResource(
                                 if (r.trigger == Trigger.NOTIFICATION) R.string.live_rule_notify

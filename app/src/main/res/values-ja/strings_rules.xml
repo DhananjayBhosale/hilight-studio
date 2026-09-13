@@ -86,6 +86,8 @@
     <string name="rules_both_triggers_exist">このアプリには通知時と表示中のルールがすでにあります。</string>
     <!-- "Copy settings to another app" -->
     <string name="rules_copy_settings">別のアプリに設定をコピー</string>
+    <!-- "App colour" -->
+    <string name="rules_app_colour">アプリの色</string>
     <!-- "Random colour each time" -->
     <string name="rules_random_colour_each_time">毎回ランダムな色</string>
     <!-- "This chat is a group, so anything posted in it fires the rule." -->

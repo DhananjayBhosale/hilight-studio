@@ -1344,7 +1344,7 @@ class Store private constructor(private val app: Context) {
         send(_enabled.value, activeAlert ?: foregroundOverride?.second, arm)
 
     /** Fires a one-shot alert, then falls back to the override/ambient layer. */
-    fun fireAlert(rule: AppRule, owner: String? = null) {
+    fun fireAlert(rule: AppRule, owner: String? = null, notifPkg: String? = null) {
         // The notification listener calls this from its own thread, while the alert slot below, its
         // expiry callback and every other push are main-thread state. Hopping once here keeps the top
         // layer single-threaded instead of trusting two threads not to interleave over it — an alert
@@ -1352,7 +1352,7 @@ class Store private constructor(private val app: Context) {
         // stuck on. The bridge write this ends in already happens on main for every slider the user
         // moves, so it is not a new cost.
         if (Looper.myLooper() != main.looper) {
-            main.post { runCatching { fireAlert(rule, owner) }.onFailure { Log.w(TAG, "alert failed", it) } }
+            main.post { runCatching { fireAlert(rule, owner, notifPkg) }.onFailure { Log.w(TAG, "alert failed", it) } }
             return
         }
         if (!_enabled.value) return
@@ -1366,7 +1366,14 @@ class Store private constructor(private val app: Context) {
         // killed every per-app colour for as long as the screen was on. Per-rule
         // AppRule.onlyWhenScreenOff is how a rule asks to flash only on a dark screen.
         if (guardState().alertSuppression() != null) return
-        val color = if (rule.randomColor) randomColor() else rule.color
+        val color = when {
+            rule.randomColor -> randomColor()
+            rule.appColor -> {
+                val targetPkg = if (rule.isCatchAll) (notifPkg ?: rule.pkg) else rule.pkg
+                AppColor.extractAppColor(app, targetPkg) ?: rule.color
+            }
+            else -> rule.color
+        }
         holdAlert(
             alert = Bridge.lookAlertJson(
                 id = Bridge.nextAlertId(),
@@ -1456,7 +1463,14 @@ class Store private constructor(private val app: Context) {
             return
         }
         if (foregroundOverride?.first == pkg) return
-        val color = if (rule.randomColor) randomColor() else rule.color
+        val color = when {
+            rule.randomColor -> randomColor()
+            rule.appColor -> {
+                val targetPkg = if (rule.isCatchAll) pkg else rule.pkg
+                AppColor.extractAppColor(app, targetPkg) ?: rule.color
+            }
+            else -> rule.color
+        }
         foregroundOverride = pkg to Bridge.lookAlertJson(
             id = Bridge.nextAlertId(),
             look = rule.effectiveLook(color),

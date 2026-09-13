@@ -52,6 +52,7 @@
     <string name="rules_trigger_pair_hint">Each app can have one notification rule and one while-open rule.</string>
     <string name="rules_both_triggers_exist">This app already has notification and while-open rules.</string>
     <string name="rules_copy_settings">Copy settings to another app</string>
+    <string name="rules_app_colour">App colour</string>
     <string name="rules_random_colour_each_time">Random colour each time</string>
     <string name="rules_chat_is_group">This chat is a group, so anything posted in it fires the rule.</string>
     <string name="rules_include_groups">Also when they post in a group</string>

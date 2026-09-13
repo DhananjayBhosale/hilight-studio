@@ -157,7 +157,8 @@ data class AppRule(
     val trigger: Trigger = Trigger.NOTIFICATION,
     val pattern: Pattern = Pattern.PULSE,
     val randomColor: Boolean = false,
-    val color: Int = 0xFF00E676.toInt(),
+    val appColor: Boolean = false,
+    val color: Int = DEFAULT_COLOR,
     val durationMs: Int = 10_000,
     val speedMs: Int = 800,
     val brightness: Float = 1f,
@@ -202,6 +203,7 @@ data class AppRule(
     fun withLook(value: Ambient): AppRule = copy(
         look = value, pattern = value.pattern, color = value.color,
         speedMs = value.speedMs, brightness = value.brightness, randomColor = false,
+        appColor = false,
     )
 
     /** The catch-all rule, which matches any app without one of its own. */
@@ -226,6 +228,7 @@ data class AppRule(
         put("trigger", trigger.name)
         put("pattern", pattern.key)
         put("randomColor", randomColor)
+        put("appColor", appColor)
         put("color", color.toUInt().toLong())
         put("durationMs", durationMs)
         put("speedMs", speedMs)
@@ -245,6 +248,9 @@ data class AppRule(
     }
 
     companion object {
+        /** Default rule colour (bright green). */
+        const val DEFAULT_COLOR = 0xFF00E676.toInt()
+
         /** Package sentinel for the catch-all rule. */
         const val ANY_APP = "*"
 
@@ -256,7 +262,8 @@ data class AppRule(
                 .getOrDefault(Trigger.NOTIFICATION),
             pattern = Pattern.of(o.optString("pattern", "pulse")),
             randomColor = o.optBoolean("randomColor", false),
-            color = o.optLong("color", 0xFF00E676L).toInt(),
+            appColor = o.optBoolean("appColor", false),
+            color = o.optLong("color", DEFAULT_COLOR.toUInt().toLong()).toInt(),
             durationMs = o.optInt("durationMs", 10_000),
             speedMs = o.optInt("speedMs", 800),
             brightness = o.optDouble("brightness", 1.0).toFloat(),

@@ -176,7 +176,7 @@ class NotificationTrigger : NotificationListenerService() {
             ?: if (rule.isCatchAll) MatchStrength.CATCH_ALL else MatchStrength.APP
         val scope = if (rule.isConversationRule) "chat" else "app"
         Log.i(TAG, "alert for ${info.pkg} rule=$scope match=$how pattern=${rule.pattern.key}")
-        store.fireAlert(rule, owner = "notification:${sbn.key}")
+        store.fireAlert(rule, owner = "notification:${sbn.key}", notifPkg = info.pkg)
         store.noteRuleFired(rule, info)
     }
 
@@ -328,7 +328,11 @@ class NotificationTrigger : NotificationListenerService() {
                 store.cancelOwnedAlert("reminder:${next.key}")
             } else if (SystemClock.elapsedRealtime() >= next.dueAtMs && !store.hasActiveAlert()) {
                 reminderOwner = "reminder:${next.key}"
-                store.fireAlert(rule.copy(pattern = Pattern.PULSE, durationMs = 1000, speedMs = 1000), reminderOwner)
+                store.fireAlert(
+                    rule.copy(pattern = Pattern.PULSE, durationMs = 1000, speedMs = 1000),
+                    reminderOwner,
+                    notifPkg = info.pkg,
+                )
                 reminders.defer(next.key, SystemClock.elapsedRealtime(), rule.repeatIntervalMs)
             }
         }
