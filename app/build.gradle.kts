@@ -91,5 +91,5 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     // Android's org.json methods are framework stubs in local JVM tests; this supplies the real
     // implementation for preference/state round-trip tests and is not packaged in the APK.
-    testImplementation("org.json:json:20240303")
+    testImplementation("org.json:json:20260814")
 }
