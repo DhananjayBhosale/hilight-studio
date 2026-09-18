@@ -47,13 +47,21 @@ class NotificationTrigger : NotificationListenerService() {
                 // Keep call state, but a user who unlocked should not see an immediate replay.
                 main.removeCallbacks(tick)
                 scheduleTick()
+            } else if (intent?.action == Intent.ACTION_SCREEN_ON ||
+                intent?.action == PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED) {
+                // Handler delays count awake time. Reconcile the elapsed-time deadline when Android
+                // wakes us instead of waiting out the old awake-time delay. Never replay missed slots.
+                reconcileSignals()
             }
         }
     }
 
     override fun onCreate() {
         super.onCreate()
-        registerReceiver(unlockReceiver, IntentFilter(Intent.ACTION_USER_PRESENT))
+        registerReceiver(unlockReceiver, IntentFilter(Intent.ACTION_USER_PRESENT).apply {
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED)
+        })
     }
 
     override fun onListenerConnected() {
@@ -143,7 +151,7 @@ class NotificationTrigger : NotificationListenerService() {
             return
         }
         if (rule.repeatWhilePending && store.enabled.value && locked()) {
-            reminders.posted(sbn.key, rule.id, sbn.postTime, SystemClock.elapsedRealtime(), rule.repeatIntervalMs)
+            reminders.posted(sbn.key, rule.id, sbn.postTime, SystemClock.elapsedRealtime(), rule.safeRepeatIntervalMs)
             scheduleTick()
         } else reminders.remove(sbn.key)
 
@@ -176,7 +184,7 @@ class NotificationTrigger : NotificationListenerService() {
             ?: if (rule.isCatchAll) MatchStrength.CATCH_ALL else MatchStrength.APP
         val scope = if (rule.isConversationRule) "chat" else "app"
         Log.i(TAG, "alert for ${info.pkg} rule=$scope match=$how pattern=${rule.pattern.key}")
-        store.fireAlert(rule, owner = "notification:${sbn.key}")
+        fireRule(rule, sbn.key, "notification:${sbn.key}")
         store.noteRuleFired(rule, info)
     }
 
@@ -241,7 +249,7 @@ class NotificationTrigger : NotificationListenerService() {
                     val rule = store.ruleForMessage(info)
                     if (rule != null && rule.repeatWhilePending &&
                         (rule.keyword.isBlank() || matchesKeyword(info, rule.keyword))) {
-                        reminders.posted(sbn.key, rule.id, sbn.postTime, SystemClock.elapsedRealtime(), rule.repeatIntervalMs)
+                        reminders.posted(sbn.key, rule.id, sbn.postTime, SystemClock.elapsedRealtime(), rule.safeRepeatIntervalMs)
                     }
                 }
             }
@@ -328,11 +336,24 @@ class NotificationTrigger : NotificationListenerService() {
                 store.cancelOwnedAlert("reminder:${next.key}")
             } else if (SystemClock.elapsedRealtime() >= next.dueAtMs && !store.hasActiveAlert()) {
                 reminderOwner = "reminder:${next.key}"
-                store.fireAlert(rule.copy(pattern = Pattern.PULSE, durationMs = 1000, speedMs = 1000), reminderOwner)
-                reminders.defer(next.key, SystemClock.elapsedRealtime(), rule.repeatIntervalMs)
+                fireRule(rule.copy(pattern = Pattern.PULSE, durationMs = rule.safeRepeatPulseMs, speedMs = 1000), next.key, reminderOwner!!, rule)
+                reminders.defer(next.key, SystemClock.elapsedRealtime(), rule.safeRepeatIntervalMs)
             }
         }
         scheduleTick()
+    }
+
+    private fun fireRule(rule: AppRule, notificationKey: String, owner: String, savedRule: AppRule = rule) {
+        if (!rule.useAppColor || rule.randomColor) { store.fireAlert(rule, owner); return }
+        observationScope?.launch {
+            val notification = runCatching { activeNotifications?.firstOrNull { it.key == notificationKey } }.getOrNull() ?: return@launch
+            val color = AppColor.colorFor(this@NotificationTrigger, notification.packageName) ?: rule.color
+            // Icon lookup never keeps a removed notification or an edited rule alive.
+            if (store.rules.value.none { it == savedRule || (it.id == savedRule.id && it.copy(conversationKey = savedRule.conversationKey) == savedRule) } ||
+                runCatching { activeNotifications?.none { it.key == notificationKey } }.getOrNull() != false ||
+                (owner.startsWith("reminder:") && !locked())) return@launch
+            store.fireAlert(rule.copy(color = color), owner)
+        }
     }
 
     private fun locked(): Boolean = !screenOn() || getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true

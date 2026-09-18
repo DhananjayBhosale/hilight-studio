@@ -2,6 +2,16 @@
 
 All notable changes to HiLight Studio are documented here.
 
+## [1.0.14-experimental] - 2026-09-18
+
+- Fixed command-output and stdin handling that could stall root startup; startup errors now identify the failed stage. The reported KernelSU case still needs affected-device confirmation.
+- Added selectable 1–3 second pending-notification reminders with safe minimum gaps and overdue reconciliation when Android wakes the app. Deep sleep can still delay reminders.
+- Added private rule export/import with validation, duplicate detection and conflict protection.
+- Added optional app-icon colors for notification rules, with background extraction and manual-color fallback.
+- Added expandable groups, independent identities and ordering controls for multiple rules per app. Existing rule cards may display in storage/priority order rather than the previous automatic visual sort.
+- Added an optional static two-second battery-level gauge on plug-in and at the configured charged threshold. Existing light restrictions still apply.
+- Retained all renderer safety limits. Recording-only camera detection remains unavailable. Physical LED behavior is not proven by emulator tests.
+
 ## [1.0.13-experimental] - 2026-09-12
 
 - Fixed two root-recovery blockers: a departed renderer's PID being reused by an unrelated process,

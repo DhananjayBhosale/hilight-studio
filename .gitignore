@@ -9,6 +9,7 @@ helper/build/
 # Release artifacts and local signing material belong outside the repository.
 *.apk
 *.aab
+/app/release/
 *.jks
 *.keystore
 key.properties

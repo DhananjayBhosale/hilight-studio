@@ -295,4 +295,20 @@
     <string name="privacy_replace_warning">保存すると、このアクティビティとアプリの既存のルールが置き換えられます。</string>
 
     <string name="privacy_one_minute_cap">カメラまたはマイクの使用が終了するとすぐに停止し、連続使用は最大 1 分で停止します。動画の録画前に、撮影画面を開いただけで反応する場合があります。録画ボタンの操作は検出しません。</string>
+    <string name="rules_export">ルールを書き出す</string>
+    <string name="rules_import">ルールを読み込む</string>
+    <string name="rules_backup_privacy">このファイルにはルールに保存されたアプリ名、連絡先・チャット名、チャットID、キーワード条件が含まれます。通知履歴は含まれません。個人情報として保管してください。書き出しますか？</string>
+    <string name="rules_backup_exported">ルールを書き出しました。ファイルを安全に保管してください。</string>
+    <string name="rules_backup_failed">バックアップを完了できませんでした。対応する1 MB以下のルールファイルか確認してください。既存のルールは上書きされません。同じIDで設定が異なる場合は先に解決してください。</string>
+    <string name="rules_import_confirm">%1$d件のルールを読み込みますか？既存のルールは変更されません。同一のルールはスキップされ、競合がある場合は読み込みを中止します。有効状態と一致条件も復元されます。</string>
+    <string name="rules_import_done">%1$d件を追加し、既存の%2$d件をスキップしました。</string>
+    <string name="rules_group">%1$s · %2$d件のルール</string>
+    <string name="rules_move_up">上へ</string>
+    <string name="rules_move_down">下へ</string>
+    <string name="rules_priority_hint">同じアプリに複数のルールを追加して並べ替えられます。会話、キーワード、アプリ全体の順で一致を確認し、同じ優先度では上のルールを使用します。</string>
+    <string name="rules_app_color">アプリアイコンの色を使う</string>
+    <string name="rules_app_color_hint">通知元アプリのアイコンの色を使います。取得できない場合は保存した色を使います。手動で色を選ぶと無効になります。</string>
+    <string name="rules_repeat_sleep_hint">スリープ中はAndroidによりリマインダーが遅れる場合があります。アプリの動作再開時に期限を過ぎたリマインダーを1回再生します。遅れた分をまとめて再生することはありません。</string>
+    <string name="rules_repeat_pulse_hint">リマインダーの点灯時間です。消灯時間を80%以上確保するため、長い点灯では最短間隔も長くなります。</string>
+    <string name="rules_keyword_summary">テキストに含む: %1$s</string>
 </resources>

@@ -36,11 +36,14 @@ class RuleDraftsTest {
     }
 
     @Test
-    fun `both whole app slots prevent another blank rule`() {
+    fun `additional whole app rules have independent identities`() {
         val notification = rule(trigger = Trigger.NOTIFICATION)
         val foreground = notification.copy(trigger = Trigger.FOREGROUND)
 
-        assertNull(nextWholeAppRule(notification.pkg, notification.label, listOf(notification, foreground)))
+        val next = nextWholeAppRule(notification.pkg, notification.label, listOf(notification, foreground))!!
+        assertNotEquals(notification.id, next.id)
+        assertNotEquals(foreground.id, next.id)
+        assertEquals(Trigger.NOTIFICATION, next.trigger)
     }
 
     @Test
@@ -127,6 +130,23 @@ class RuleDraftsTest {
                 isNew = false,
             )
         )
+    }
+
+    @Test fun `legacy identity survives editing trigger and learning chat key`() {
+        val legacy = rule().copy(conversationName = "Alex")
+        val migrated = legacy.withStableIdentity()
+        assertEquals(legacy.id, migrated.id)
+        assertEquals(migrated.id, migrated.copy(conversationKey = "learned", trigger = Trigger.FOREGROUND).id)
+        assertEquals(migrated, AppRule.fromJson(migrated.toPrefsJson()))
+    }
+
+    @Test fun `app color copy resolves target while keeping manual fallback`() {
+        val source = rule().copy(useAppColor = true, stableId = "source", color = 0xff123456.toInt())
+        val copied = copyWholeAppRule(source, "target.app", "Target")
+        assertTrue(copied.useAppColor)
+        assertEquals(source.color, copied.color)
+        assertEquals("target.app", copied.pkg)
+        assertNotEquals(source.id, copied.id)
     }
 
     private fun rule(

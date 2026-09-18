@@ -211,6 +211,8 @@ manual GitHub update check and the complete advanced app picker. The `play` flav
 same core lighting features but excludes the updater, network permission, and broad app visibility.
 You may fork the repository, change the source, and build your own version under the terms of the MIT License.
 
+I use AI tools like Codex, Claude Code, Cursor, and Antigravity to build HiLight Studio.
+
 ## Contributing
 
 Issues and pull requests are welcome. Hardware reports should include the Pixel model, Android build,

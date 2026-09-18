@@ -1,0 +1,1 @@
+Improves root startup reliability. Adds configurable notification reminders, private rule backup and import, optional app-icon colors, grouped independent rules, and a finite battery-level gauge. Existing light-safety limits remain. KernelSU recovery and physical LED behavior still need affected-device confirmation.

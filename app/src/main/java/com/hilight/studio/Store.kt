@@ -925,8 +925,8 @@ class Store private constructor(private val app: Context) {
         // with the healed row's stronger key match, so the user's edit would never fire again and
         // nothing would say why. Catch that one signature and treat it as the same rule.
         val healed = replacing
-            ?.takeIf { it.id != rule.id || _rules.value.none { live -> live.id == it.id } }
-            ?.let { was -> _rules.value.firstOrNull { live -> ConversationMatch.isHealOf(live, was) } }
+            ?.takeIf { it.conversationKey.isNullOrBlank() }
+            ?.let { was -> _rules.value.firstOrNull { live -> (was.stableId == null || live.id == was.id) && ConversationMatch.isHealOf(live, was) } }
         if (healed != null) {
             Log.i(TAG, "rule for ${healed.pkg} gained a chat id while its editor was open")
             // Unless this edit deliberately dropped the id — the "re-learn this chat" action — keep
@@ -963,6 +963,29 @@ class Store private constructor(private val app: Context) {
         _rules.value = out
         saveRules()
         syncForegroundWatcher()
+    }
+
+    /** Moves only within an app group. List order is the tie-breaker among matching rules. */
+    fun moveRule(rule: AppRule, direction: Int) {
+        val out = _rules.value.toMutableList()
+        val group = out.indices.filter { out[it].pkg == rule.pkg }
+        val position = group.indexOfFirst { out[it].id == rule.id }
+        val destination = position + direction
+        if (position < 0 || destination !in group.indices) return
+        java.util.Collections.swap(out, group[position], group[destination])
+        _rules.value = out
+        saveRules()
+        syncForegroundWatcher()
+    }
+
+    /** Validate and persist once before exposing imported rules. Other preferences are untouched. */
+    internal fun importRules(imported: List<AppRule>): RuleBackup.MergeResult {
+        val merged = RuleBackup.merge(_rules.value, imported)
+        val json = JSONArray().also { a -> merged.rules.forEach { a.put(it.toPrefsJson()) } }
+        check(prefs.edit().putString("rules", json.toString()).commit()) { "Could not save rules" }
+        _rules.value = merged.rules.map { it.withStableIdentity() }
+        syncForegroundWatcher()
+        return merged
     }
 
     fun removeRule(rule: AppRule) {
@@ -1084,7 +1107,7 @@ class Store private constructor(private val app: Context) {
      * device; this only hands it the current rule set.
      */
     fun ruleForMessage(info: MessageInfo): AppRule? =
-        runCatching { ConversationMatch.resolve(_rules.value, info) }
+        runCatching { resolveNotificationRule(_rules.value, info) }
             .onFailure { Log.w(TAG, "rule resolution failed", it) }
             .getOrNull()
 
@@ -1216,7 +1239,7 @@ class Store private constructor(private val app: Context) {
         // the same chat — the named one only got to fire because the keyed one is switched off.
         // Healing would collapse two rules into one slot and lose one the user wrote by hand, so the
         // named rule is left matching on text.
-        if (_rules.value.any { it.id == healed.id }) return rule
+        if (_rules.value.any { it.id != rule.id && it.pkg == healed.pkg && it.trigger == healed.trigger && it.conversationKey == healed.conversationKey }) return rule
         // Two people really can be saved under the same name, and until one of them has a key there is
         // nothing to tell their chats apart. Healing on the first of them to write would quietly narrow
         // the rule to that one person for good, while the card kept showing healthy matches from them —
@@ -3038,7 +3061,7 @@ class Store private constructor(private val app: Context) {
             runCatching {
                 val a = JSONArray(raw)
                 (0 until a.length()).mapNotNull { i ->
-                    runCatching { AppRule.fromJson(a.getJSONObject(i)) }.getOrNull()
+                    runCatching { AppRule.fromJson(a.getJSONObject(i)).let { it.withStableIdentity() } }.getOrNull()
                 }
             }.getOrNull()
         } ?: emptyList()

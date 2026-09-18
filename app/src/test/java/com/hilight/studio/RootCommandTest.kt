@@ -79,19 +79,32 @@ class RootCommandTest {
         val start = RootCommand.start(
             "/storage/emulated/0/Android/data/com.hilight.studio/files/hilight",
             "root-instance-1",
+            "/data/app/play/base.apk",
         )
 
         assertTrue(start.contains("nohup app_process"))
         assertTrue(start.contains("--owner root"))
         assertTrue(start.contains("--instance 'root-instance-1'"))
-        assertTrue(start.contains("pm path ${BuildConfig.APPLICATION_ID}"))
         assertTrue(start.contains("& echo \$!"))
         assertFalse(start.contains("pkill"))
+        assertTrue(start.contains("CLASSPATH='/data/app/play/base.apk'"))
+        assertTrue(start.contains("< /dev/null"))
+        assertFalse(start.contains("pm path"))
+    }
+
+    @Test
+    fun `missing current APK cannot silently launch a renderer from another installed edition`() {
+        val missing = java.io.File(temporary.newFolder(), "missing.apk").absolutePath
+        val process = ProcessBuilder("sh", "-c", RootCommand.start("/unused", "root-1", missing))
+            .redirectErrorStream(true).start()
+        assertTrue(process.waitFor(3, TimeUnit.SECONDS))
+        assertEquals(1, process.exitValue())
+        assertTrue(process.inputStream.bufferedReader().readText().contains("APK is not readable"))
     }
 
     @Test
     fun `bridge path is safely single quoted for the phone shell`() {
-        val start = RootCommand.start("/data/a user's/light", "root-instance-2")
+        val start = RootCommand.start("/data/a user's/light", "root-instance-2", "/data/app/play/base.apk")
 
         assertTrue(start.contains("'/data/a user'\\''s/light'"))
     }
@@ -133,6 +146,6 @@ class RootCommandTest {
 
     @Test(expected = IllegalArgumentException::class)
     fun `root launch rejects shell metacharacters in renderer identity`() {
-        RootCommand.start("/data/local/tmp/hilight", "bad; kill 1")
+        RootCommand.start("/data/local/tmp/hilight", "bad; kill 1", "/data/app/play/base.apk")
     }
 }

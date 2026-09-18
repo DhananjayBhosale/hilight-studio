@@ -191,6 +191,10 @@ data class AppRule(
     val ignoreSilent: Boolean = false,
     val repeatWhilePending: Boolean = false,
     val repeatIntervalMs: Int = 15_000,
+    val repeatPulseMs: Int = 1_000,
+    val useAppColor: Boolean = false,
+    /** New rules have an independent ID; legacy identities are retained when loaded. */
+    val stableId: String? = null,
     /** Exclusions apply only to catch-all rules, leaving explicit app rules independent. */
     val excludedPackages: Set<String> = emptySet(),
 ) {
@@ -217,7 +221,11 @@ data class AppRule(
      * Package plus trigger used to be enough, but an app can now hold several rules — one per
      * conversation, plus a plain one for everything else — so the conversation has to be part of it.
      */
-    val id: String get() = "$pkg|${trigger.name}|${conversationKey ?: conversationName ?: ""}"
+    val id: String get() = stableId ?: "$pkg|${trigger.name}|${conversationKey ?: conversationName ?: ""}"
+
+    val safeRepeatPulseMs: Int get() = repeatPulseMs.coerceIn(1_000, 3_000)
+    // At least four dark milliseconds per lit millisecond; the old 1s / 5s minimum stays valid.
+    val safeRepeatIntervalMs: Int get() = repeatIntervalMs.coerceIn(5_000, 60_000).coerceAtLeast(safeRepeatPulseMs * 5)
 
     fun toPrefsJson(): JSONObject = JSONObject().apply {
         put("pkg", pkg)
@@ -240,7 +248,10 @@ data class AppRule(
         look?.let { put("look", it.toPrefsJson()) }
         put("ignoreSilent", ignoreSilent)
         put("repeatWhilePending", repeatWhilePending)
-        put("repeatIntervalMs", repeatIntervalMs.coerceIn(5_000, 60_000))
+        put("repeatIntervalMs", safeRepeatIntervalMs)
+        put("repeatPulseMs", safeRepeatPulseMs)
+        put("useAppColor", useAppColor)
+        stableId?.let { put("stableId", it) }
         put("excludedPackages", JSONArray().also { a -> excludedPackages.sorted().forEach(a::put) })
     }
 
@@ -271,6 +282,9 @@ data class AppRule(
             ignoreSilent = o.optBoolean("ignoreSilent", false),
             repeatWhilePending = o.optBoolean("repeatWhilePending", false),
             repeatIntervalMs = o.optInt("repeatIntervalMs", 15_000).coerceIn(5_000, 60_000),
+            repeatPulseMs = o.optInt("repeatPulseMs", 1_000).coerceIn(1_000, 3_000),
+            useAppColor = o.optBoolean("useAppColor", false),
+            stableId = o.optString("stableId", "").takeIf { it.isNotBlank() },
             excludedPackages = o.optJSONArray("excludedPackages")?.let { a ->
                 (0 until a.length()).mapNotNull { a.optString(it).takeIf(String::isNotBlank) }.toSet()
             } ?: emptySet(),
