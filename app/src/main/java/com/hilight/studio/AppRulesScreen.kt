@@ -3,14 +3,11 @@ package com.hilight.studio
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.slideInVertically
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -53,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
@@ -83,9 +81,42 @@ private data class RuleEditorState(val rule: AppRule, val isNew: Boolean)
 @Composable
 fun AppRulesScreen(store: Store) {
     val ctx = LocalContext.current
+    val resources = LocalResources.current
     val launchPreview = rememberPreviewLauncher(store)
     val rules by store.rules.collectAsStateWithLifecycle()
     val presets by store.presets.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+    var exportText by remember { mutableStateOf<String?>(null) }
+    var confirmExport by remember { mutableStateOf(false) }
+    var importedRules by remember { mutableStateOf<List<AppRule>?>(null) }
+    var backupMessage by remember { mutableStateOf<String?>(null) }
+    val exportRules = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        val snapshot = exportText
+        exportText = null
+        if (uri != null && snapshot != null) scope.launch {
+            backupMessage = runCatching {
+                withContext(Dispatchers.IO) {
+                    ctx.contentResolver.openOutputStream(uri, "wt")?.use { it.write(snapshot.toByteArray(Charsets.UTF_8)) }
+                        ?: error("Could not open the selected file")
+                }
+                resources.getString(R.string.rules_backup_exported)
+            }.getOrElse { resources.getString(R.string.rules_backup_failed) }
+        }
+    }
+    val importRules = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) scope.launch {
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    val bytes = ctx.contentResolver.openInputStream(uri)?.use { it.readNBytes(RuleBackup.MAX_BYTES + 1) }
+                        ?: error("Could not open the selected file")
+                    require(bytes.size <= RuleBackup.MAX_BYTES)
+                    RuleBackup.decode(bytes.toString(Charsets.UTF_8))
+                }
+            }.onSuccess { importedRules = it }
+                .onFailure { backupMessage = resources.getString(R.string.rules_backup_failed) }
+        }
+    }
+
     val privacyRules by store.privacyRules.collectAsStateWithLifecycle()
     val conversations by store.conversations.collectAsStateWithLifecycle()
     val lastMatch by store.lastMatch.collectAsStateWithLifecycle()
@@ -118,6 +149,10 @@ fun AppRulesScreen(store: Store) {
         SectionTitle(stringResource(R.string.rules_section_title))
         Caption(stringResource(R.string.rules_intro_apps))
         Caption(stringResource(R.string.rules_intro_messaging))
+        Row {
+            TextButton(onClick = { confirmExport = true }) { Text(stringResource(R.string.rules_export)) }
+            TextButton(onClick = { importRules.launch(arrayOf("application/json", "text/plain")) }) { Text(stringResource(R.string.rules_import)) }
+        }
         Button(onClick = { picking = true }, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Rounded.Add, contentDescription = null)
             Spacer(Modifier.width(8.dp))
@@ -125,44 +160,73 @@ fun AppRulesScreen(store: Store) {
         }
     }
 
-    // An app's own rule and the per-chat rules under it have to sit together, or a colour for one
-    // contact reads as an unrelated app halfway down the list. Grouping by package keeps the apps in
-    // the order they were added — groupBy preserves that — and the plain rule leads its own group.
-    val ordered = remember(rules) {
-        rules.groupBy { it.pkg }.values.flatMap { group ->
-            group.sortedWith(
-                compareBy<AppRule>({ it.isConversationRule }, { it.conversationName ?: "" })
-            )
-        }
-    }
-
-    ordered.forEachIndexed { index, rule ->
-        key(rule.id) {
-            // cards ease in rather than appearing, staggered down the list
-            AnimatedVisibility(
-                visible = true,
-                enter = fadeIn(tween(220, delayMillis = index * 40)) +
-                    slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy)) { it / 6 } +
-                    scaleIn(tween(240), initialScale = 0.97f),
-            ) {
-                RuleCard(
-                    rule = rule,
-                    chat = knownConversation(rule, conversations),
-                    lastMatchedMs = lastMatch[rule.id],
-                    onToggle = { store.upsertRule(rule.copy(enabled = it)) },
-                    onEdit = { editing = RuleEditorState(rule, isNew = false) },
-                    onTest = {
-                        // test what the rule will actually do, including how long it stays lit
-                        launchPreview(
-                            rule.pattern, rule.color, rule.speedMs, rule.brightness, rule.durationMs,
-                            look = rule.effectiveLook(),
+    // Preserve the existing cards and editors; only apps with several rules need a group header.
+    rules.groupBy { it.pkg }.forEach { (pkg, group) ->
+        key(pkg) {
+            var expanded by remember { mutableStateOf(true) }
+            if (group.size > 1) {
+                TextButton(onClick = { expanded = !expanded }, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.rules_group, ruleLabel(group.first()), group.size) + if (expanded) " ▴" else " ▾")
+                }
+            }
+            if (expanded) group.forEachIndexed { index, rule ->
+                key(rule.id) {
+                    Column {
+                        RuleCard(
+                            rule = rule,
+                            chat = knownConversation(rule, conversations),
+                            lastMatchedMs = lastMatch[rule.id],
+                            onToggle = { store.upsertRule(rule.copy(enabled = it)) },
+                            onEdit = { editing = RuleEditorState(rule, isNew = false) },
+                            onTest = {
+                                scope.launch {
+                                    val color = if (rule.useAppColor) AppColor.colorFor(ctx, rule.pkg) ?: rule.color else rule.color
+                                    launchPreview(rule.pattern, color, rule.speedMs, rule.brightness, rule.durationMs, look = rule.effectiveLook(color))
+                                }
+                            },
+                            onDelete = { store.removeRule(rule) },
                         )
-                    },
-                    onDelete = { store.removeRule(rule) },
-                )
+                        if (group.size > 1) Row {
+                            TextButton(onClick = { store.moveRule(rule, -1) }, enabled = index > 0) { Text(stringResource(R.string.rules_move_up)) }
+                            TextButton(onClick = { store.moveRule(rule, 1) }, enabled = index < group.lastIndex) { Text(stringResource(R.string.rules_move_down)) }
+                        }
+                    }
+                }
             }
         }
     }
+
+    if (confirmExport) AlertDialog(
+        onDismissRequest = { confirmExport = false },
+        title = { Text(stringResource(R.string.rules_export)) },
+        text = { Text(stringResource(R.string.rules_backup_privacy)) },
+        confirmButton = { TextButton(onClick = {
+            confirmExport = false
+            runCatching { RuleBackup.encode(rules) }.onSuccess {
+                exportText = it
+                exportRules.launch("hilight-rules.json")
+            }.onFailure { backupMessage = resources.getString(R.string.rules_backup_failed) }
+        }) { Text(stringResource(R.string.rules_export)) } },
+        dismissButton = { TextButton(onClick = { confirmExport = false }) { Text(stringResource(R.string.common_cancel)) } },
+    )
+    importedRules?.let { imported -> AlertDialog(
+        onDismissRequest = { importedRules = null },
+        title = { Text(stringResource(R.string.rules_import)) },
+        text = { Text(stringResource(R.string.rules_import_confirm, imported.size)) },
+        confirmButton = { TextButton(onClick = {
+            importedRules = null
+            backupMessage = runCatching {
+                val result = store.importRules(imported)
+                resources.getString(R.string.rules_import_done, result.added, result.skipped)
+            }.getOrElse { resources.getString(R.string.rules_backup_failed) }
+        }) { Text(stringResource(R.string.rules_import)) } },
+        dismissButton = { TextButton(onClick = { importedRules = null }) { Text(stringResource(R.string.common_cancel)) } },
+    ) }
+    backupMessage?.let { message -> AlertDialog(
+        onDismissRequest = { backupMessage = null },
+        text = { Text(message) },
+        confirmButton = { TextButton(onClick = { backupMessage = null }) { Text(stringResource(R.string.common_close)) } },
+    ) }
 
     PrivacyRulesSection(
         rules = privacyRules,
@@ -223,8 +287,8 @@ fun AppRulesScreen(store: Store) {
                 )
                 // A chat that already has a rule opens that rule instead of a blank one. Both share
                 // an id, so saving the blank one would overwrite the colour already chosen for them.
-                val stored = rules.firstOrNull { it.id == fresh.id }
-                editing = RuleEditorState(stored ?: fresh, isNew = stored == null)
+                val stored = rules.firstOrNull { it.pkg == fresh.pkg && it.trigger == fresh.trigger && it.conversationKey == fresh.conversationKey && it.conversationName == fresh.conversationName }
+                editing = RuleEditorState(stored ?: fresh.copy(stableId = java.util.UUID.randomUUID().toString()), isNew = stored == null)
             },
         )
     }
@@ -361,6 +425,11 @@ private fun RuleCard(
 ) {
     val haptics = LocalHapticFeedback.current
     val perChat = rule.isConversationRule
+    val context = LocalContext.current
+    val iconColor by produceState<Int?>(null, rule.pkg, rule.useAppColor) {
+        value = if (rule.useAppColor && !rule.isCatchAll) AppColor.colorFor(context, rule.pkg) else null
+    }
+    val shownColor = if (rule.useAppColor) iconColor ?: rule.color else rule.color
     // A per-chat rule is inset and a shade darker than the cards around it, so it reads as hanging
     // off the app above rather than as another app of its own.
     PixelCard(
@@ -381,7 +450,7 @@ private fun RuleCard(
                     Box(
                         Modifier
                             .size(14.dp)
-                            .background(Color(rule.color), CircleShape)
+                            .background(Color(shownColor), CircleShape)
                     )
                 }
                 Column {
@@ -422,12 +491,14 @@ private fun RuleCard(
                         stringResource(
                             R.string.rules_card_summary,
                             if (rule.randomColor) stringResource(R.string.rules_random_colour)
+                            else if (rule.useAppColor) stringResource(R.string.rules_app_color)
                             else stringResource(rule.pattern.labelRes),
                             if (rule.trigger == Trigger.NOTIFICATION)
                                 stringResource(R.string.rules_trigger_notification_short)
                             else stringResource(R.string.rules_trigger_foreground_short),
                         )
                     )
+                    if (rule.keyword.isNotBlank()) Caption(stringResource(R.string.rules_keyword_summary, rule.keyword))
                     if (rule.trigger == Trigger.NOTIFICATION) {
                         // "Matched", not "fired": the match is recorded even when a guard — quiet
                         // hours, the battery floor, the master switch — swallowed the flash, and
@@ -454,12 +525,7 @@ private fun RuleCard(
         }
         LedStrip(
             rule.pattern,
-            Ambient(
-                pattern = rule.pattern,
-                color = rule.color,
-                speedMs = rule.speedMs,
-                brightness = rule.brightness,
-            ),
+            rule.effectiveLook(shownColor),
             active = rule.enabled,
             heightDp = 34,
         )
@@ -625,6 +691,11 @@ private fun RuleEditorDialog(
     var pickingPreset by remember { mutableStateOf(false) }
     var pickingExcludedApp by remember { mutableStateOf(false) }
     val ctx = LocalContext.current
+    var iconColor by remember(r.pkg) { mutableStateOf<Int?>(null) }
+    LaunchedEffect(r.pkg, r.useAppColor) {
+        iconColor = if (r.useAppColor && !r.isCatchAll) AppColor.colorFor(ctx, r.pkg) else null
+    }
+    val previewRule = if (r.useAppColor) r.copy(color = iconColor ?: r.color) else r
 
     /*
      * Whether saving would land on a rule other than the one being edited.
@@ -668,7 +739,7 @@ private fun RuleEditorDialog(
             ) {
                 LedStrip(
                     r.pattern,
-                    r.effectiveLook(),
+                    previewRule.effectiveLook(),
                     heightDp = 38,
                 )
 
@@ -691,9 +762,9 @@ private fun RuleEditorDialog(
                         options = listOf(Trigger.NOTIFICATION, Trigger.FOREGROUND),
                         selected = r.trigger,
                         label = { if (it == Trigger.NOTIFICATION) onNotification else whileOpen },
-                        onSelect = { r = r.copy(trigger = it) },
+                        onSelect = { r = r.copy(trigger = it, useAppColor = if (it == Trigger.NOTIFICATION) r.useAppColor else false) },
                     )
-                    Caption(stringResource(R.string.rules_trigger_pair_hint))
+                    Caption(stringResource(R.string.rules_priority_hint))
                 }
 
                 TextButton(onClick = { pickingPreset = true }, modifier = Modifier.fillMaxWidth()) {
@@ -705,13 +776,19 @@ private fun RuleEditorDialog(
                     onSelect = { r = r.copy(pattern = it) },
                 )
 
+                if (r.pattern != Pattern.CUSTOM && r.trigger == Trigger.NOTIFICATION) {
+                    ToggleRow(stringResource(R.string.rules_app_color), r.useAppColor) {
+                        r = r.copy(useAppColor = it, randomColor = if (it) false else r.randomColor)
+                    }
+                    if (r.useAppColor) Caption(stringResource(R.string.rules_app_color_hint))
+                }
                 if (r.pattern != Pattern.CUSTOM) {
                     ToggleRow(
                         stringResource(R.string.rules_random_colour_each_time), r.randomColor,
-                    ) { r = r.copy(randomColor = it) }
+                    ) { r = r.copy(randomColor = it, useAppColor = if (it) false else r.useAppColor) }
                 }
                 if (!r.randomColor && r.pattern != Pattern.CUSTOM) {
-                    ColorPicker(r.color, { r = r.copy(color = it) })
+                    ColorPicker(r.color, { r = r.copy(color = it, useAppColor = false) })
                     if (r.pattern == Pattern.GRADIENT) {
                         Caption(stringResource(R.string.rules_gradient_second_colour))
                         ColorPicker(r.effectiveLook().secondColor, {
@@ -733,9 +810,16 @@ private fun RuleEditorDialog(
                     }
                     if (r.repeatWhilePending) {
                         Caption(stringResource(R.string.rules_repeat_pending_hint))
+                        Caption(stringResource(R.string.rules_repeat_sleep_hint))
+                        SegmentedSelector(
+                            options = listOf(1000, 2000, 3000), selected = r.safeRepeatPulseMs,
+                            label = { formatDuration(it) },
+                            onSelect = { r = r.copy(repeatPulseMs = it, repeatIntervalMs = r.repeatIntervalMs.coerceAtLeast(it * 5)) },
+                        )
+                        Caption(stringResource(R.string.rules_repeat_pulse_hint))
                         PixelSlider(
                             stringResource(R.string.rules_repeat_interval),
-                            r.repeatIntervalMs.toFloat(), 5_000f..60_000f,
+                            r.safeRepeatIntervalMs.toFloat(), (r.safeRepeatPulseMs * 5).toFloat()..60_000f,
                             { r = r.copy(repeatIntervalMs = it.toInt()) },
                             typeInSeconds = true,
                         ) { formatDuration(it.toInt()) }
@@ -856,7 +940,7 @@ private fun RuleEditorDialog(
                     { r = r.copy(brightness = it) },
                 ) { stringResource(R.string.common_percent, (it * 100).toInt()) }
 
-                FilledTonalButton(onClick = { onTest(r) }, modifier = Modifier.fillMaxWidth()) {
+                FilledTonalButton(onClick = { onTest(previewRule) }, modifier = Modifier.fillMaxWidth()) {
                     ButtonLabel(stringResource(R.string.rules_test_on_leds))
                 }
 
@@ -899,7 +983,7 @@ private fun RuleEditorDialog(
                     LazyColumn(Modifier.heightIn(max = 380.dp)) {
                         items(available, key = { it.name }) { preset ->
                             TextButton(onClick = {
-                                r = r.withLook(preset.ambient)
+                                r = r.withLook(preset.ambient).copy(useAppColor = false)
                                 pickingPreset = false
                             }, modifier = Modifier.fillMaxWidth()) {
                                 Text(preset.name)

@@ -3,6 +3,8 @@
     <string name="device_signals_title">Device signals</string>
     <string name="device_signals_description">Optional light signals. Quiet hours, battery limits and face-down restrictions still apply. Notification access is needed for DND and incoming calls.</string>
     <string name="device_signals_charging">Charging indicator</string>
+    <string name="device_signals_gauge">Show battery level instead</string>
+    <string name="device_signals_gauge_description">Show the battery level across the eight lights for 2 seconds when you plug in or reach your charged level, then turn off. Changing these settings also shows a brief preview while plugged in. No repeating animation. Existing light restrictions still apply.</string>
     <string name="device_signals_charging_description">While plugged in, blink for 2 seconds every 15 seconds. At your charged level, show a steady color for 2 seconds instead. Signals may pause while the phone sleeps or another alert is playing. When Respect DND is enabled, charging signals pause until notification access supplies the current DND status.</string>
     <string name="device_signals_charging_color">Charging color</string>
     <string name="device_signals_charged_color">Charged color</string>

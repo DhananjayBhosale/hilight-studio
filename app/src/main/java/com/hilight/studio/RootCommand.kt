@@ -2,12 +2,14 @@ package com.hilight.studio
 
 /** Phone-shell commands used by the direct-root backend. */
 object RootCommand {
-    fun start(bridgeDir: String, rendererInstanceId: String): String {
+    fun start(bridgeDir: String, rendererInstanceId: String, apkPath: String): String {
         require(validInstanceId(rendererInstanceId)) { "invalid renderer instance id" }
-        return "CLASSPATH=${'$'}(pm path com.hilight.studio | head -1 | cut -d: -f2) " +
+        require(apkPath.startsWith("/")) { "APK path must be absolute" }
+        return "[ -r ${quote(apkPath)} ] || { echo 'installed APK is not readable'; exit 1; }; " +
+            "CLASSPATH=${quote(apkPath)} " +
             "nohup app_process / com.hilight.core.AdbHelper --owner root " +
             "--instance ${quote(rendererInstanceId)} --exclusive --dir ${quote(bridgeDir)} " +
-            "> /data/local/tmp/hilight-root.log 2>&1 & echo ${'$'}!"
+            "> /data/local/tmp/hilight-root.log 2>&1 < /dev/null & echo ${'$'}!"
     }
 
     /**

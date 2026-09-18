@@ -19,7 +19,10 @@ fun DeviceSignalsSection(store: Store) {
             store.deviceSignals.updateSettings { s -> s.copy(chargingEnabled = it) }
         }
         if (settings.chargingEnabled) {
-            Text(stringResource(R.string.device_signals_charging_description), style = MaterialTheme.typography.bodySmall)
+            ToggleRow(stringResource(R.string.device_signals_gauge), settings.chargingGauge) {
+                store.deviceSignals.updateSettings { s -> s.copy(chargingGauge = it) }
+            }
+            Text(stringResource(if (settings.chargingGauge) R.string.device_signals_gauge_description else R.string.device_signals_charging_description), style = MaterialTheme.typography.bodySmall)
             ColorPicker(settings.chargingColor, { color -> store.deviceSignals.updateSettings { it.copy(chargingColor = color) } }, stringResource(R.string.device_signals_charging_color))
             ColorPicker(settings.chargedColor, { color -> store.deviceSignals.updateSettings { it.copy(chargedColor = color) } }, stringResource(R.string.device_signals_charged_color))
             Text(stringResource(R.string.device_signals_full_percent, settings.fullPercent))

@@ -18,6 +18,7 @@ data class DeviceSignalSettings(
     val chargingColor: Int = 0xFF2979FF.toInt(),
     val chargedColor: Int = 0xFF00E676.toInt(),
     val fullPercent: Int = 100,
+    val chargingGauge: Boolean = false,
     val dndEnabled: Boolean = false,
     val dndColor: Int = 0xFF7C4DFF.toInt(),
     val callsEnabled: Boolean = false,
@@ -29,6 +30,40 @@ internal fun chargingSignalLook(settings: DeviceSignalSettings, percent: Int): A
     color = if (percent >= settings.fullPercent) settings.chargedColor else settings.chargingColor,
     speedMs = 600,
 )
+
+/** A static, finite bar; the existing renderer handles the normal brightness/duty limits. */
+internal fun chargingGaugeLook(settings: DeviceSignalSettings, percent: Int): Ambient {
+    val level = percent.coerceIn(0, 100)
+    val color = if (level >= settings.fullPercent) settings.chargedColor else settings.chargingColor
+    return Ambient(pattern = Pattern.CUSTOM, perLed = List(LED_COUNT) { index ->
+        val fraction = (level * LED_COUNT / 100f - index).coerceIn(0f, 1f)
+        fun channel(shift: Int) = (((color ushr shift) and 255) * fraction).toInt()
+        (0xFF shl 24) or (channel(16) shl 16) or (channel(8) shl 8) or channel(0)
+    })
+}
+
+/** First observation primes the controller; reopening the app is not a plug-in event. */
+internal class ChargingGaugeEvents {
+    private var previousPlugged: Boolean? = null
+    private var fullReported = false
+
+    fun observe(plugged: Boolean, percent: Int, fullPercent: Int): Boolean {
+        if (percent !in 0..100) return false
+        val wasPlugged = previousPlugged
+        previousPlugged = plugged
+        val full = percent >= fullPercent.coerceIn(1, 100)
+        if (wasPlugged == null) {
+            fullReported = plugged && full
+            return false
+        }
+        if (!plugged) { fullReported = false; return false }
+        val signal = !wasPlugged || (full && !fullReported)
+        if (full) fullReported = true
+        return signal
+    }
+
+    fun reset() { previousPlugged = null; fullReported = false }
+}
 
 internal fun dndWasActivated(previous: Int?, current: Int): Boolean =
     previous == NotificationManager.INTERRUPTION_FILTER_ALL && current in listOf(
@@ -55,6 +90,7 @@ class DeviceSignals(
         chargingColor = prefs.getInt("signals.chargingColor", 0xFF2979FF.toInt()),
         chargedColor = prefs.getInt("signals.chargedColor", 0xFF00E676.toInt()),
         fullPercent = prefs.getInt("signals.fullPercent", 100).coerceIn(1, 100),
+        chargingGauge = prefs.getBoolean("signals.chargingGauge", false),
         dndEnabled = prefs.getBoolean("signals.dndEnabled", false),
         dndColor = prefs.getInt("signals.dndColor", 0xFF7C4DFF.toInt()),
         callsEnabled = prefs.getBoolean("signals.callsEnabled", false),
@@ -65,6 +101,7 @@ class DeviceSignals(
     private var registered = false
     private var plugged = false
     private var batteryPercent = -1
+    private val gaugeEvents = ChargingGaugeEvents()
     private var previousFilter: Int? = null
     val inDoNotDisturb: Boolean
         get() = previousFilter == NotificationManager.INTERRUPTION_FILTER_PRIORITY ||
@@ -78,6 +115,7 @@ class DeviceSignals(
         override fun run() {
             pulseScheduled = false
             if (!masterEnabled || !settings.value.chargingEnabled || !plugged || batteryPercent < 0) return
+            if (settings.value.chargingGauge) return
             show(OWNER_CHARGING, chargingSignalLook(settings.value, batteryPercent), SIGNAL_DURATION_MS)
             // A normal Handler deliberately does not wake a sleeping device.
             pulseScheduled = true
@@ -92,7 +130,11 @@ class DeviceSignals(
             val wasFull = batteryPercent >= settings.value.fullPercent
             batteryPercent = if (level >= 0 && scale > 0) (level.toLong() * 100 / scale).toInt().coerceIn(0, 100) else -1
             plugged = intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) != 0
+            val showGauge = gaugeEvents.observe(plugged, batteryPercent, settings.value.fullPercent)
             if (!plugged || batteryPercent < 0) stopCharging()
+            else if (settings.value.chargingGauge) {
+                if (showGauge) show(OWNER_CHARGING, chargingGaugeLook(settings.value, batteryPercent), SIGNAL_DURATION_MS)
+            }
             else if (!pulseScheduled || wasFull != (batteryPercent >= settings.value.fullPercent)) {
                 stopCharging()
                 pulse.run()
@@ -110,6 +152,7 @@ class DeviceSignals(
             .putInt("signals.chargingColor", next.chargingColor)
             .putInt("signals.chargedColor", next.chargedColor)
             .putInt("signals.fullPercent", next.fullPercent)
+            .putBoolean("signals.chargingGauge", next.chargingGauge)
             .putBoolean("signals.dndEnabled", next.dndEnabled)
             .putInt("signals.dndColor", next.dndColor)
             .putBoolean("signals.callsEnabled", next.callsEnabled)
@@ -119,9 +162,14 @@ class DeviceSignals(
         if (!next.dndEnabled) cancel(OWNER_DND)
         if (!next.callsEnabled) cancel(OWNER_CALL)
         syncBatteryRegistration()
-        if (old.chargingColor != next.chargingColor || old.chargedColor != next.chargedColor || old.fullPercent != next.fullPercent) {
+        if (old.chargingColor != next.chargingColor || old.chargedColor != next.chargedColor ||
+            old.fullPercent != next.fullPercent || old.chargingGauge != next.chargingGauge) {
             stopCharging()
-            pulse.run()
+            if (next.chargingGauge) {
+                if (masterEnabled && next.chargingEnabled && plugged && batteryPercent >= 0) {
+                    show(OWNER_CHARGING, chargingGaugeLook(next, batteryPercent), SIGNAL_DURATION_MS)
+                }
+            } else pulse.run()
         }
     }
 
@@ -154,6 +202,7 @@ class DeviceSignals(
             }
             plugged = false
             batteryPercent = -1
+            gaugeEvents.reset()
             stopCharging()
         }
     }

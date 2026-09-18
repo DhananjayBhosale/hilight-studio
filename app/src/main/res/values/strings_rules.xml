@@ -190,4 +190,20 @@
     <string name="privacy_replace_warning">Saving will replace the existing rule for this activity and app.</string>
 
     <string name="privacy_one_minute_cap">Stops immediately when camera or microphone use ends, and after at most 1 minute of uninterrupted use. Activity may start in the viewfinder before video recording. This does not detect the Record button.</string>
+    <string name="rules_export">Export rules</string>
+    <string name="rules_import">Import rules</string>
+    <string name="rules_backup_privacy">This file includes app names, contact or chat names, chat IDs, and keyword filters saved in your rules. It does not include notification history. Keep it private. Export this information?</string>
+    <string name="rules_backup_exported">Rules exported. Keep the file private.</string>
+    <string name="rules_backup_failed">Could not complete the backup operation. Check that the file is a supported rule backup under 1 MB. Import never overwrites a saved rule; conflicting rules must be resolved first.</string>
+    <string name="rules_import_confirm">Import %1$d rules? Existing rules stay unchanged. Identical rules are skipped; conflicting rules cancel the import. Imported rules keep their enabled state and matching conditions.</string>
+    <string name="rules_import_done">Added %1$d rules. Skipped %2$d existing rules.</string>
+    <string name="rules_group">%1$s · %2$d rules</string>
+    <string name="rules_move_up">Move up</string>
+    <string name="rules_move_down">Move down</string>
+    <string name="rules_priority_hint">Add several rules for one app and move them up or down. Conversation matches come first, then matching text rules, then the app fallback. Within each level, the first matching rule wins.</string>
+    <string name="rules_app_color">Use app icon color</string>
+    <string name="rules_app_color_hint">Uses the notifying app’s icon color. If unavailable, your saved color is used. Choosing a color manually turns this off.</string>
+    <string name="rules_repeat_sleep_hint">Android may delay reminders while asleep. When Android wakes the app, one overdue reminder can play; missed reminders never pile up.</string>
+    <string name="rules_repeat_pulse_hint">Reminder pulse length. The minimum interval increases with longer pulses to keep at least 80% of the time dark.</string>
+    <string name="rules_keyword_summary">Text contains: %1$s</string>
 </resources>

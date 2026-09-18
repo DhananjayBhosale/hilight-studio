@@ -4,6 +4,29 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class PendingNotificationRemindersTest {
+    @Test fun longerPulsesKeepAtLeastEightyPercentDarkAndLegacyDefaults() {
+        val legacy = AppRule("pkg", "App")
+        assertEquals(1000, legacy.safeRepeatPulseMs)
+        assertEquals(15000, legacy.safeRepeatIntervalMs)
+        for (pulse in listOf(-1, 1000, 2000, 3000, Int.MAX_VALUE)) {
+            val rule = legacy.copy(repeatPulseMs = pulse, repeatIntervalMs = 5000)
+            assertTrue(rule.safeRepeatPulseMs in 1000..3000)
+            assertTrue(rule.safeRepeatIntervalMs >= 5 * rule.safeRepeatPulseMs)
+            val restored = AppRule.fromJson(rule.toPrefsJson())
+            assertEquals(rule.safeRepeatPulseMs, restored.safeRepeatPulseMs)
+            assertEquals(rule.safeRepeatIntervalMs, restored.safeRepeatIntervalMs)
+        }
+    }
+
+    @Test fun lateWakeKeepsDeadlineAndDefersOnePulseFromNowWithoutCatchupBurst() {
+        val queue = PendingNotificationReminders()
+        queue.posted("n", "r", 1000, 0, 20_000)
+        // No awake-time callback ran for two minutes. The original elapsed deadline stays overdue.
+        assertTrue(120_000 >= queue.latest()!!.dueAtMs)
+        queue.defer("n", 120_000, 20_000)
+        assertEquals(140_000L, queue.latest()!!.dueAtMs)
+    }
+
     @Test fun newestPendingWinsAndDismissalRestoresPrevious() {
         val queue = PendingNotificationReminders()
         queue.posted("old", "r1", 100, 1000, 15_000)
