@@ -279,4 +279,5 @@
     <string name="setup_root_error_body">Root を起動できませんでした。再試行するか、別の設定方法を使用できます。</string>
     <string name="setup_root_retry">Root を再試行</string>
 
+    <string name="setup_root_disconnected_body">root は利用できますが、ライトのレンダラーに接続されていません。root を再試行し、接続できない場合は LED 診断情報をコピーしてください。</string>
 </resources>

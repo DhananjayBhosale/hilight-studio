@@ -16,6 +16,7 @@ class RootCommandTest {
         processes: Map<Int, List<String>>,
         executables: Map<Int, String> = emptyMap(),
         instance: String = "root-1",
+        outerShell: String? = null,
     ): Pair<Int, String> {
         val proc = temporary.newFolder()
         for ((pid, args) in processes) {
@@ -36,8 +37,11 @@ class RootCommandTest {
         val script = "procRoot='${proc.absolutePath}'; signals='${signals.absolutePath}'; " +
             "kill() { printf '%s\\n' \"\$*\" >> \"\$signals\"; " +
             "rm -r \"\$procRoot/\$2\"; }; " +
-            RootCommand.stop(4321, "root", instance).replace("/proc/", "\"\$procRoot\"/")
-        val process = ProcessBuilder("bash", "-c", script).redirectErrorStream(true).start()
+            RootCommand.stopBody(4321, "root", instance).replace("/proc/", "\"\$procRoot\"/")
+        // Wrap the WHOLE fixture, including signal overrides, so no host PID can be signalled.
+        val command = if (outerShell == null) script else
+            RootCommand.platformShell(script).replaceFirst("/system/bin/sh", "/bin/bash")
+        val process = ProcessBuilder(outerShell ?: "bash", "-c", command).redirectErrorStream(true).start()
         assertTrue("stop command must finish", process.waitFor(10, TimeUnit.SECONDS))
         return process.exitValue() to signals.readText()
     }
@@ -53,12 +57,32 @@ class RootCommandTest {
         val script = "calls='${calls.absolutePath}'; " +
             "tr() { echo tr >> \"\$calls\"; command tr \"\$@\"; }; " +
             "kill() { echo unexpected-kill >> \"\$calls\"; return 1; }; " +
-            RootCommand.stop(4321, "root", "root-1").replace("/proc/", "'${proc.absolutePath}'/")
+            RootCommand.stopBody(4321, "root", "root-1").replace("/proc/", "'${proc.absolutePath}'/")
         // Android's mksh and bash both support NUL-delimited read. CI's /bin/sh may be dash.
         val process = ProcessBuilder("bash", "-c", script).redirectErrorStream(true).start()
         assertTrue(process.waitFor(10, TimeUnit.SECONDS))
         assertEquals(0, process.exitValue())
         assertEquals("ordinary processes must not consume the stop deadline spawning tr", "", calls.readText())
+    }
+
+    @Test
+    fun `cleanup explicitly pins Android shell and quotes the complete body`() {
+        val body = RootCommand.stopBody(4321, "root", "root-1")
+        val quoted = "'" + body.replace("'", "'\\''") + "'"
+        assertEquals("/system/bin/sh -c $quoted", RootCommand.stop(4321, "root", "root-1"))
+    }
+
+    @Test
+    fun `outer POSIX shell cannot change cleanup reader or bypass ownership checks`() {
+        org.junit.Assume.assumeTrue(java.io.File("/bin/dash").canExecute())
+        val unrelated = mapOf(9876 to listOf("com.example.app"))
+        assertEquals(0, runStop(unrelated, mapOf(9876 to "/system/bin/app_process64"), outerShell = "/bin/dash").first)
+        val blocked = runStop(mapOf(9876 to helper("root-other")), outerShell = "/bin/dash")
+        assertEquals(1, blocked.first)
+        assertEquals("", blocked.second)
+        val stopped = runStop(mapOf(4321 to helper("root-1")), outerShell = "/bin/dash")
+        assertEquals(0, stopped.first)
+        assertEquals("-TERM 4321\n", stopped.second)
     }
 
     private fun helper(instance: String) = listOf(
@@ -178,7 +202,7 @@ class RootCommandTest {
 
     @Test
     fun `root stop validates pid and owner before cooperative term`() {
-        val stop = RootCommand.stop(4321, "root", "root-instance-1")
+        val stop = RootCommand.stopBody(4321, "root", "root-instance-1")
 
         assertTrue(stop.contains("/proc/4321/cmdline"))
         assertTrue(stop.contains("' --owner root '"))
@@ -192,7 +216,7 @@ class RootCommandTest {
 
     @Test
     fun `renderer instance identity is an exact argv token not a prefix`() {
-        val stop = RootCommand.stop(4321, "root", "root-1")
+        val stop = RootCommand.stopBody(4321, "root", "root-1")
 
         assertTrue(stop.contains("while IFS= read -r arg"))
         assertTrue(stop.contains("[ \"\$prev\" = --instance ]"))
@@ -202,7 +226,7 @@ class RootCommandTest {
 
     @Test
     fun `adb stop rejects a root-owned helper with the same entry point`() {
-        val stop = RootCommand.stop(4321, "adb")
+        val stop = RootCommand.stopBody(4321, "adb")
 
         assertTrue(stop.contains("com.hilight.core.AdbHelper"))
         assertTrue(stop.contains("! printf"))

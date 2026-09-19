@@ -405,6 +405,7 @@ fun SetupScreen(store: Store) {
         RootBackend.State.STARTING,
         RootBackend.State.RUNNING,
     )
+    val rendererConnected = store.isRendererConnectedForUi(status)
     if (rootPresent) {
         PixelCard(tone = 2) {
             SectionTitle(
@@ -415,21 +416,25 @@ fun SetupScreen(store: Store) {
                             if (rootState == RootBackend.State.RUNNING)
                                 R.string.setup_root_active else R.string.setup_root_available
                         ),
-                        ok = true,
+                        ok = rootState == RootBackend.State.RUNNING && rendererConnected,
                     )
                 },
             )
             Caption(
                 stringResource(
                     when (rootState) {
-                        RootBackend.State.AVAILABLE -> R.string.setup_root_available_body
+                        RootBackend.State.AVAILABLE -> if (masterEnabled && !rendererConnected)
+                            R.string.setup_root_disconnected_body else R.string.setup_root_available_body
                         RootBackend.State.REQUESTING -> R.string.setup_root_requesting_body
                         RootBackend.State.STARTING -> R.string.setup_root_starting_body
                         else -> R.string.setup_root_active_body
                     }
                 )
             )
-            if (rootState == RootBackend.State.RUNNING && !status.alive) {
+            if (rootState == RootBackend.State.AVAILABLE) {
+                store.root.errorText()?.let { Caption(it) }
+            }
+            if (rootRetryVisible(rootState, rendererConnected)) {
                 Caption(stringResource(R.string.setup_led_cleanup_renderer_unavailable))
                 TextButton(onClick = store::retryRoot) {
                     ButtonLabel(stringResource(R.string.setup_root_retry))
@@ -649,6 +654,8 @@ fun SetupScreen(store: Store) {
         FilledTonalButton(
             onClick = {
                 updateScope.launch {
+                    val lifecycle = store.lifecycleDiagnostics()
+                    val root = store.root.diagnostics()
                     val payload = withContext(Dispatchers.IO) {
                         val snapshot = store.freshRendererStatusSnapshot()
                         RendererDiagnostics.format(
@@ -661,6 +668,8 @@ fun SetupScreen(store: Store) {
                             buildId = Build.ID,
                             sdkInt = Build.VERSION.SDK_INT,
                             capturedAtEpochMs = snapshot.capturedAtEpochMs,
+                            root = root,
+                            lifecycle = lifecycle,
                         )
                     }
                     copy(ctx, payload, R.string.setup_led_diagnostics_copied)

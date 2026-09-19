@@ -16,7 +16,14 @@ object RootCommand {
      * Validates and stops only the exact acknowledged source. A final read-only scan fails if a
      * different helper remains, closing the shared-file duplicate hole without signaling it.
      */
-    fun stop(pid: Int, owner: String = "root", rendererInstanceId: String = ""): String {
+    fun stop(pid: Int, owner: String = "root", rendererInstanceId: String = ""): String =
+        platformShell(stopBody(pid, owner, rendererInstanceId))
+
+    // su implementations may select a different shell. The NUL reader below requires Android mksh.
+    internal fun platformShell(command: String): String = "/system/bin/sh -c ${quote(command)}"
+
+    /** Unwrapped body so fixture-only process/signal overrides stay in the same shell. */
+    internal fun stopBody(pid: Int, owner: String = "root", rendererInstanceId: String = ""): String {
         require(pid > 0) { "pid must be positive" }
         require(owner == "adb" || owner == "root") { "owner must be adb or root" }
         require(rendererInstanceId.isEmpty() || validInstanceId(rendererInstanceId)) {

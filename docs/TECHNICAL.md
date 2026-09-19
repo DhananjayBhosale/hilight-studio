@@ -353,3 +353,6 @@ silence a configured microphone rule.
   delayed until wake, when the stale-reading guard closes the gate and runs the normal renderer
   release. HiLight never assumes success: an unavailable or stale reading keeps the array fully off.
 - Notification rules ignore ongoing notifications (media, progress) to avoid constant retriggering.
+
+Rule groups use stored list order as matching priority and display order from 1.0.14 onward.
+Keep that explicit order on upgrades; automatically sorting existing groups again would change user priorities.

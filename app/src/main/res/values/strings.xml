@@ -3,4 +3,5 @@
     <!-- The product name, which is the same in every language. Marked untranslatable so that lint
          stops asking for a Japanese rendering of it, and so no future translator supplies one. -->
     <string name="app_name" translatable="false">HiLight Studio</string>
+    <string name="setup_root_disconnected_body">Root is available, but the light renderer is not connected. Retry root, then copy LED diagnostics if it stays disconnected.</string>
 </resources>

@@ -5,6 +5,8 @@ import java.util.concurrent.TimeUnit
 
 /** Drain available output while waiting, without a reader that descendants can keep blocked. */
 internal object RootProcess {
+    class CommandTimeout(message: String) : IllegalStateException(message)
+
     data class Result(val code: Int, val output: String)
 
     fun run(args: List<String>, timeoutSeconds: Long): Result {
@@ -38,15 +40,15 @@ internal object RootProcess {
                     drainAvailable()
                     return Result(process.exitValue(), output.toString("UTF-8"))
                 }
-                check(System.nanoTime() - started < timeoutNanos) {
+                if (System.nanoTime() - started >= timeoutNanos) {
                     // Report only our fixed progress markers, never arbitrary command output.
                     val phase = output.toString("UTF-8").lineSequence().lastOrNull {
                         it == "HiLight cleanup: checking source identity" ||
                             it == "HiLight cleanup: waiting for renderer exit" ||
                             it == "HiLight cleanup: scanning remaining renderers"
                     }
-                    "command timed out after ${timeoutSeconds}s" +
-                        (phase?.let { " ($it)" } ?: "")
+                    throw CommandTimeout("command timed out after ${timeoutSeconds}s" +
+                        (phase?.let { " ($it)" } ?: ""))
                 }
             }
         } finally {

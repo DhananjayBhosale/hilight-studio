@@ -12,7 +12,7 @@ import java.util.Locale
  * names, accounts, stable device identifiers, and logs are never inputs to this formatter.
  */
 object RendererDiagnostics {
-    const val SCHEMA_VERSION = 2
+    const val SCHEMA_VERSION = 3
 
     fun format(
         status: HelperStatus,
@@ -25,6 +25,8 @@ object RendererDiagnostics {
         sdkInt: Int,
         capturedAtEpochMs: Long = System.currentTimeMillis(),
         capturedAtElapsedRealtimeMs: Long = SystemClock.elapsedRealtime(),
+        root: RootConnectionDiagnostics? = null,
+        lifecycle: LifecycleDiagnostics? = null,
     ): String = JSONObject().apply {
         put("schemaVersion", SCHEMA_VERSION)
         put("capturedAtEpochMs", capturedAtEpochMs)
@@ -41,6 +43,26 @@ object RendererDiagnostics {
             put("selected", selectedTransport.token())
             put("active", activeTransport.token())
         })
+        root?.let { snapshot ->
+            put("root", JSONObject().apply {
+                put("state", snapshot.state.name.lowercase(Locale.ROOT))
+                put("starting", snapshot.starting)
+                put("phase", snapshot.attempt.phase.name.lowercase(Locale.ROOT))
+                put("failure", snapshot.attempt.failure.name.lowercase(Locale.ROOT))
+            })
+        }
+        lifecycle?.let { snapshot ->
+            put("lifecycle", JSONObject().apply {
+                put("enabled", snapshot.enabled)
+                put("rootTransition", snapshot.rootTransition)
+                put("coldDiscoveryPending", snapshot.coldDiscoveryPending)
+                put("handoffAwaitingRetry", snapshot.handoffAwaitingRetry)
+                put("sourceExitConfirmed", snapshot.sourceExitConfirmed)
+                put("handoffSource", snapshot.handoffSource?.token() ?: JSONObject.NULL)
+                put("handoffTarget", snapshot.handoffTarget?.token() ?: JSONObject.NULL)
+                put("fenced", snapshot.fenced)
+            })
+        }
         put("renderer", JSONObject().apply {
             put("alive", status.alive)
             put("statusAgeMs", status.ageMs)
