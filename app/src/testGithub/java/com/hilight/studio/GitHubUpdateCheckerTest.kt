@@ -63,6 +63,19 @@ class GitHubUpdateCheckerTest {
     }
 
     @Test
+    fun `targeted root test release is not offered to ordinary users`() {
+        val result = GitHubUpdateChecker.resolve(
+            currentVersionName = "1.0.14",
+            response = releases(
+                release("test/issue-19-root-cleanup-1.0.15-1", prerelease = true),
+                release("v1.0.14-experimental", prerelease = true),
+            ),
+        )
+        assertTrue(result is UpdateCheckResult.Current)
+        assertEquals("1.0.14", (result as UpdateCheckResult.Current).latestVersionName)
+    }
+
+    @Test
     fun `empty list and invalid response have distinct safe results`() {
         assertEquals(
             UpdateCheckResult.NoPublishedRelease,

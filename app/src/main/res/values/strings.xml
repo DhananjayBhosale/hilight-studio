@@ -5,4 +5,5 @@
     <string name="app_name" translatable="false">HiLight Studio</string>
     <string name="app_brand_short" translatable="false">HiLight</string>
     <string name="app_logo_description">HiLight Studio logo</string>
+    <string name="setup_root_disconnected_body">Root is available, but the light renderer is not connected. Retry root, then copy LED diagnostics if it stays disconnected.</string>
 </resources>

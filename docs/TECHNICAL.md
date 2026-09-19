@@ -76,6 +76,12 @@ renderer only after its identity, PID, owner, released state revision, closed se
 cleanup, and idle privacy state all match. A denied or failed request leaves output off and exposes
 the Shizuku/ADB fallbacks.
 
+Root cleanup retains its nine-second command deadline and exact process-identity checks. Its final
+process scan reads NUL-delimited arguments with Android shell builtins instead of spawning `tr` for
+every process. Empty command lines still use the executable check, and another surviving helper
+still blocks takeover. Timeout errors identify whether cleanup was checking identity, waiting for
+exit, or scanning for remaining renderers; they do not include arbitrary root-command output.
+
 **Shizuku transport (no computer).** Shizuku v12 or newer launches `HiLightUserService` into a
 shell-UID process (`daemon(true)`, so it outlives the UI) and the app holds a real binder to it. State
 is pushed straight in, no polling. The app first peeks at the existing user-service version so it does
@@ -347,3 +353,6 @@ silence a configured microphone rule.
   delayed until wake, when the stale-reading guard closes the gate and runs the normal renderer
   release. HiLight never assumes success: an unavailable or stale reading keeps the array fully off.
 - Notification rules ignore ongoing notifications (media, progress) to avoid constant retriggering.
+
+Rule groups use stored list order as matching priority and display order from 1.0.14 onward.
+Keep that explicit order on upgrades; automatically sorting existing groups again would change user priorities.

@@ -978,7 +978,10 @@ class Store private constructor(private val app: Context) {
         syncForegroundWatcher()
     }
 
-    /** Validate and persist once before exposing imported rules. Other preferences are untouched. */
+    /** Validate and persist once before exposing imported rules. Other preferences are untouched.
+     * Keep the synchronous commit until rule writers can serialize a durable background transaction;
+     * apply() would lose failure reporting, and a background snapshot could overwrite newer edits.
+     */
     internal fun importRules(imported: List<AppRule>): RuleBackup.MergeResult {
         val merged = RuleBackup.merge(_rules.value, imported)
         val json = JSONArray().also { a -> merged.rules.forEach { a.put(it.toPrefsJson()) } }
@@ -2960,6 +2963,19 @@ class Store private constructor(private val app: Context) {
             rootTransition || root.state.value in setOf(RootBackend.State.CHECKING,
                 RootBackend.State.REQUESTING, RootBackend.State.STARTING))
     }
+
+    /** Main-thread lifecycle state; contains no renderer output or user content. */
+    fun lifecycleDiagnostics(): LifecycleDiagnostics = LifecycleDiagnostics(
+        enabled = _enabled.value,
+        rootTransition = rootTransition,
+        coldDiscoveryPending = coldDiscoveryPending != null,
+        handoffAwaitingRetry = handoffAwaitingRetry,
+        sourceExitConfirmed = sourceExitConfirmed,
+        handoffSource = handoffSource,
+        handoffTarget = handoffTarget,
+        fenced = rootTransition || handoffTarget != null || coldDiscoveryPending != null ||
+            shizuku.unresolvedIncompatibleRenderer.value,
+    )
 
     /** Reads transport and renderer status together for one user-requested diagnostics capture. */
     fun freshRendererStatusSnapshot(): RendererStatusSnapshot {

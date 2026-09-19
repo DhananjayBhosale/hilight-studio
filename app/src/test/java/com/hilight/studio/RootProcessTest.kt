@@ -36,8 +36,19 @@ class RootProcessTest {
     @Test fun `timeout remains bounded and identifies its duration`() {
         val started = System.nanoTime()
         val error = runCatching { RootProcess.run(listOf("sh", "-c", "exec sleep 30"), 1) }.exceptionOrNull()
-        assertTrue(error is IllegalStateException)
+        assertTrue(error is RootProcess.CommandTimeout)
         assertTrue(error?.message.orEmpty().contains("1s"))
         assertTrue((System.nanoTime() - started) / 1_000_000 < 4000)
+    }
+
+    @Test fun `cleanup timeout identifies its last phase without exposing arbitrary output`() {
+        val error = runCatching {
+            RootProcess.run(listOf("sh", "-c",
+                "echo 'HiLight cleanup: scanning remaining renderers'; echo private-data; exec sleep 30"), 1)
+        }.exceptionOrNull()
+        assertEquals(
+            "command timed out after 1s (HiLight cleanup: scanning remaining renderers)",
+            error?.message,
+        )
     }
 }

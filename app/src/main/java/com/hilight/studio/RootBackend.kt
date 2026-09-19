@@ -57,6 +57,10 @@ class RootBackend(private val ctx: Context) : Backend {
     @Volatile private var starting = false
     @Volatile private var checkingPresence = false
     @Volatile private var lastError: String? = null
+    // Retain the last attempt across presence checks; reset only on a new attempt or success.
+    @Volatile private var attempt = RootAttemptDiagnostics()
+
+    fun diagnostics(): RootConnectionDiagnostics = RootConnectionDiagnostics(_state.value, starting, attempt)
 
     var onStateChanged: (() -> Unit)? = null
 
@@ -110,6 +114,7 @@ class RootBackend(private val ctx: Context) : Backend {
     fun ensureStarted(stagedRevision: Long, onComplete: (Boolean) -> Unit) {
         if (starting) return
         starting = true
+        attempt = RootAttemptDiagnostics(RootStartupPhase.PERMISSION)
         Thread({
             var ok = false
             var phase = "root permission check"
@@ -117,16 +122,19 @@ class RootBackend(private val ctx: Context) : Backend {
                 update(State.REQUESTING)
                 val identity = runSu("id", 60)
                 if (identity.code != 0 || !identity.output.contains("uid=0")) {
+                    attempt = RootAttemptDiagnostics(RootStartupPhase.PERMISSION, RootFailureCode.PERMISSION_DENIED)
                     lastError = "Root permission was not granted"
                     update(State.DENIED)
                     return@Thread
                 }
 
                 phase = "previous renderer cleanup"
+                attempt = RootAttemptDiagnostics(RootStartupPhase.CLEANUP)
                 update(State.STARTING)
                 releaseAndStopBridgeRenderer(stagedRevision)
                 val instanceId = "root-${UUID.randomUUID()}"
                 phase = "renderer launch"
+                attempt = RootAttemptDiagnostics(RootStartupPhase.LAUNCH)
                 val launch = runSu(
                     RootCommand.start(Bridge.DEVICE_DIR, instanceId, ctx.applicationInfo.sourceDir), 10,
                 )
@@ -140,6 +148,7 @@ class RootBackend(private val ctx: Context) : Backend {
                 ownedInstanceId = instanceId
 
                 phase = "renderer readiness"
+                attempt = RootAttemptDiagnostics(RootStartupPhase.READINESS)
                 val deadline = SystemClock.elapsedRealtime() + 10_000
                 while (SystemClock.elapsedRealtime() < deadline) {
                     val status = Bridge.readStatus(ctx)
@@ -149,6 +158,7 @@ class RootBackend(private val ctx: Context) : Backend {
                     ) {
                         ok = true
                         lastError = null
+                        attempt = RootAttemptDiagnostics()
                         update(State.RUNNING)
                         return@Thread
                     }
@@ -156,6 +166,12 @@ class RootBackend(private val ctx: Context) : Backend {
                 }
                 throw IllegalStateException("root helper did not become ready")
             } catch (t: Throwable) {
+                attempt = attempt.copy(failure = when {
+                    t is RootProcess.CommandTimeout -> RootFailureCode.TIMEOUT
+                    attempt.phase == RootStartupPhase.READINESS -> RootFailureCode.READINESS_FAILED
+                    attempt.phase in setOf(RootStartupPhase.CLEANUP, RootStartupPhase.LAUNCH) -> RootFailureCode.COMMAND_FAILED
+                    else -> RootFailureCode.UNKNOWN
+                })
                 lastError = "$phase: ${t.message ?: t.javaClass.simpleName}"
                 cleanupOwned()
                 update(State.ERROR)

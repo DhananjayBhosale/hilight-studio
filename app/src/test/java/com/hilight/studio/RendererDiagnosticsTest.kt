@@ -10,6 +10,41 @@ import org.junit.Test
 class RendererDiagnosticsTest {
 
     @Test
+    fun `root and handoff diagnostics reveal a stalled connection using only typed fields`() {
+        val payload = JSONObject(RendererDiagnostics.format(
+            status = HelperStatus(alive = false),
+            selectedTransport = Transport.AUTO,
+            activeTransport = Transport.ADB,
+            appVersionName = "1.0.15", appVersionCode = 16,
+            deviceModel = "Pixel", buildId = "test", sdkInt = 37,
+            capturedAtEpochMs = 100, capturedAtElapsedRealtimeMs = 100,
+            root = RootConnectionDiagnostics(RootBackend.State.AVAILABLE, false,
+                RootAttemptDiagnostics(RootStartupPhase.CLEANUP, RootFailureCode.TIMEOUT)),
+            lifecycle = LifecycleDiagnostics(true, false, true, true, false, null, Transport.ROOT, true),
+        ))
+        assertEquals(setOf("state", "starting", "phase", "failure"), payload.objectKeys("root"))
+        assertEquals("available", payload.getJSONObject("root").getString("state"))
+        assertEquals("cleanup", payload.getJSONObject("root").getString("phase"))
+        assertEquals("timeout", payload.getJSONObject("root").getString("failure"))
+        assertEquals(setOf("enabled", "rootTransition", "coldDiscoveryPending", "handoffAwaitingRetry",
+            "sourceExitConfirmed", "handoffSource", "handoffTarget", "fenced"), payload.objectKeys("lifecycle"))
+        val lifecycle = payload.getJSONObject("lifecycle")
+        assertTrue(lifecycle.getBoolean("coldDiscoveryPending"))
+        assertTrue(lifecycle.getBoolean("fenced"))
+        assertTrue(lifecycle.isNull("handoffSource"))
+        assertEquals("root", lifecycle.getString("handoffTarget"))
+    }
+
+    @Test
+    fun `disconnected available root offers retry without exposing it during startup`() {
+        for (state in RootBackend.State.entries) {
+            assertEquals(state in setOf(RootBackend.State.AVAILABLE, RootBackend.State.RUNNING),
+                rootRetryVisible(state, connected = false))
+            assertFalse(rootRetryVisible(state, connected = true))
+        }
+    }
+
+    @Test
     fun `payload contains only allowlisted renderer lifecycle sections`() {
         val payload = JSONObject(
             RendererDiagnostics.format(

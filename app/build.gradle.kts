@@ -30,8 +30,8 @@ android {
         // supported hardware prevents installation on devices the renderer cannot support.
         minSdk = 37
         targetSdk = 37
-        versionCode = 15
-        versionName = "1.0.14"
+        versionCode = 17
+        versionName = "1.0.15-rc.1"
     }
 
     signingConfigs {

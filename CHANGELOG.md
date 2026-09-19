@@ -2,6 +2,14 @@
 
 All notable changes to HiLight Studio are documented here.
 
+## 1.0.15-rc.1 — 2026-09-20
+
+- Release candidate for GitHub, version code 17; not a confirmed fix for the KernelSU reports.
+- Root cleanup uses Android’s platform shell explicitly, retaining exact process checks and cleanup deadlines. The faster process scan from the targeted test is retained.
+- Copy LED diagnostics now includes fixed root startup/failure fields and handoff state, without raw logs or notification content.
+- Setup shows retry guidance and the previous error when root is available but the renderer is disconnected.
+- Existing rules, preferences and permission requirements are unchanged. Affected-device confirmation is still required before general rollout.
+
 ## [1.0.14-experimental] - 2026-09-18
 
 - Fixed command-output and stdin handling that could stall root startup; startup errors now identify the failed stage. The reported KernelSU case still needs affected-device confirmation.
