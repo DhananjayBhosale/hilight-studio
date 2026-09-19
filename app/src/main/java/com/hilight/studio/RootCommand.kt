@@ -41,25 +41,34 @@ object RootCommand {
                 "[ \"${'$'}arg\" = \"$rendererInstanceId\" ]; then exit 0; fi; " +
                 "prev=${'$'}arg; done; exit 1; }"
         }
+        // Android's mksh reads NUL-delimited argv directly. Forking tr for every process made
+        // this scan consume the stop deadline even when the recorded renderer was already gone.
+        // Keep the empty/unreadable-cmdline executable check and reject every surviving helper.
         val rejectOtherHelper =
-            "for d in /proc/[0-9]*; do c=${'$'}(tr '\\000' ' ' < ${'$'}d/cmdline " +
-                "2>/dev/null) || c=''; if [ -z \"${'$'}c\" ]; then " +
+            "echo 'HiLight cleanup: scanning remaining renderers'; " +
+            "for d in /proc/[0-9]*; do a=''; b=''; c=''; " +
+                "{ IFS= read -r -d '' a; case \"${'$'}{a##*/}\" in " +
+                "app_process|app_process32|app_process64) " +
+                "IFS= read -r -d '' b; IFS= read -r -d '' c;; esac; } " +
+                "2>/dev/null < \"${'$'}d/cmdline\"; if [ -z \"${'$'}a\" ]; then " +
                 "e=${'$'}(readlink ${'$'}d/exe 2>/dev/null) || e=''; " +
                 "x=${'$'}{e##*/}; if [ \"${'$'}x\" = app_process ] || " +
                 "[ \"${'$'}x\" = app_process32 ] || " +
                 "[ \"${'$'}x\" = app_process64 ]; then exit 1; fi; continue; fi; " +
-                "set -- ${'$'}c; x=${'$'}{1##*/}; " +
+                "x=${'$'}{a##*/}; " +
                 "if { [ \"${'$'}x\" = app_process ] || " +
                 "[ \"${'$'}x\" = app_process32 ] || [ \"${'$'}x\" = app_process64 ]; } && " +
-                "[ \"${'$'}2\" = / ] && " +
-                "[ \"${'$'}3\" = com.hilight.core.AdbHelper ]; then exit 1; fi; done"
-        return "original=''; if [ -d /proc/$pid ]; then " +
+                "[ \"${'$'}b\" = / ] && " +
+                "[ \"${'$'}c\" = com.hilight.core.AdbHelper ]; then exit 1; fi; done"
+        return "echo 'HiLight cleanup: checking source identity'; " +
+            "original=''; if [ -d /proc/$pid ]; then " +
             "original=${'$'}($readCmdline) || exit 1; [ -n \"${'$'}original\" ] || exit 1; " +
             // A PID may be reused after the helper dies. Never signal its new owner. The final
             // scan still rejects every surviving helper, including a different instance at this PID.
             "if ( $identity ); then kill -TERM $pid 2>/dev/null || exit 1; " +
             "else original=''; fi; fi; " +
-            "if [ -n \"${'$'}original\" ]; then i=0; " +
+            "if [ -n \"${'$'}original\" ]; then " +
+            "echo 'HiLight cleanup: waiting for renderer exit'; i=0; " +
             "while [ ${'$'}i -lt 65 ] && [ -d /proc/$pid ]; do " +
             "current=${'$'}($readCmdline) || current=''; " +
             "if [ -z \"${'$'}current\" ]; then sleep 0.1; " +

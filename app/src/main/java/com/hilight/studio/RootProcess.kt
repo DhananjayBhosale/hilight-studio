@@ -39,7 +39,14 @@ internal object RootProcess {
                     return Result(process.exitValue(), output.toString("UTF-8"))
                 }
                 check(System.nanoTime() - started < timeoutNanos) {
-                    "command timed out after ${timeoutSeconds}s"
+                    // Report only our fixed progress markers, never arbitrary command output.
+                    val phase = output.toString("UTF-8").lineSequence().lastOrNull {
+                        it == "HiLight cleanup: checking source identity" ||
+                            it == "HiLight cleanup: waiting for renderer exit" ||
+                            it == "HiLight cleanup: scanning remaining renderers"
+                    }
+                    "command timed out after ${timeoutSeconds}s" +
+                        (phase?.let { " ($it)" } ?: "")
                 }
             }
         } finally {
