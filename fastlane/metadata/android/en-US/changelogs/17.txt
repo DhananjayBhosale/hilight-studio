@@ -1,0 +1,1 @@
+Improves root and KernelSU shell compatibility, connection diagnostics, and retry guidance. Keeps LED safety controls and the Play-only update path. Intermittent LED issues still need confirmation on affected devices.
