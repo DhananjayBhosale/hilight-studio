@@ -17,16 +17,19 @@
     <string name="setup_play_updates_canceled">The update was not installed. You can try again.</string>
     <string name="setup_play_updates_failed">Google Play could not check for an update. Try again later.</string>
     <string name="supporter_card_title">Support Highlight Studio</string>
-    <string name="supporter_card_body">Every style stays free and the app has no ads. An optional one-time purchase adds a supporter badge and helps future development.</string>
+    <string name="supporter_card_body">Every style stays free and the app has no ads. Optional monthly or lifetime support adds a supporter badge and helps future development.</string>
     <string name="supporter_badge_title">Supporter badge active</string>
     <string name="supporter_badge_body">Thank you for supporting Highlight Studio. Every style remains available.</string>
     <string name="supporter_prompt_title">Keep every style</string>
-    <string name="supporter_prompt_body">You have tried five styles. Highlight Studio has no ads. Make a one-time supporter purchase and receive a supporter badge, or continue free with every style.</string>
-    <string name="supporter_buy">Support development</string>
-    <string name="supporter_buy_price">Support for %1$s</string>
+    <string name="supporter_prompt_body">You have tried five styles. Choose monthly or lifetime support and receive a supporter badge, or continue free with every style. Highlight Studio has no ads.</string>
+    <string name="supporter_monthly">Support monthly</string>
+    <string name="supporter_monthly_price">%1$s per month</string>
+    <string name="supporter_lifetime">Support for life</string>
+    <string name="supporter_lifetime_price">%1$s lifetime</string>
+    <string name="supporter_terms">Monthly support renews automatically until canceled and keeps the badge active. Lifetime support keeps it permanently. Payment is optional.</string>
     <string name="supporter_continue_free">Continue free — no ads</string>
     <string name="supporter_connecting">Connecting to Google Play…</string>
     <string name="supporter_purchasing">Waiting for Google Play…</string>
     <string name="supporter_pending">Payment is pending. The badge will activate after Google Play confirms it.</string>
-    <string name="supporter_unavailable">The supporter purchase is unavailable right now. Every style is still free.</string>
+    <string name="supporter_unavailable">Supporter purchases are unavailable right now. Every style is still free.</string>
 </resources>

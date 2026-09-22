@@ -4,6 +4,9 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.util.Log
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
@@ -15,8 +18,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import com.android.billingclient.api.AcknowledgePurchaseParams
 import com.android.billingclient.api.BillingClient
@@ -31,10 +36,12 @@ import com.android.billingclient.api.QueryProductDetailsParams
 import com.android.billingclient.api.QueryPurchasesParams
 
 private const val TAG = "HiLightSupport"
-private const val PRODUCT_ID = "supporter_badge_lifetime"
+private const val LIFETIME_PRODUCT_ID = "supporter_badge_lifetime"
+private const val MONTHLY_PRODUCT_ID = "supporter_monthly"
+private const val MONTHLY_BASE_PLAN_ID = "monthly"
 private const val PREFS = "play_support"
 private const val KEY_CONTINUE_FREE = "continue_free"
-private const val KEY_SUPPORTER = "supporter_owned"
+private const val KEY_LIFETIME_SUPPORTER = "lifetime_supporter_owned"
 private const val KEY_SEEN_PATTERNS = "seen_patterns"
 
 private enum class PurchaseStatus { IDLE, CONNECTING, READY, PURCHASING, PENDING, ERROR }
@@ -55,14 +62,21 @@ internal class SupportPromptState(
 
     private var pendingPattern: Pattern? = null
     private var pendingApply: (() -> Unit)? = null
-    private var productDetails: ProductDetails? = null
-    private var offerToken: String? = null
+    private var lifetimeDetails: ProductDetails? = null
+    private var lifetimeOfferToken: String? = null
+    private var monthlyDetails: ProductDetails? = null
+    private var monthlyOfferToken: String? = null
 
     private var showChoice by mutableStateOf(false)
     private var freeContinuationChosen by mutableStateOf(prefs.getBoolean(KEY_CONTINUE_FREE, false))
-    private var supporterOwned by mutableStateOf(prefs.getBoolean(KEY_SUPPORTER, false))
-    private var formattedPrice by mutableStateOf<String?>(null)
+    private var lifetimeOwned by mutableStateOf(prefs.getBoolean(KEY_LIFETIME_SUPPORTER, false))
+    private var monthlyActive by mutableStateOf(false)
+    private var lifetimePrice by mutableStateOf<String?>(null)
+    private var monthlyPrice by mutableStateOf<String?>(null)
     private var purchaseStatus by mutableStateOf(PurchaseStatus.CONNECTING)
+
+    private val supporterOwned: Boolean
+        get() = lifetimeOwned || monthlyActive
 
     init {
         billingClient.startConnection(this)
@@ -113,9 +127,7 @@ internal class SupportPromptState(
         showChoice = false
     }
 
-    private fun launchPurchase() {
-        val details = productDetails
-        val token = offerToken
+    private fun launchPurchase(details: ProductDetails?, token: String?) {
         if (activity == null || details == null || token.isNullOrBlank()) {
             purchaseStatus = PurchaseStatus.ERROR
             return
@@ -135,6 +147,10 @@ internal class SupportPromptState(
         }
     }
 
+    private fun launchMonthlyPurchase() = launchPurchase(monthlyDetails, monthlyOfferToken)
+
+    private fun launchLifetimePurchase() = launchPurchase(lifetimeDetails, lifetimeOfferToken)
+
     override fun onBillingSetupFinished(result: BillingResult) {
         if (result.responseCode != BillingClient.BillingResponseCode.OK) {
             purchaseStatus = PurchaseStatus.ERROR
@@ -142,8 +158,8 @@ internal class SupportPromptState(
             return
         }
         purchaseStatus = PurchaseStatus.READY
-        queryProduct()
-        restorePurchase()
+        queryProducts()
+        restorePurchases()
     }
 
     override fun onBillingServiceDisconnected() {
@@ -151,9 +167,14 @@ internal class SupportPromptState(
         purchaseStatus = PurchaseStatus.CONNECTING
     }
 
-    private fun queryProduct() {
+    private fun queryProducts() {
+        queryLifetimeProduct()
+        queryMonthlyProduct()
+    }
+
+    private fun queryLifetimeProduct() {
         val product = QueryProductDetailsParams.Product.newBuilder()
-            .setProductId(PRODUCT_ID)
+            .setProductId(LIFETIME_PRODUCT_ID)
             .setProductType(BillingClient.ProductType.INAPP)
             .build()
         billingClient.queryProductDetailsAsync(
@@ -163,22 +184,59 @@ internal class SupportPromptState(
                 purchaseStatus = PurchaseStatus.ERROR
                 return@queryProductDetailsAsync
             }
-            val details = queryResult.productDetailsList.firstOrNull { it.productId == PRODUCT_ID }
+            val details = queryResult.productDetailsList.firstOrNull {
+                it.productId == LIFETIME_PRODUCT_ID
+            }
             val offer = details?.oneTimePurchaseOfferDetailsList?.firstOrNull()
-            productDetails = details
-            offerToken = offer?.offerToken
-            formattedPrice = offer?.formattedPrice
+            lifetimeDetails = details
+            lifetimeOfferToken = offer?.offerToken
+            lifetimePrice = offer?.formattedPrice
             if (details == null || offer == null) purchaseStatus = PurchaseStatus.ERROR
         }
     }
 
-    private fun restorePurchase() {
-        val params = QueryPurchasesParams.newBuilder()
-            .setProductType(BillingClient.ProductType.INAPP)
+    private fun queryMonthlyProduct() {
+        val product = QueryProductDetailsParams.Product.newBuilder()
+            .setProductId(MONTHLY_PRODUCT_ID)
+            .setProductType(BillingClient.ProductType.SUBS)
             .build()
+        billingClient.queryProductDetailsAsync(
+            QueryProductDetailsParams.newBuilder().setProductList(listOf(product)).build()
+        ) { result, queryResult ->
+            if (result.responseCode != BillingClient.BillingResponseCode.OK) {
+                purchaseStatus = PurchaseStatus.ERROR
+                return@queryProductDetailsAsync
+            }
+            val details = queryResult.productDetailsList.firstOrNull {
+                it.productId == MONTHLY_PRODUCT_ID
+            }
+            val offer = details?.subscriptionOfferDetails?.firstOrNull {
+                it.basePlanId == MONTHLY_BASE_PLAN_ID
+            }
+            monthlyDetails = details
+            monthlyOfferToken = offer?.offerToken
+            monthlyPrice = offer?.pricingPhases?.pricingPhaseList?.lastOrNull()?.formattedPrice
+            if (details == null || offer == null) purchaseStatus = PurchaseStatus.ERROR
+        }
+    }
+
+    private fun restorePurchases() {
+        queryOwnedPurchases(BillingClient.ProductType.INAPP) { purchases ->
+            lifetimeOwned = false
+            prefs.edit { putBoolean(KEY_LIFETIME_SUPPORTER, false) }
+            purchases.forEach(::handlePurchase)
+        }
+        queryOwnedPurchases(BillingClient.ProductType.SUBS) { purchases ->
+            monthlyActive = false
+            purchases.forEach(::handlePurchase)
+        }
+    }
+
+    private fun queryOwnedPurchases(productType: String, onSuccess: (List<Purchase>) -> Unit) {
+        val params = QueryPurchasesParams.newBuilder().setProductType(productType).build()
         billingClient.queryPurchasesAsync(params) { result, purchases ->
             if (result.responseCode == BillingClient.BillingResponseCode.OK) {
-                purchases.forEach(::handlePurchase)
+                onSuccess(purchases)
             }
         }
     }
@@ -195,14 +253,16 @@ internal class SupportPromptState(
     }
 
     private fun handlePurchase(purchase: Purchase) {
-        if (PRODUCT_ID !in purchase.products) return
+        val grantsLifetime = LIFETIME_PRODUCT_ID in purchase.products
+        val grantsMonthly = MONTHLY_PRODUCT_ID in purchase.products
+        if (!grantsLifetime && !grantsMonthly) return
         if (purchase.purchaseState == Purchase.PurchaseState.PENDING) {
             purchaseStatus = PurchaseStatus.PENDING
             return
         }
         if (purchase.purchaseState != Purchase.PurchaseState.PURCHASED) return
         if (purchase.isAcknowledged) {
-            grantSupporterStatus()
+            grantSupporterStatus(grantsLifetime, grantsMonthly)
             return
         }
         val params = AcknowledgePurchaseParams.newBuilder()
@@ -210,7 +270,7 @@ internal class SupportPromptState(
             .build()
         billingClient.acknowledgePurchase(params) { result ->
             if (result.responseCode == BillingClient.BillingResponseCode.OK) {
-                grantSupporterStatus()
+                grantSupporterStatus(grantsLifetime, grantsMonthly)
             } else {
                 purchaseStatus = PurchaseStatus.ERROR
                 Log.w(TAG, "Could not acknowledge purchase: ${result.responseCode}")
@@ -218,10 +278,13 @@ internal class SupportPromptState(
         }
     }
 
-    private fun grantSupporterStatus() {
-        supporterOwned = true
+    private fun grantSupporterStatus(grantsLifetime: Boolean, grantsMonthly: Boolean) {
+        if (grantsLifetime) {
+            lifetimeOwned = true
+            prefs.edit { putBoolean(KEY_LIFETIME_SUPPORTER, true) }
+        }
+        if (grantsMonthly) monthlyActive = true
         purchaseStatus = PurchaseStatus.READY
-        prefs.edit { putBoolean(KEY_SUPPORTER, true) }
         completePendingPattern()
     }
 
@@ -241,15 +304,8 @@ internal class SupportPromptState(
                 )
             )
             if (!supporterOwned) {
-                FilledTonalButton(
-                    onClick = ::launchPurchase,
-                    enabled = productDetails != null && purchaseStatus != PurchaseStatus.PURCHASING,
-                ) {
-                    Text(
-                        formattedPrice?.let { stringResource(R.string.supporter_buy_price, it) }
-                            ?: stringResource(R.string.supporter_buy)
-                    )
-                }
+                PurchaseButtons()
+                Caption(stringResource(R.string.supporter_terms))
                 PurchaseStatusText(purchaseStatus)
             }
         }
@@ -259,28 +315,49 @@ internal class SupportPromptState(
                 onDismissRequest = ::dismissChoice,
                 title = { Text(stringResource(R.string.supporter_prompt_title)) },
                 text = {
-                    Text(
-                        stringResource(R.string.supporter_prompt_body),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                },
-                confirmButton = {
-                    TextButton(
-                        onClick = ::launchPurchase,
-                        enabled = productDetails != null && purchaseStatus != PurchaseStatus.PURCHASING,
-                    ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
-                            formattedPrice?.let { stringResource(R.string.supporter_buy_price, it) }
-                                ?: stringResource(R.string.supporter_buy)
+                            stringResource(R.string.supporter_prompt_body),
+                            style = MaterialTheme.typography.bodyMedium,
                         )
+                        PurchaseButtons()
+                        Caption(stringResource(R.string.supporter_terms))
+                        PurchaseStatusText(purchaseStatus)
                     }
                 },
-                dismissButton = {
+                confirmButton = {
                     TextButton(onClick = ::continueFree) {
                         Text(stringResource(R.string.supporter_continue_free))
                     }
                 },
             )
+        }
+    }
+
+    @Composable
+    private fun PurchaseButtons() {
+        val purchasesEnabled = purchaseStatus != PurchaseStatus.PURCHASING
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilledTonalButton(
+                onClick = ::launchMonthlyPurchase,
+                enabled = monthlyDetails != null && purchasesEnabled,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    monthlyPrice?.let { stringResource(R.string.supporter_monthly_price, it) }
+                        ?: stringResource(R.string.supporter_monthly)
+                )
+            }
+            FilledTonalButton(
+                onClick = ::launchLifetimePurchase,
+                enabled = lifetimeDetails != null && purchasesEnabled,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    lifetimePrice?.let { stringResource(R.string.supporter_lifetime_price, it) }
+                        ?: stringResource(R.string.supporter_lifetime)
+                )
+            }
         }
     }
 }
