@@ -8,7 +8,7 @@ Control the eight-LED HiLight array on Pixel 11 Pro devices.
 [![Latest release](https://img.shields.io/github/v/release/DhananjayBhosale/hilight-studio?include_prereleases&label=release)](https://github.com/DhananjayBhosale/hilight-studio/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2f81f7.svg)](LICENSE)
 
-<h2><strong>Now available on the Play Store. <a href="https://groups.google.com/g/apps-beta-testing-dhananjaytech">Join this group first</a> and then <a href="https://play.google.com/apps/testing/com.highlight.studio">download the app from the Play Store</a>.</strong></h2>
+<h2><strong>Open testing is now available on Google Play. <a href="https://play.google.com/store/apps/details?id=com.highlight.studio">Download Highlight Studio from the Play Store</a> — no Google Group is required.</strong></h2>
 
 > [!IMPORTANT]
 > HiLight Studio is experimental and supports only the Pixel 11 Pro, Pixel 11 Pro XL, and Pixel 11 Pro Fold on Android 17 (API 37). It is not affiliated with or endorsed by Google.
@@ -51,10 +51,10 @@ Control the eight-LED HiLight array on Pixel 11 Pro devices.
 
 ## Install
 
-### Google Play closed test
+### Google Play open test
 
-1. [Join the tester Google Group](https://groups.google.com/g/apps-beta-testing-dhananjaytech) with the Google account used on your supported Pixel.
-2. [Open the Play testing page](https://play.google.com/apps/testing/com.highlight.studio), opt in, and install Highlight Studio from Google Play.
+1. [Open Highlight Studio on Google Play](https://play.google.com/store/apps/details?id=com.highlight.studio) with the Google account used on your supported Pixel.
+2. Join the open test and install the app. No Google Group or email signup is required.
 
 The Play edition installs separately from the experimental GitHub build and starts with its own settings.
 
