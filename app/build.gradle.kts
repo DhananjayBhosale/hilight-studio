@@ -30,8 +30,8 @@ android {
         // supported hardware prevents installation on devices the renderer cannot support.
         minSdk = 37
         targetSdk = 37
-        versionCode = 17
-        versionName = "1.0.15-rc.1"
+        versionCode = 18
+        versionName = "1.0.16-rc.1"
     }
 
     signingConfigs {
@@ -104,6 +104,7 @@ dependencies {
     implementation("dev.rikka.shizuku:provider:13.1.5")
     add("playImplementation", "com.google.android.play:app-update:2.1.0")
     add("playImplementation", "com.google.android.play:app-update-ktx:2.1.0")
+    add("playImplementation", "com.android.billingclient:billing:9.1.0")
     testImplementation("junit:junit:4.13.2")
     // Android's org.json methods are framework stubs in local JVM tests; this supplies the real
     // implementation for preference/state round-trip tests and is not packaged in the APK.

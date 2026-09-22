@@ -58,9 +58,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 fun AmbientScreen(store: Store) {
     val ambient by store.ambient.collectAsStateWithLifecycle()
     val enabled by store.enabled.collectAsStateWithLifecycle()
+    val supportPrompt = rememberSupportPromptState()
     var editingLed by rememberSaveable { mutableIntStateOf(0) }
 
     PresetsCard(store)
+    supportPrompt.Content()
 
     PixelCard(tone = 2) {
         SectionTitle(stringResource(R.string.style_always_on_style))
@@ -68,7 +70,11 @@ fun AmbientScreen(store: Store) {
         PatternCarousel(
             selected = ambient.pattern,
             options = Pattern.entries,
-            onSelect = { store.setAmbient(ambient.copy(pattern = it)) },
+            onSelect = { pattern ->
+                supportPrompt.onPatternSelected(pattern) {
+                    store.setAmbient(ambient.copy(pattern = pattern))
+                }
+            },
         )
         if (!enabled) {
             Text(

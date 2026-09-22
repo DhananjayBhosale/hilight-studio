@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Play-only supporter purchase. The GitHub flavor remains billing-free. -->
+    <uses-permission android:name="com.android.vending.BILLING" />
+</manifest>

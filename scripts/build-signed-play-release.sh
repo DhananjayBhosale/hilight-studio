@@ -124,10 +124,17 @@ PACKAGE_NAME="$($AAPT2 dump badging "$APK" \
   || { echo "unexpected Play package: $PACKAGE_NAME" >&2; exit 1; }
 
 PERMISSIONS="$($APKANALYZER manifest permissions "$APK")"
-if grep -Eq 'android.permission.(INTERNET|QUERY_ALL_PACKAGES)' <<<"$PERMISSIONS"; then
-  echo "Play APK contains a forbidden distribution permission" >&2
+if grep -q 'android.permission.QUERY_ALL_PACKAGES' <<<"$PERMISSIONS"; then
+  echo "Play APK contains the forbidden QUERY_ALL_PACKAGES permission" >&2
   exit 1
 fi
+for REQUIRED_PERMISSION in \
+  com.android.vending.BILLING \
+  android.permission.INTERNET \
+  android.permission.ACCESS_NETWORK_STATE; do
+  grep -qx "$REQUIRED_PERMISSION" <<<"$PERMISSIONS" \
+    || { echo "Play APK is missing $REQUIRED_PERMISSION" >&2; exit 1; }
+done
 
 PACKAGES="$($APKANALYZER dex packages "$APK")"
 grep -q 'com.hilight.core.AdbHelper' <<<"$PACKAGES" \

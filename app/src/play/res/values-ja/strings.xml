@@ -13,4 +13,17 @@
     <string name="setup_play_updates_restart">再起動して更新</string>
     <string name="setup_play_updates_canceled">アップデートはインストールされませんでした。もう一度お試しください。</string>
     <string name="setup_play_updates_failed">Google Play でアップデートを確認できませんでした。しばらくしてからもう一度お試しください。</string>
+    <string name="supporter_card_title">Highlight Studio を応援</string>
+    <string name="supporter_card_body">すべてのスタイルは無料で、広告もありません。任意の一回限りの購入でサポーターバッジが追加され、今後の開発を応援できます。</string>
+    <string name="supporter_badge_title">サポーターバッジ有効</string>
+    <string name="supporter_badge_body">Highlight Studio を応援していただきありがとうございます。すべてのスタイルを引き続き利用できます。</string>
+    <string name="supporter_prompt_title">すべてのスタイルを使う</string>
+    <string name="supporter_prompt_body">5つのスタイルを試しました。Highlight Studio には広告がありません。一回限りの購入でサポーターバッジを受け取るか、すべてのスタイルを無料で使い続けられます。</string>
+    <string name="supporter_buy">開発を応援</string>
+    <string name="supporter_buy_price">%1$s で応援</string>
+    <string name="supporter_continue_free">無料で続ける — 広告なし</string>
+    <string name="supporter_connecting">Google Play に接続中…</string>
+    <string name="supporter_purchasing">Google Play の完了を待っています…</string>
+    <string name="supporter_pending">お支払いは保留中です。Google Play の確認後にバッジが有効になります。</string>
+    <string name="supporter_unavailable">現在サポーター購入を利用できません。すべてのスタイルは引き続き無料です。</string>
 </resources>
