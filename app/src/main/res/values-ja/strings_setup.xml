@@ -13,7 +13,8 @@
 
     <!-- Compact project attribution at the top of Settings. -->
     <!-- "Made with passion and care by Dhananjay Tech" -->
-    <string name="setup_attribution">Dhananjay Tech が情熱と心を込めて作りました</string>
+    <string name="setup_attribution">Dhananjay Tech 制作</string>
+    <string name="setup_attribution_body">丁寧に作られた独立系ツール</string>
     <!-- "Opens Dhananjay Tech on X" -->
     <string name="setup_attribution_external">X で Dhananjay Tech を開きます</string>
 

@@ -1,0 +1,70 @@
+require_relative "google_impersonation_compat"
+require "digest"
+
+opt_out_usage
+default_platform(:android)
+
+PROJECT_ROOT = File.expand_path("..", __dir__)
+PLAY_PACKAGE = "com.highlight.studio"
+
+def play_credentials
+  explicit = ENV["HILIGHT_PLAY_JSON_KEY"].to_s
+  return File.expand_path(explicit, PROJECT_ROOT) unless explicit.empty?
+
+  adc = File.expand_path("~/.config/fastlane-stores/google-adc.json")
+  UI.user_error!("Configure HILIGHT_PLAY_JSON_KEY or shared store authentication.") unless File.file?(adc)
+  ENV["GOOGLE_APPLICATION_CREDENTIALS"] = adc
+  nil
+end
+
+def required_option(options, key)
+  value = options[key].to_s.strip
+  UI.user_error!("Pass #{key}: explicitly.") if value.empty?
+  value
+end
+
+platform :android do
+  desc "Inspect version codes in an explicit Google Play track"
+  lane :status do |options|
+    track = required_option(options, :track)
+    versions = google_play_track_version_codes(
+      package_name: PLAY_PACKAGE,
+      json_key: play_credentials,
+      track: track,
+    )
+    UI.message("#{track} version codes: #{versions.join(', ')}")
+  end
+
+  desc "Submit a verified AAB to Open testing while preserving existing store metadata"
+  lane :open_testing do |options|
+    artifact = File.expand_path(required_option(options, :aab), PROJECT_ROOT)
+    expected_hash = required_option(options, :sha256).downcase
+    version = required_option(options, :version_code)
+    release_name = required_option(options, :version_name)
+    UI.user_error!("aab: must name an existing .aab file.") unless File.file?(artifact) && File.extname(artifact) == ".aab"
+    UI.user_error!("version_code: must be a positive integer.") unless version.match?(/\A[1-9]\d*\z/)
+    actual_hash = Digest::SHA256.file(artifact).hexdigest
+    UI.user_error!("Verified AAB hash mismatch.") unless actual_hash == expected_hash
+
+    upload_to_play_store(
+      package_name: PLAY_PACKAGE,
+      json_key: play_credentials,
+      aab: artifact,
+      track: "beta",
+      release_status: "completed",
+      version_code: version.to_i,
+      version_name: release_name,
+      metadata_path: File.join(PROJECT_ROOT, "fastlane", "metadata", "android"),
+      skip_upload_apk: true,
+      skip_upload_aab: false,
+      skip_upload_metadata: true,
+      skip_upload_changelogs: false,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      changes_not_sent_for_review: false,
+      rescue_changes_not_sent_for_review: false,
+      timeout: 600,
+    )
+    UI.success("Open-testing submission accepted. Google review remains a separate gate.")
+  end
+end

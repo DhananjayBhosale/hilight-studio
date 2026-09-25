@@ -2,13 +2,16 @@ package com.hilight.studio
 
 internal const val FREE_STYLE_COUNT = 5
 
+internal fun wasSupportPromptShownForVersion(
+    lastPromptedVersion: Int,
+    currentVersion: Int,
+): Boolean = lastPromptedVersion == currentVersion
+
 /** Pure decision logic shared by the Play supporter prompt and its unit tests. */
 internal fun shouldOfferSupportChoice(
     seenPatternKeys: Set<String>,
-    candidatePatternKey: String,
-    freeContinuationChosen: Boolean,
+    promptShownThisVersion: Boolean,
     supporterOwned: Boolean,
-): Boolean = !freeContinuationChosen &&
+): Boolean = !promptShownThisVersion &&
     !supporterOwned &&
-    candidatePatternKey !in seenPatternKeys &&
     seenPatternKeys.size >= FREE_STYLE_COUNT

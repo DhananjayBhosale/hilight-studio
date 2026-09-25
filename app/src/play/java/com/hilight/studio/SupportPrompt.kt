@@ -5,19 +5,30 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.background
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -40,7 +51,7 @@ private const val LIFETIME_PRODUCT_ID = "supporter_badge_lifetime"
 private const val MONTHLY_PRODUCT_ID = "supporter_monthly"
 private const val MONTHLY_BASE_PLAN_ID = "monthly"
 private const val PREFS = "play_support"
-private const val KEY_CONTINUE_FREE = "continue_free"
+private const val KEY_LAST_PROMPTED_VERSION = "last_prompted_version"
 private const val KEY_LIFETIME_SUPPORTER = "lifetime_supporter_owned"
 private const val KEY_SEEN_PATTERNS = "seen_patterns"
 
@@ -68,7 +79,9 @@ internal class SupportPromptState(
     private var monthlyOfferToken: String? = null
 
     private var showChoice by mutableStateOf(false)
-    private var freeContinuationChosen by mutableStateOf(prefs.getBoolean(KEY_CONTINUE_FREE, false))
+    private var lastPromptedVersion by mutableIntStateOf(
+        prefs.getInt(KEY_LAST_PROMPTED_VERSION, 0)
+    )
     private var lifetimeOwned by mutableStateOf(prefs.getBoolean(KEY_LIFETIME_SUPPORTER, false))
     private var monthlyActive by mutableStateOf(false)
     private var lifetimePrice by mutableStateOf<String?>(null)
@@ -87,11 +100,14 @@ internal class SupportPromptState(
     fun onPatternSelected(pattern: Pattern, apply: () -> Unit) {
         if (shouldOfferSupportChoice(
                 seenPatternKeys = seenPatterns,
-                candidatePatternKey = pattern.key,
-                freeContinuationChosen = freeContinuationChosen,
+                promptShownThisVersion = wasSupportPromptShownForVersion(
+                    lastPromptedVersion,
+                    BuildConfig.VERSION_CODE,
+                ),
                 supporterOwned = supporterOwned,
             )
         ) {
+            markPromptShownForCurrentVersion()
             pendingPattern = pattern
             pendingApply = apply
             showChoice = true
@@ -108,20 +124,18 @@ internal class SupportPromptState(
     }
 
     private fun continueFree() {
-        freeContinuationChosen = true
-        prefs.edit { putBoolean(KEY_CONTINUE_FREE, true) }
+        markPromptShownForCurrentVersion()
         completePendingPattern()
+    }
+
+    private fun markPromptShownForCurrentVersion() {
+        lastPromptedVersion = BuildConfig.VERSION_CODE
+        prefs.edit { putInt(KEY_LAST_PROMPTED_VERSION, BuildConfig.VERSION_CODE) }
     }
 
     private fun completePendingPattern() {
         pendingPattern?.let(::rememberPattern)
         pendingApply?.invoke()
-        pendingPattern = null
-        pendingApply = null
-        showChoice = false
-    }
-
-    private fun dismissChoice() {
         pendingPattern = null
         pendingApply = null
         showChoice = false
@@ -289,30 +303,59 @@ internal class SupportPromptState(
     }
 
     @Composable
-    fun Content() {
-        PixelCard(tone = if (supporterOwned) 2 else 1) {
-            SectionTitle(
-                stringResource(
-                    if (supporterOwned) R.string.supporter_badge_title
-                    else R.string.supporter_card_title
+    fun Content(showCard: Boolean = true) {
+        if (showCard) {
+            PixelCard(tone = if (supporterOwned) 2 else 1) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.FavoriteBorder,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                    Text(
+                        text = stringResource(R.string.supporter_card_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Caption(
+                    stringResource(
+                        if (supporterOwned) R.string.supporter_badge_body
+                        else R.string.supporter_card_body
+                    )
                 )
-            )
-            Caption(
-                stringResource(
-                    if (supporterOwned) R.string.supporter_badge_body
-                    else R.string.supporter_card_body
-                )
-            )
-            if (!supporterOwned) {
-                PurchaseButtons()
-                Caption(stringResource(R.string.supporter_terms))
-                PurchaseStatusText(purchaseStatus)
+                if (!supporterOwned) {
+                    PurchaseButtons()
+                    TextButton(
+                        onClick = ::continueFree,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.supporter_free_summary),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                    Caption(stringResource(R.string.supporter_terms))
+                    PurchaseStatusText(purchaseStatus)
+                }
             }
         }
 
         if (showChoice) {
             AlertDialog(
-                onDismissRequest = ::dismissChoice,
+                onDismissRequest = ::continueFree,
                 title = { Text(stringResource(R.string.supporter_prompt_title)) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -337,21 +380,24 @@ internal class SupportPromptState(
     @Composable
     private fun PurchaseButtons() {
         val purchasesEnabled = purchaseStatus != PurchaseStatus.PURCHASING
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilledTonalButton(
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            OutlinedButton(
                 onClick = ::launchMonthlyPurchase,
                 enabled = monthlyDetails != null && purchasesEnabled,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.weight(1f),
             ) {
                 Text(
                     monthlyPrice?.let { stringResource(R.string.supporter_monthly_price, it) }
                         ?: stringResource(R.string.supporter_monthly)
                 )
             }
-            FilledTonalButton(
+            OutlinedButton(
                 onClick = ::launchLifetimePurchase,
                 enabled = lifetimeDetails != null && purchasesEnabled,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.weight(1f),
             ) {
                 Text(
                     lifetimePrice?.let { stringResource(R.string.supporter_lifetime_price, it) }

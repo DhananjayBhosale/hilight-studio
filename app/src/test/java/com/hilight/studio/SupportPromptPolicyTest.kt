@@ -8,19 +8,24 @@ class SupportPromptPolicyTest {
     private val five = setOf("solid", "gradient", "breathe", "blink", "pulse")
 
     @Test fun `first five distinct styles never prompt`() {
-        assertFalse(shouldOfferSupportChoice(five.take(4).toSet(), "pulse", false, false))
+        assertFalse(shouldOfferSupportChoice(five.take(4).toSet(), false, false))
     }
 
-    @Test fun `sixth distinct style offers supporter choice`() {
-        assertTrue(shouldOfferSupportChoice(five, "chase", false, false))
+    @Test fun `next style selection after five offers supporter choice`() {
+        assertTrue(shouldOfferSupportChoice(five, false, false))
     }
 
-    @Test fun `previously seen style never prompts`() {
-        assertFalse(shouldOfferSupportChoice(five, "pulse", false, false))
+    @Test fun `a previously seen style can trigger the once per update prompt`() {
+        assertTrue(shouldOfferSupportChoice(five, false, false))
     }
 
-    @Test fun `continue free and supporter purchase both remove the prompt`() {
-        assertFalse(shouldOfferSupportChoice(five, "chase", true, false))
-        assertFalse(shouldOfferSupportChoice(five, "chase", false, true))
+    @Test fun `shown prompt and supporter purchase both remove the prompt`() {
+        assertFalse(shouldOfferSupportChoice(five, true, false))
+        assertFalse(shouldOfferSupportChoice(five, false, true))
+    }
+
+    @Test fun `prompt is suppressed only for the version where it was shown`() {
+        assertTrue(wasSupportPromptShownForVersion(lastPromptedVersion = 18, currentVersion = 18))
+        assertFalse(wasSupportPromptShownForVersion(lastPromptedVersion = 18, currentVersion = 19))
     }
 }

@@ -15,14 +15,21 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -35,6 +42,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
@@ -141,6 +150,7 @@ val ADB_COMMAND_CMD =
 fun SetupScreen(store: Store) {
     val ctx = LocalContext.current
     val resources = LocalResources.current
+    val supportPrompt = rememberSupportPromptState()
     val status by store.status.collectAsStateWithLifecycle()
     val masterEnabled by store.enabled.collectAsStateWithLifecycle()
     val manualCleanupPending by store.manualLedCleanupPending.collectAsStateWithLifecycle()
@@ -236,6 +246,7 @@ fun SetupScreen(store: Store) {
     }
 
     val attribution = stringResource(R.string.setup_attribution)
+    val attributionBody = stringResource(R.string.setup_attribution_body)
     val attributionLink = stringResource(R.string.setup_attribution_external)
     PixelCard(
         modifier = Modifier.semantics(mergeDescendants = true) {
@@ -245,9 +256,45 @@ fun SetupScreen(store: Store) {
         tone = 0,
         onClick = { openExternalUrl(ctx, DHANANJAY_TECH_URL) },
     ) {
-        SectionTitle(attribution)
-        Caption(attributionLink)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.42f))
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.62f),
+                        shape = RoundedCornerShape(16.dp),
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "DT",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(attribution, style = MaterialTheme.typography.titleMedium)
+                Caption(attributionBody)
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.OpenInNew,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        }
     }
+
+    supportPrompt.Content()
 
     PixelCard(tone = 2) {
         SectionTitle(

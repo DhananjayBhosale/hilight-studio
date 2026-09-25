@@ -13,11 +13,10 @@
     <string name="setup_play_updates_restart">再起動して更新</string>
     <string name="setup_play_updates_canceled">アップデートはインストールされませんでした。もう一度お試しください。</string>
     <string name="setup_play_updates_failed">Google Play でアップデートを確認できませんでした。しばらくしてからもう一度お試しください。</string>
-    <string name="supporter_card_title">Highlight Studio を応援</string>
-    <string name="supporter_card_body">すべてのスタイルは無料で、広告もありません。任意の月額または買い切りのサポートで、サポーターバッジが追加され、今後の開発を応援できます。</string>
-    <string name="supporter_badge_title">サポーターバッジ有効</string>
+    <string name="supporter_card_title">アプリを応援</string>
+    <string name="supporter_card_body">すべての機能を無料・広告なしで利用できます。\n任意のサポートが今後の開発に役立ちます。</string>
     <string name="supporter_badge_body">Highlight Studio を応援していただきありがとうございます。すべてのスタイルを引き続き利用できます。</string>
-    <string name="supporter_prompt_title">すべてのスタイルを使う</string>
+    <string name="supporter_prompt_title">アプリを応援</string>
     <string name="supporter_prompt_body">5つのスタイルを試しました。月額または買い切りで応援してサポーターバッジを受け取るか、すべてのスタイルを無料で使い続けられます。広告はありません。</string>
     <string name="supporter_monthly">毎月応援</string>
     <string name="supporter_monthly_price">月額 %1$s</string>
@@ -25,6 +24,7 @@
     <string name="supporter_lifetime_price">買い切り %1$s</string>
     <string name="supporter_terms">月額サポートは解約するまで自動更新され、契約中はバッジが有効です。買い切りでは永久に有効です。支払いは任意です。</string>
     <string name="supporter_continue_free">無料で続ける — 広告なし</string>
+    <string name="supporter_free_summary">無料で続ける — 広告なし · すべての機能を利用できます</string>
     <string name="supporter_connecting">Google Play に接続中…</string>
     <string name="supporter_purchasing">Google Play の完了を待っています…</string>
     <string name="supporter_pending">お支払いは保留中です。Google Play の確認後にバッジが有効になります。</string>

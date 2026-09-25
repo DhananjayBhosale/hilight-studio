@@ -62,7 +62,7 @@ fun AmbientScreen(store: Store) {
     var editingLed by rememberSaveable { mutableIntStateOf(0) }
 
     PresetsCard(store)
-    supportPrompt.Content()
+    supportPrompt.Content(showCard = false)
 
     PixelCard(tone = 2) {
         SectionTitle(stringResource(R.string.style_always_on_style))

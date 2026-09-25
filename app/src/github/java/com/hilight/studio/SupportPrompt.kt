@@ -8,7 +8,7 @@ internal class SupportPromptState {
     fun onPatternSelected(pattern: Pattern, apply: () -> Unit) = apply()
 
     @Composable
-    fun Content() = Unit
+    fun Content(showCard: Boolean = true) = Unit
 }
 
 @Composable

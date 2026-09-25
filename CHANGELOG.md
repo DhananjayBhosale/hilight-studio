@@ -2,6 +2,15 @@
 
 All notable changes to HiLight Studio are documented here.
 
+## 1.0.17-rc.1 — 2026-09-25
+
+- Added a permanent, Play-only **Support the App** card at the top of Setup, with optional monthly
+  and lifetime support and a clear free, ad-free path that keeps every feature available.
+- Redesigned the Dhananjay Tech attribution to match the app's Pixel-style cards.
+- Shows the optional support prompt once per app update after five styles have been used; dismissing
+  it continues with the selected style for free.
+- The GitHub flavor remains billing-free.
+
 ## 1.0.15-rc.1 — 2026-09-20
 
 - Release candidate for GitHub, version code 17; not a confirmed fix for the KernelSU reports.

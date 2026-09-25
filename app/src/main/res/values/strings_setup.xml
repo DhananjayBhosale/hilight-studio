@@ -13,7 +13,8 @@
 <resources>
 
     <!-- Compact project attribution at the top of Settings. The whole card opens the profile. -->
-    <string name="setup_attribution">Made with passion and care by Dhananjay Tech</string>
+    <string name="setup_attribution">Made by Dhananjay Tech</string>
+    <string name="setup_attribution_body">Independent tools, thoughtfully built</string>
     <string name="setup_attribution_external">Opens Dhananjay Tech on X</string>
 
     <!-- Auto-off. The trailing readout and the slider badge both come from the shared duration
