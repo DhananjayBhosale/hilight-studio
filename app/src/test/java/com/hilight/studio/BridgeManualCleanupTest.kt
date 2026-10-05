@@ -96,11 +96,47 @@ class BridgeManualCleanupTest {
         val heartbeat = currentHeartbeat(timestampMs = 10_000L)
             .put("heartbeatElapsedRealtimeMs", 50_000L)
             .toString()
-        val previousBoot = Bridge.BridgeStatusCache().read(heartbeat, 10_100L, 1_000L)
+        val cache = Bridge.BridgeStatusCache()
+        val previousBoot = cache.read(heartbeat, 10_100L, 1_000L)
 
         assertFalse(previousBoot.alive)
         assertEquals(4321, previousBoot.pid)
         assertTrue(previousBoot.identityResolved)
+        // Catching up with an old boot's uptime cannot resurrect its dead process.
+        val caughtUp = cache.read(heartbeat, 60_000L, 50_001L)
+        assertFalse(caughtUp.alive)
+        assertEquals(previousBoot.rendererInstanceId, caughtUp.rendererInstanceId)
+        assertEquals(previousBoot.pid, caughtUp.pid)
+        val torn = cache.read("{", 60_001L, 50_002L)
+        assertFalse(torn.alive)
+        val successor = JSONObject(heartbeat)
+            .put("rendererInstanceId", "adb-instance-2")
+            .put("pid", 5432)
+            .put("heartbeatElapsedRealtimeMs", 50_002L)
+        assertTrue(cache.read(successor.toString(), 60_002L, 50_003L).alive)
+    }
+
+    @Test
+    fun `retry root can recover expired cached ownership after status writer dies mid write`() {
+        val cache = Bridge.BridgeStatusCache()
+        val heartbeat = currentHeartbeat(timestampMs = 10_000L)
+            .put("owner", "root").put("uid", 0)
+            .put("rendererInstanceId", "root-instance-1")
+            .put("heartbeatElapsedRealtimeMs", 50_000L)
+        assertTrue(rootHeartbeatBlocksRecovery(cache.read(heartbeat.toString(), 10_100L, 50_100L)))
+        // A short torn read must still defer recovery while the cached heartbeat is fresh.
+        assertTrue(rootHeartbeatBlocksRecovery(cache.read("", 10_200L, 50_200L)))
+        for (elapsed in listOf(54_001L, 54_151L, 54_301L)) {
+            val expired = cache.read("", 15_000L, elapsed)
+            assertFalse(expired.alive)
+            assertFalse(expired.identityResolved)
+            assertEquals(4321, expired.pid)
+            assertEquals("root-instance-1", expired.rendererInstanceId)
+            assertFalse(rootHeartbeatBlocksRecovery(expired))
+        }
+        // A returning heartbeat stops recovery again; corruption never authorizes killing by itself.
+        heartbeat.put("heartbeatElapsedRealtimeMs", 54_400L)
+        assertTrue(rootHeartbeatBlocksRecovery(cache.read(heartbeat.toString(), 15_100L, 54_401L)))
     }
 
     @Test
