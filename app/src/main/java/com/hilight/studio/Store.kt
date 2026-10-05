@@ -1944,6 +1944,10 @@ class Store private constructor(private val app: Context) {
                     pending.manualBlackClearRequestId,
                 )
             }
+            // Availability may have arrived while discovery owned routing. Re-evaluate through
+            // the normal callback so master/ownership fences still guard startup; a failed or
+            // denied attempt is not retried here.
+            if (root.state.value == RootBackend.State.AVAILABLE) root.onStateChanged?.invoke()
         }
         main.postDelayed(::sampleAgain, COLD_BRIDGE_DISCOVERY_INTERVAL_MS)
     }

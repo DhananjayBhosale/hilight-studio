@@ -6,9 +6,68 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 
 class ShizukuLifecycleDecisionTest {
+
+    @Test
+    fun `manager recovery waits for queued execution and newer disconnect cancels it`() {
+        val pending = ArrayDeque<() -> Unit>()
+        val reconnect = ShizukuReconnectQueue { pending.addLast(it) }
+        var starts = 0
+        reconnect.schedule { starts++ }
+        assertEquals(0, starts)
+        assertTrue(reconnect.cancel()) // Exact exit happened, but the replacement has not begun.
+        assertFalse(reconnect.cancel())
+        pending.removeFirst().invoke()
+        assertEquals(0, starts)
+    }
+
+    @Test
+    fun `fresh manager recovery runs once and replaces an older queued reconnect`() {
+        val pending = ArrayDeque<() -> Unit>()
+        val reconnect = ShizukuReconnectQueue { pending.addLast(it) }
+        val starts = mutableListOf<String>()
+        reconnect.schedule { starts += "old" }
+        reconnect.schedule { starts += "current" }
+        while (pending.isNotEmpty()) pending.removeFirst().invoke()
+        assertEquals(listOf("current"), starts)
+    }
+
+    @Test
+    fun `manual bind or accepted handoff cancels compatibility reconnect`() {
+        val pending = ArrayDeque<() -> Unit>()
+        val reconnect = ShizukuReconnectQueue { pending.addLast(it) }
+        var starts = 0
+        reconnect.schedule { starts++ }
+        reconnect.cancel()
+        pending.removeFirst().invoke()
+        assertEquals(0, starts)
+        reconnect.schedule { starts++ }
+        pending.removeFirst().invoke()
+        assertEquals(1, starts)
+    }
+
+    @Test
+    fun `executing reconnect is no longer an unstarted replacement`() {
+        val pending = ArrayDeque<() -> Unit>()
+        val reconnect = ShizukuReconnectQueue { pending.addLast(it) }
+        reconnect.schedule { assertFalse(reconnect.cancel()) }
+        pending.removeFirst().invoke()
+        assertFalse(reconnect.cancel())
+    }
+
+    @Test
+    fun `stale callback cannot clear a newer unstarted replacement`() {
+        val pending = ArrayDeque<() -> Unit>()
+        val reconnect = ShizukuReconnectQueue { pending.addLast(it) }
+        reconnect.schedule { fail("superseded reconnect ran") }
+        reconnect.schedule { fail("cancelled reconnect ran") }
+        pending.removeFirst().invoke()
+        assertTrue(reconnect.cancel())
+        pending.removeFirst().invoke()
+    }
 
     @Test
     fun `visible adb state is targeted only to an exact current shell helper`() {

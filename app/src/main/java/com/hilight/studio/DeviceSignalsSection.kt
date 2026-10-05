@@ -23,7 +23,17 @@ fun DeviceSignalsSection(store: Store) {
                 store.deviceSignals.updateSettings { s -> s.copy(chargingGauge = it) }
             }
             Text(stringResource(if (settings.chargingGauge) R.string.device_signals_gauge_description else R.string.device_signals_charging_description), style = MaterialTheme.typography.bodySmall)
-            ColorPicker(settings.chargingColor, { color -> store.deviceSignals.updateSettings { it.copy(chargingColor = color) } }, stringResource(R.string.device_signals_charging_color))
+            if (!settings.chargingGauge) {
+                Text(stringResource(R.string.device_signals_charging_style))
+                PatternCarousel(
+                    selected = settings.chargingPattern,
+                    options = chargingPatterns,
+                    onSelect = { pattern -> store.deviceSignals.updateSettings { it.copy(chargingPattern = pattern) } },
+                )
+            }
+            if (settings.chargingGauge || settings.chargingPattern != Pattern.RAINBOW) {
+                ColorPicker(settings.chargingColor, { color -> store.deviceSignals.updateSettings { it.copy(chargingColor = color) } }, stringResource(R.string.device_signals_charging_color))
+            }
             ColorPicker(settings.chargedColor, { color -> store.deviceSignals.updateSettings { it.copy(chargedColor = color) } }, stringResource(R.string.device_signals_charged_color))
             Text(stringResource(R.string.device_signals_full_percent, settings.fullPercent))
             Slider(value = settings.fullPercent.toFloat(), onValueChange = { percent ->

@@ -171,6 +171,8 @@ object Bridge {
         private var unreleasedFatal: Good? = null
         /** Exact verified-exited identities whose stale on-disk heartbeat must not resurrect them. */
         private val forgotten = LinkedHashMap<ProcessIdentity, Long>()
+        /** An observed previous-boot process cannot revive when this boot reaches its old uptime. */
+        private val previousBootIdentities = mutableSetOf<ProcessIdentity>()
 
         @Synchronized
         fun read(raw: String?, nowMs: Long, nowElapsedMs: Long? = null): HelperStatus {
@@ -197,12 +199,14 @@ object Bridge {
             val monotonic = nowElapsedMs != null && good.heartbeatElapsedRealtimeMs != null
             val age = if (monotonic) nowElapsedMs - good.heartbeatElapsedRealtimeMs
                 else nowMs - good.timestampMs
+            if (monotonic && age < 0) previousBootIdentities.add(good.identity())
             return good.status.copy(
                 // The helper writes once a second. A torn read cannot erase its identity; only an
                 // explicitly old heartbeat crosses this dead threshold.
                 // A future elapsed timestamp can be left over from a previous boot. Retain its
                 // identity for exact stopping, but never accept it as a live renderer.
-                alive = age in (if (monotonic) 0L else -5_000L)..STATUS_STALE_AFTER_MS,
+                alive = good.identity() !in previousBootIdentities &&
+                    age in (if (monotonic) 0L else -5_000L)..STATUS_STALE_AFTER_MS,
                 ageMs = age,
                 // Cached fields remain useful for fencing, but they do not turn a torn *fresh* read
                 // into a new process-identity proof. Store performs a bounded reread before acting.

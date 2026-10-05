@@ -11,6 +11,49 @@ class DeviceSignalsTest {
         assertFalse(settings.dndEnabled)
         assertFalse(settings.callsEnabled)
         assertFalse(settings.chargingGauge)
+        assertEquals(Pattern.BLINK, settings.chargingPattern)
+    }
+
+    @Test fun chargingStyleKeysRestoreSafelyAcrossUpgrades() {
+        assertEquals(Pattern.BLINK, chargingPatternOf(null))
+        assertEquals(Pattern.BLINK, chargingPatternOf("future-style"))
+        listOf(Pattern.OFF, Pattern.CUSTOM, Pattern.GRADIENT).forEach {
+            assertEquals(Pattern.BLINK, chargingPatternOf(it.key))
+        }
+        chargingPatterns.forEach { pattern ->
+            assertEquals(pattern, chargingPatternOf(pattern.key))
+        }
+    }
+
+    @Test fun selectedChargingAnimationsReachRendererAndFullStillUsesSteadyChargedColor() {
+        chargingPatterns.forEach { pattern ->
+            val settings = DeviceSignalSettings(chargingPattern = pattern,
+                chargingColor = 0xFFFF0000.toInt(), chargedColor = 0xFF00FF00.toInt(), fullPercent = 80)
+            val look = chargingSignalLook(settings, 79)
+            assertEquals(pattern.key, look.toJson().getString("mode"))
+            assertEquals(settings.chargingColor, look.color)
+            assertTrue(look.speedMs in 600..DeviceSignals.SIGNAL_DURATION_MS)
+            val full = chargingSignalLook(settings, 80)
+            assertEquals(Pattern.SOLID, full.pattern)
+            assertEquals(settings.chargedColor, full.color)
+        }
+    }
+
+    @Test fun heartbeatAndRainbowFitTheBriefChargingWindow() {
+        val settings = DeviceSignalSettings()
+        assertEquals(600, chargingSignalLook(settings, 50).speedMs)
+        assertEquals(1200, chargingSignalLook(settings.copy(chargingPattern = Pattern.HEARTBEAT), 50).speedMs)
+        val rainbow = chargingSignalLook(settings.copy(chargingPattern = Pattern.RAINBOW), 50)
+        assertEquals(2000, rainbow.speedMs)
+        assertTrue(rainbow.toJson().getBoolean("spread"))
+    }
+
+    @Test fun chargingStyleDoesNotChangeTheBatteryGauge() {
+        val original = DeviceSignalSettings(chargingGauge = true)
+        chargingPatterns.forEach { pattern ->
+            assertEquals(chargingGaugeLook(original, 55),
+                chargingGaugeLook(original.copy(chargingPattern = pattern), 55))
+        }
     }
 
     @Test fun chargingSwitchesAtConfiguredThreshold() {
