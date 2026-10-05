@@ -2,6 +2,14 @@
 
 All notable changes to HiLight Studio are documented here.
 
+## 1.0.18-rc.1 — 2026-10-06
+
+- Added charging styles including heartbeat, pulse and rainbow in Setup → Device signals. Existing blinking defaults, charged color, battery gauge and brief display limits are preserved.
+- Fixed Shizuku recovery when its manager returns before the previous renderer finishes exiting. Disconnect now cancels queued reconnects without leaving an unnecessary reconnection block.
+- Improved root recovery from unreadable cached status and previous-boot heartbeats, and restored root startup when availability arrives during initial renderer discovery.
+- Existing rules, settings and renderer ownership safeguards remain intact. These recovery changes need affected-device confirmation; the reported KernelSU cleanup timeout is not confirmed resolved.
+- Experimental GitHub release; the separate Play edition is intended for Open testing.
+
 ## 1.0.15-rc.1 — 2026-09-20
 
 - Release candidate for GitHub, version code 17; not a confirmed fix for the KernelSU reports.
