@@ -1,0 +1,1 @@
+Improves Shizuku reconnection and adds 13 charging-indicator styles. Existing timing, safety limits, device support, optional supporter choices and ad-free access remain unchanged.

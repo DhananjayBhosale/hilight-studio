@@ -100,6 +100,7 @@ internal class SupportPromptState(
     fun onPatternSelected(pattern: Pattern, apply: () -> Unit) {
         if (shouldOfferSupportChoice(
                 seenPatternKeys = seenPatterns,
+                candidatePatternKey = pattern.key,
                 promptShownThisVersion = wasSupportPromptShownForVersion(
                     lastPromptedVersion,
                     BuildConfig.VERSION_CODE,
@@ -363,14 +364,16 @@ internal class SupportPromptState(
                             stringResource(R.string.supporter_prompt_body),
                             style = MaterialTheme.typography.bodyMedium,
                         )
+                        Caption(stringResource(R.string.supporter_prompt_free_body))
                         PurchaseButtons()
                         Caption(stringResource(R.string.supporter_terms))
+                        Caption(stringResource(R.string.supporter_prompt_once))
                         PurchaseStatusText(purchaseStatus)
                     }
                 },
                 confirmButton = {
                     TextButton(onClick = ::continueFree) {
-                        Text(stringResource(R.string.supporter_continue_free))
+                        Text(stringResource(R.string.supporter_skip_free))
                     }
                 },
             )

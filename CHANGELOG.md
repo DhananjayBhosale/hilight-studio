@@ -2,6 +2,16 @@
 
 All notable changes to HiLight Studio are documented here.
 
+## 1.0.18-rc.1 — 2026-10-06
+
+- Improved Shizuku recovery after the manager returns and canceled stale queued reconnects when a
+  newer disconnect, bind or handoff supersedes them.
+- Added 13 selectable charging-indicator styles while preserving the existing blink default,
+  charged color, battery gauge, timing and safety restrictions.
+- Retained the existing KernelSU startup and heartbeat recovery changes. Reporter cleanup timeouts,
+  physical LED behavior and the separate Shizuku report still require supported-device evidence.
+- Preserved the Play-only supporter options, Google Play updates and existing device restrictions.
+
 ## 1.0.17-rc.1 — 2026-09-25
 
 - Added a permanent, Play-only **Support the App** card at the top of Setup, with optional monthly

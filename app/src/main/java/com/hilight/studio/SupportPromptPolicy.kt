@@ -10,8 +10,12 @@ internal fun wasSupportPromptShownForVersion(
 /** Pure decision logic shared by the Play supporter prompt and its unit tests. */
 internal fun shouldOfferSupportChoice(
     seenPatternKeys: Set<String>,
+    candidatePatternKey: String,
     promptShownThisVersion: Boolean,
     supporterOwned: Boolean,
 ): Boolean = !promptShownThisVersion &&
     !supporterOwned &&
-    seenPatternKeys.size >= FREE_STYLE_COUNT
+    (
+        seenPatternKeys.size > FREE_STYLE_COUNT ||
+            (seenPatternKeys.size == FREE_STYLE_COUNT && candidatePatternKey !in seenPatternKeys)
+        )
