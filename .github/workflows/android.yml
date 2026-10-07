@@ -23,7 +23,7 @@ jobs:
           packages: platform-tools
       - name: Install Android platform
         run: sdkmanager --channel=3 'platforms;android-37.0' 'build-tools;36.1.0'
-      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
       - name: Test, build, and lint
         run: ./gradlew --no-daemon :app:testDebugUnitTest :app:build :app:lint
       - name: Build standalone helper
