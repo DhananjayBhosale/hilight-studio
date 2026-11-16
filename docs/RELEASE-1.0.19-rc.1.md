@@ -1,4 +1,4 @@
-# HiLight Studio 1.0.19-rc.1 (draft, not released)
+# HiLight Studio 1.0.19-rc.1
 
 Version code 21. GitHub package: `com.hilight.studio`. The separately built Play edition uses `com.highlight.studio` and targets Open testing.
 
@@ -20,7 +20,7 @@ Signed builds, 2026-11-16 (scripts/build-signed-release.sh and the Play worktree
 - GitHub APK `HiLight-Studio-v1.0.19-rc.1-experimental-signed-20261116T101954Z.apk`, SHA-256 59655283d914421c0a0eabd771b57b90746cd314390b1e6f77dec6bfa06dfa5d.
 - Play APK `Highlight-Studio-v1.0.19-rc.1-play-signed-20261116T101751Z.apk`, SHA-256 7c9e1528d83996b262b5b3729d8b55c8a699b5f393dbe631dd80b0aeae93c141.
 - Play upload bundle `Highlight-Studio-v1.0.19-rc.1-play-upload-20261116T101751Z.aab`, SHA-256 813217b487512e2848dd05f67ef533c360737fe684be0375de0ce386b51d8770.
-The Play build includes App's uncommitted landscape fix in SupportPrompt.kt (checked on the phone 15:46: the pop-up scrolls in landscape, Maybe later and the fine print reachable). Release steps approved by the user on 2026-11-16: commits, tag `v1.0.19-rc.1`, GitHub prerelease, Play Open testing upload. Not checked: any rooted phone, the LED colours by eye. #19 needs a KernelSU Pixel 11 Pro to confirm. #76 needs the Play Console products `supporter_badge_lifetime` and `supporter_monthly` (base plan `monthly`) confirmed active and available in the reporter's country.
+The Play build includes App's uncommitted landscape fix in SupportPrompt.kt (checked on the phone 15:46: the pop-up scrolls in landscape, Maybe later and the fine print reachable). Released 2026-11-16: tag `v1.0.19-rc.1` on e3c4398, GitHub prerelease https://github.com/DhananjayBhosale/hilight-studio/releases/tag/v1.0.19-rc.1 (asset digest matches), Play AAB submitted to Open testing at 16:24 IST via fastlane (`beta` track reads code 21; Google review pending). Play branch codex/play-store at da37137, record in its docs/releases/1.0.19-play.md. Not checked: any rooted phone, the LED colours by eye. #19 needs a KernelSU Pixel 11 Pro to confirm. #76 needs the Play Console products `supporter_badge_lifetime` and `supporter_monthly` (base plan `monthly`) confirmed active and available in the reporter's country.
 
 Not addressed: #28 (needs the reporter's phone), #42 (no reliable recording-only signal), #75 (new scope, waiting on the user).
 
