@@ -18,6 +18,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.Dp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -90,6 +94,7 @@ private const val KEY_LAST_SEEN_VERSION = "last_seen_version"
 /** How long the after-update offer waits for Play's ownership answer before using saved state. */
 private const val OWNERSHIP_WAIT_MS = 4_000L
 private const val HERO_LEDS = 8
+private const val SHORT_SCREEN_DP = 520
 private const val LED_WAVE_MS = 3_200
 private val LED_HERO_BACKGROUND = Color(0xFF16171A)
 
@@ -598,12 +603,14 @@ internal class SupportPromptState(
                 shape = RoundedCornerShape(30.dp),
                 color = MaterialTheme.colorScheme.surface,
                 modifier = Modifier
-                    .padding(horizontal = 24.dp)
+                    .padding(horizontal = 24.dp, vertical = 16.dp)
                     .widthIn(max = 400.dp)
                     .fillMaxWidth(),
             ) {
-                Column {
-                    LedHero()
+                // Landscape is shorter than the dialog: everything scrolls, and the hero shrinks.
+                val short = LocalConfiguration.current.screenHeightDp < SHORT_SCREEN_DP
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    LedHero(height = if (short) 72.dp else 130.dp)
                     Column(
                         modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 14.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -701,7 +708,7 @@ internal class SupportPromptState(
  * with it. With animations removed in Accessibility settings, a still rainbow.
  */
 @Composable
-private fun LedHero() {
+private fun LedHero(height: Dp) {
     val animate = remember { ValueAnimator.areAnimatorsEnabled() }
     val phase = if (animate) {
         val transition = rememberInfiniteTransition(label = "ledWave")
@@ -715,7 +722,7 @@ private fun LedHero() {
     Canvas(
         Modifier
             .fillMaxWidth()
-            .height(130.dp)
+            .height(height)
             .background(LED_HERO_BACKGROUND)
     ) {
         val dot = 16.dp.toPx()
