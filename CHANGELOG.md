@@ -2,6 +2,33 @@
 
 All notable changes to HiLight Studio are documented here.
 
+## 1.0.19-rc.1 — 2026-11-16
+
+- Fixed the crash reported in Android vitals for 1.0.18-rc.1 (IllegalStateException in Shizuku's
+  permission check). When Shizuku has not accepted HiLight, Setup now shows Failed with a Restart app
+  button instead of crashing.
+- Root is found again after a reboot or app update without a hard restart, and the root cleanup no
+  longer times out under KernelSU. Needs confirmation on a rooted Pixel 11 Pro.
+- The Live screen shows Not connected, Paused with the reason, or resting instead of on.
+- Added "Color follows battery level" for charging (red to amber to green, off by default) and a
+  Call style choice for the incoming-call signal (Pulse stays the default).
+- Setup is grouped into five collapsible sections; Connection opens by itself when it needs attention.
+- The app no longer freezes if the renderer stalls: Shizuku status checks run off the main thread
+  and wait at most one second.
+- Copy LED diagnostics (schema 4) adds Shizuku state and the reasons the light may stay dark.
+- Support: a redesigned pop-up with eight animated LEDs (a still rainbow when animations are off),
+  the two prices, Maybe later and one line of renewal terms. It also shows once on the first open
+  after an update, never on a fresh install and never for supporters (it waits for Google Play to
+  confirm ownership), and counts as shown only after you answer it. Monthly support is remembered
+  offline, and a purchase Google Play has not confirmed shows Try again. The attribution card's
+  caption was removed. The support buttons always respond, explain Google Play problems, offer Try
+  again and re-check owned purchases.
+- Shorter text throughout: helper lines under settings, cards and buttons are one sentence or
+  removed (English and Japanese).
+- The "Try an effect" buttons can no longer be tapped while they are disabled.
+- Existing rules, settings and light-safety limits are preserved. Checked on a Pixel 11 Pro XL
+  (debug build): no crash when Shizuku stops, Restart app reconnects, the pop-up after an update.
+
 ## 1.0.18-rc.1 — 2026-10-06
 
 - Improved Shizuku recovery after the manager returns and canceled stale queued reconnects when a
