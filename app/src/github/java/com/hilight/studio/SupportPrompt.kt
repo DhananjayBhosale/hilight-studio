@@ -13,3 +13,7 @@ internal class SupportPromptState {
 
 @Composable
 internal fun rememberSupportPromptState(): SupportPromptState = remember { SupportPromptState() }
+
+/** GitHub builds have no billing, so there is no after-update supporter offer. */
+@Composable
+internal fun SupportPromptOnUpdate() = Unit

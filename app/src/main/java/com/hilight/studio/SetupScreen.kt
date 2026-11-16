@@ -10,26 +10,32 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.OpenInNew
+import androidx.compose.material.icons.rounded.BatteryChargingFull
+import androidx.compose.material.icons.rounded.BugReport
+import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -40,10 +46,12 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
@@ -51,6 +59,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -58,6 +67,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.system.exitProcess
+import androidx.compose.ui.draw.clip
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.border
 
 /**
  * Clears any renderer already holding the array, before a new one is started.
@@ -246,7 +261,6 @@ fun SetupScreen(store: Store) {
     }
 
     val attribution = stringResource(R.string.setup_attribution)
-    val attributionBody = stringResource(R.string.setup_attribution_body)
     val attributionLink = stringResource(R.string.setup_attribution_external)
     PixelCard(
         modifier = Modifier.semantics(mergeDescendants = true) {
@@ -279,13 +293,11 @@ fun SetupScreen(store: Store) {
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
-            Column(
+            Text(
+                attribution,
+                style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text(attribution, style = MaterialTheme.typography.titleMedium)
-                Caption(attributionBody)
-            }
+            )
             Icon(
                 imageVector = Icons.AutoMirrored.Rounded.OpenInNew,
                 contentDescription = null,
@@ -296,150 +308,519 @@ fun SetupScreen(store: Store) {
 
     supportPrompt.Content()
 
-    PixelCard(tone = 2) {
-        SectionTitle(
-            stringResource(R.string.setup_auto_off_title),
-            trailing = { Caption(formatDuration(timeoutMs)) },
-        )
-        Caption(stringResource(R.string.setup_auto_off_body))
-        Caption(stringResource(R.string.setup_auto_off_protection))
-        GatedDurationSlider(
-            label = stringResource(R.string.setup_stay_on_for),
-            valueMs = timeoutMs,
-            minMs = 5_000,
-            safeMaxMs = Limits.WARN_ABOVE_MS,
-            extendedMaxMs = Limits.AMBIENT_MAX_MS,
-            unlockLabel = stringResource(R.string.setup_allow_five_minutes),
-            warnFirst = stringResource(R.string.setup_warn_long_title) to
-                stringResource(R.string.setup_warn_long_body),
-            warnSecond = stringResource(R.string.setup_warn_long_confirm_title) to
-                stringResource(R.string.setup_warn_long_confirm_body),
-            onChange = { store.setAmbientTimeoutMs(it) },
-        )
-    }
+    val rootPresent = rootState in setOf(
+        RootBackend.State.AVAILABLE,
+        RootBackend.State.REQUESTING,
+        RootBackend.State.STARTING,
+        RootBackend.State.RUNNING,
+    )
+    val rendererConnected = store.isRendererConnectedForUi(status)
+    val connectionNeedsAttention = !rendererConnected || !notifAccess
+    val lightingPause = glowSuppression ?: pauseSuppression
 
-    PixelCard {
-        SectionTitle(
-            stringResource(R.string.setup_glow_conditions_title),
-            trailing = {
-                glowSuppression?.let { LivePill(stringResource(it.shortRes), ok = false) }
-            },
-        )
-        ToggleRow(stringResource(R.string.setup_screen_off_only), screenOffOnly) {
-            store.setScreenOffOnly(it)
-        }
-        ToggleRow(
-            label = stringResource(R.string.setup_face_down_only),
-            checked = faceDownOnly,
-            // A restored setting still has to be switchable off on hardware without this sensor.
-            enabled = faceDownSensorAvailable || faceDownOnly,
-        ) { wanted ->
-            when {
-                !wanted -> store.setFaceDownOnly(false)
-                faceDownNoticeAccepted -> store.setFaceDownOnly(true)
-                else -> confirmingFaceDown = true
+    SettingsCategory(
+        key = "connection",
+        title = stringResource(R.string.setup_category_connection),
+        icon = Icons.Rounded.Link,
+        initiallyExpanded = connectionNeedsAttention,
+        trailing = {
+            LivePill(
+                stringResource(
+                    if (connectionNeedsAttention) R.string.setup_category_needs_attention
+                    else R.string.setup_category_connected
+                ),
+                ok = !connectionNeedsAttention,
+            )
+        },
+    ) {
+        if (rootPresent) {
+            PixelCard(tone = 2) {
+                SectionTitle(
+                    stringResource(R.string.setup_root_title),
+                    trailing = {
+                        LivePill(
+                            stringResource(
+                                if (rootState == RootBackend.State.RUNNING)
+                                    R.string.setup_root_active else R.string.setup_root_available
+                            ),
+                            ok = rootState == RootBackend.State.RUNNING && rendererConnected,
+                        )
+                    },
+                )
+                Caption(
+                    stringResource(
+                        when (rootState) {
+                            RootBackend.State.AVAILABLE -> if (masterEnabled && !rendererConnected)
+                                R.string.setup_root_disconnected_body else R.string.setup_root_available_body
+                            RootBackend.State.REQUESTING -> R.string.setup_root_requesting_body
+                            RootBackend.State.STARTING -> R.string.setup_root_starting_body
+                            else -> R.string.setup_root_active_body
+                        }
+                    )
+                )
+                if (rootState == RootBackend.State.AVAILABLE) {
+                    store.root.errorText()?.let { Caption(it) }
+                }
+                if (rootRetryVisible(rootState, rendererConnected)) {
+                    Caption(stringResource(R.string.setup_led_cleanup_renderer_unavailable))
+                    TextButton(onClick = store::retryRoot) {
+                        ButtonLabel(stringResource(R.string.setup_root_retry))
+                    }
+                }
+            }
+        } else {
+            PixelCard(tone = 2) {
+                SectionTitle(stringResource(R.string.setup_privileged_title))
+                Caption(stringResource(R.string.setup_privileged_body))
+                val selectable = listOf(Transport.AUTO, Transport.SHIZUKU, Transport.ADB)
+                val transportLabels = selectable.associateWith { stringResource(it.labelRes) }
+                SegmentedSelector(
+                    options = selectable,
+                    selected = transport.takeIf { it in selectable } ?: Transport.AUTO,
+                    label = { transportLabels.getValue(it) },
+                    onSelect = { store.setTransport(it) },
+                )
+                if (transport == Transport.AUTO) Caption(stringResource(R.string.setup_transport_auto_note))
+                if (rootState == RootBackend.State.DENIED || rootState == RootBackend.State.ERROR) {
+                    Caption(
+                        store.root.errorText()
+                            ?: stringResource(R.string.setup_root_error_body)
+                    )
+                    TextButton(onClick = store::retryRoot) {
+                        ButtonLabel(stringResource(R.string.setup_root_retry))
+                    }
+                }
+            }
+
+            AnimatedContent(
+                targetState = transport,
+                transitionSpec = { fadeIn(tween(180)).togetherWith(fadeOut(tween(120))) },
+                label = "transportCards",
+            ) { t ->
+                Column {
+                    if (t != Transport.ADB) ShizukuCard(store, shizukuState)
+                    if (t != Transport.SHIZUKU) AdbCard(ctx)
+                }
             }
         }
-        Caption(stringResource(R.string.face_down_caution))
-        if (!faceDownSensorAvailable) {
-            Caption(stringResource(R.string.face_down_no_sensor))
-        } else if (faceDownOnly) {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Caption(stringResource(R.string.face_down_status_label))
-                LivePill(
-                    text = stringResource(
-                        when (faceDownState) {
-                            FaceDownState.INACTIVE -> R.string.face_down_state_inactive
-                            FaceDownState.STARTING -> R.string.face_down_state_starting
-                            FaceDownState.CHECKING -> R.string.face_down_state_checking
-                            FaceDownState.FACE_DOWN -> R.string.face_down_state_face_down
-                            FaceDownState.NOT_FACE_DOWN -> R.string.face_down_state_not_face_down
-                            FaceDownState.UNAVAILABLE -> R.string.face_down_state_unavailable
-                            FaceDownState.STALE -> R.string.face_down_state_stale
-                            FaceDownState.START_FAILED -> R.string.face_down_state_start_failed
+
+        PixelCard {
+            ToggleRow(stringResource(R.string.shizuku_recovery_setting), notifyShizukuLoss,
+                onChange = store::setNotifyShizukuLoss)
+            Caption(stringResource(R.string.shizuku_recovery_help))
+        }
+
+        PixelCard {
+            SectionTitle(
+                stringResource(R.string.setup_notif_title),
+                trailing = {
+                    LivePill(
+                        stringResource(
+                            if (notifAccess) R.string.setup_state_granted else R.string.setup_state_needed
+                        ),
+                        notifAccess,
+                    )
+                },
+            )
+            Caption(stringResource(R.string.setup_notif_body))
+            FilledTonalButton(
+                onClick = { confirmingNotificationAccess = true },
+            ) { ButtonLabel(stringResource(R.string.setup_open_notif_access)) }
+            Caption(stringResource(R.string.setup_inspector_body))
+            TextButton(onClick = { inspecting = true }) {
+                ButtonLabel(stringResource(R.string.setup_inspector_button))
+            }
+            // The chat picker's convenience comes from a list of real contact names held on the device,
+            // so there has to be a way to be rid of it without uninstalling. Rules keep their own copy of
+            // the name they match on, so clearing this list leaves working rules working.
+            Caption(
+                if (conversations.isEmpty()) {
+                    stringResource(R.string.setup_chats_none)
+                } else {
+                    stringResource(R.string.setup_chats_remembered, conversations.size)
+                }
+            )
+            if (conversations.isNotEmpty()) {
+                TextButton(onClick = { forgetting = true }) {
+                    ButtonLabel(stringResource(R.string.setup_forget_chats_button))
+                }
+            }
+        }
+
+        PixelCard {
+            SectionTitle(
+                stringResource(R.string.setup_usage_title),
+                trailing = {
+                    LivePill(
+                        stringResource(
+                            if (usageAccess) R.string.setup_state_granted else R.string.setup_state_optional
+                        ),
+                        usageAccess,
+                    )
+                },
+            )
+            Caption(stringResource(R.string.setup_usage_body))
+            FilledTonalButton(onClick = { ctx.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) }) {
+                ButtonLabel(stringResource(R.string.setup_open_usage_access))
+            }
+        }
+    }
+
+    SettingsCategory(
+        key = "lighting",
+        title = stringResource(R.string.setup_category_lighting),
+        icon = Icons.Rounded.Schedule,
+        trailing = { lightingPause?.let { LivePill(stringResource(it.shortRes), ok = false) } },
+    ) {
+        PixelCard(tone = 2) {
+            SectionTitle(
+                stringResource(R.string.setup_auto_off_title),
+                trailing = { Caption(formatDuration(timeoutMs)) },
+            )
+            Caption(stringResource(R.string.setup_auto_off_body))
+            Caption(stringResource(R.string.setup_auto_off_protection))
+            GatedDurationSlider(
+                label = stringResource(R.string.setup_stay_on_for),
+                valueMs = timeoutMs,
+                minMs = 5_000,
+                safeMaxMs = Limits.WARN_ABOVE_MS,
+                extendedMaxMs = Limits.AMBIENT_MAX_MS,
+                unlockLabel = stringResource(R.string.setup_allow_five_minutes),
+                warnFirst = stringResource(R.string.setup_warn_long_title) to
+                    stringResource(R.string.setup_warn_long_body),
+                warnSecond = stringResource(R.string.setup_warn_long_confirm_title) to
+                    stringResource(R.string.setup_warn_long_confirm_body),
+                onChange = { store.setAmbientTimeoutMs(it) },
+            )
+        }
+
+        PixelCard {
+            SectionTitle(
+                stringResource(R.string.setup_glow_conditions_title),
+                trailing = {
+                    glowSuppression?.let { LivePill(stringResource(it.shortRes), ok = false) }
+                },
+            )
+            ToggleRow(stringResource(R.string.setup_screen_off_only), screenOffOnly) {
+                store.setScreenOffOnly(it)
+            }
+            ToggleRow(
+                label = stringResource(R.string.setup_face_down_only),
+                checked = faceDownOnly,
+                // A restored setting still has to be switchable off on hardware without this sensor.
+                enabled = faceDownSensorAvailable || faceDownOnly,
+            ) { wanted ->
+                when {
+                    !wanted -> store.setFaceDownOnly(false)
+                    faceDownNoticeAccepted -> store.setFaceDownOnly(true)
+                    else -> confirmingFaceDown = true
+                }
+            }
+            Caption(stringResource(R.string.face_down_caution))
+            if (!faceDownSensorAvailable) {
+                Caption(stringResource(R.string.face_down_no_sensor))
+            } else if (faceDownOnly) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Caption(stringResource(R.string.face_down_status_label))
+                    LivePill(
+                        text = stringResource(
+                            when (faceDownState) {
+                                FaceDownState.INACTIVE -> R.string.face_down_state_inactive
+                                FaceDownState.STARTING -> R.string.face_down_state_starting
+                                FaceDownState.CHECKING -> R.string.face_down_state_checking
+                                FaceDownState.FACE_DOWN -> R.string.face_down_state_face_down
+                                FaceDownState.NOT_FACE_DOWN -> R.string.face_down_state_not_face_down
+                                FaceDownState.UNAVAILABLE -> R.string.face_down_state_unavailable
+                                FaceDownState.STALE -> R.string.face_down_state_stale
+                                FaceDownState.START_FAILED -> R.string.face_down_state_start_failed
+                            }
+                        ),
+                        ok = faceDownState == FaceDownState.FACE_DOWN,
+                    )
+                }
+            }
+        }
+
+        PixelCard {
+            SectionTitle(
+                stringResource(R.string.setup_pause_conditions_title),
+                trailing = {
+                    pauseSuppression?.let { LivePill(stringResource(it.shortRes), ok = false) }
+                },
+            )
+            ToggleRow(stringResource(R.string.suppression_quiet_hours), quietEnabled) {
+                store.setQuietHours(it)
+            }
+            if (quietEnabled) {
+                ToggleRow(stringResource(R.string.setup_quiet_by_day), quietByDay, onChange = store::setQuietByDay)
+                if (quietByDay) {
+                    Caption(stringResource(R.string.setup_quiet_by_day_note))
+                    val dayNames = java.text.DateFormatSymbols.getInstance().weekdays
+                    quietDays.forEachIndexed { day, window ->
+                        val calendarDay = (day + 1) % 7 + 1
+                        ToggleRow(dayNames[calendarDay], window.enabled) {
+                            store.setQuietDay(day, window.copy(enabled = it))
                         }
-                    ),
-                    ok = faceDownState == FaceDownState.FACE_DOWN,
+                        if (window.enabled) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                FilledTonalButton(
+                                    onClick = { pickTime(ctx, window.startMin) { store.setQuietDay(day, window.copy(startMin = it)) } },
+                                    modifier = Modifier.weight(1f),
+                                ) { ButtonLabel(stringResource(R.string.setup_quiet_from, clock(window.startMin))) }
+                                FilledTonalButton(
+                                    onClick = { pickTime(ctx, window.endMin) { store.setQuietDay(day, window.copy(endMin = it)) } },
+                                    modifier = Modifier.weight(1f),
+                                ) { ButtonLabel(stringResource(R.string.setup_quiet_until, clock(window.endMin))) }
+                            }
+                        }
+                    }
+                } else {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        FilledTonalButton(
+                            onClick = { pickTime(ctx, quietStart) { store.setQuietHours(true, startMin = it) } },
+                            modifier = Modifier.weight(1f),
+                        ) { ButtonLabel(stringResource(R.string.setup_quiet_from, clock(quietStart))) }
+                        FilledTonalButton(
+                            onClick = { pickTime(ctx, quietEnd) { store.setQuietHours(true, endMin = it) } },
+                            modifier = Modifier.weight(1f),
+                        ) { ButtonLabel(stringResource(R.string.setup_quiet_until, clock(quietEnd))) }
+                    }
+                }
+                ToggleRow(stringResource(R.string.setup_quiet_dim), quietDim) { store.setQuietDim(it) }
+                if (quietDim) {
+                    PixelSlider(
+                        stringResource(R.string.setup_dim_to),
+                        quietDimPct.toFloat(),
+                        2f..40f,
+                        { store.setQuietDim(true, it.toInt()) },
+                    ) { stringResource(R.string.setup_percent, it.toInt()) }
+                }
+            }
+            ToggleRow(stringResource(R.string.setup_respect_dnd), respectDnd) { store.setRespectDnd(it) }
+            ToggleRow(stringResource(R.string.setup_pause_saver), saverGuard) { store.setSaverGuard(it) }
+            ToggleRow(stringResource(R.string.setup_pause_low_battery), batteryGuard) {
+                store.setBatteryGuard(it)
+            }
+            if (batteryGuard) {
+                PixelSlider(
+                    stringResource(R.string.setup_pause_below),
+                    batteryMinPct.toFloat(),
+                    Limits.BATTERY_MIN_PCT.toFloat()..Limits.BATTERY_MAX_PCT.toFloat(),
+                    { store.setBatteryGuard(true, it.toInt()) },
+                ) { stringResource(R.string.setup_percent, it.toInt()) }
+                Caption(stringResource(R.string.setup_battery_note))
+            }
+        }
+    }
+
+    SettingsCategory(
+        key = "signals",
+        title = stringResource(R.string.device_signals_title),
+        icon = Icons.Rounded.BatteryChargingFull,
+    ) {
+        DeviceSignalsSection(store, showTitle = false)
+    }
+
+    SettingsCategory(
+        key = "troubleshooting",
+        title = stringResource(R.string.setup_category_troubleshooting),
+        icon = Icons.Rounded.BugReport,
+    ) {
+        PixelCard {
+            SectionTitle(stringResource(R.string.setup_test_title))
+            Caption(stringResource(R.string.setup_test_body))
+            selfTestWarning?.let { Caption(it) }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                FilledTonalButton(
+                    onClick = postSelfTest,
+                    enabled = selfTestCountdown == 0,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    ButtonLabel(stringResource(R.string.setup_test_button))
+                }
+                TextButton(
+                    onClick = {
+                        // State changes synchronously, so a second queued tap cannot launch another job
+                        // before Compose has redrawn the disabled button.
+                        if (selfTestCountdown != 0) return@TextButton
+                        val warning = testWarning(true)
+                        selfTestWarning = warning
+                        if (warning != null) {
+                            Toast.makeText(ctx.applicationContext, warning, Toast.LENGTH_LONG).show()
+                            return@TextButton
+                        }
+                        selfTestCountdown = 5
+                        updateScope.launch {
+                            try {
+                                for (remaining in 5 downTo 1) {
+                                    selfTestCountdown = remaining
+                                    delay(1_000)
+                                }
+                                postSelfTest()
+                            } finally {
+                                selfTestCountdown = 0
+                            }
+                        }
+                    },
+                    enabled = selfTestCountdown == 0,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    ButtonLabel(
+                        if (selfTestCountdown > 0) {
+                            stringResource(R.string.setup_test_countdown, selfTestCountdown)
+                        } else {
+                            stringResource(R.string.setup_test_delay_button)
+                        }
+                    )
+                }
+            }
+        }
+
+        PixelCard(tone = 2) {
+            SectionTitle(stringResource(R.string.setup_led_diagnostics_title))
+            Caption(stringResource(R.string.setup_led_diagnostics_body))
+            FilledTonalButton(
+                onClick = {
+                    updateScope.launch {
+                        val lifecycle = store.lifecycleDiagnostics()
+                        val root = store.root.diagnostics()
+                        val gates = store.gateDiagnostics(hasNotificationAccess(ctx))
+                        val shizuku = withContext(Dispatchers.IO) { store.shizuku.diagnostics() }
+                        val payload = withContext(Dispatchers.IO) {
+                            val snapshot = store.freshRendererStatusSnapshot()
+                            RendererDiagnostics.format(
+                                status = snapshot.status,
+                                selectedTransport = snapshot.selectedTransport,
+                                activeTransport = snapshot.activeTransport,
+                                appVersionName = BuildConfig.VERSION_NAME,
+                                appVersionCode = BuildConfig.VERSION_CODE.toLong(),
+                                deviceModel = Build.MODEL,
+                                buildId = Build.ID,
+                                sdkInt = Build.VERSION.SDK_INT,
+                                capturedAtEpochMs = snapshot.capturedAtEpochMs,
+                                root = root,
+                                lifecycle = lifecycle,
+                                shizuku = shizuku,
+                                gates = gates,
+                            )
+                        }
+                        copy(ctx, payload, R.string.setup_led_diagnostics_copied)
+                    }
+                },
+            ) {
+                ButtonLabel(stringResource(R.string.setup_led_diagnostics_copy))
+            }
+            Caption(stringResource(R.string.setup_led_cleanup_retry_body))
+            if (!status.alive || status.rendererStale) {
+                Caption(stringResource(R.string.setup_led_cleanup_renderer_unavailable))
+            }
+            FilledTonalButton(
+                onClick = { store.retryLedCleanup() },
+                enabled = store.isLedCleanupRetryEnabled(
+                    masterEnabled = masterEnabled,
+                    status = status,
+                    requestPending = manualCleanupPending,
+                ),
+            ) {
+                ButtonLabel(
+                    stringResource(
+                        if (manualCleanupInProgress) R.string.setup_led_cleanup_retry_pending
+                        else R.string.setup_led_cleanup_retry,
+                    )
                 )
             }
         }
     }
 
-    PixelCard {
-        SectionTitle(
-            stringResource(R.string.setup_pause_conditions_title),
-            trailing = {
-                pauseSuppression?.let { LivePill(stringResource(it.shortRes), ok = false) }
-            },
-        )
-        ToggleRow(stringResource(R.string.suppression_quiet_hours), quietEnabled) {
-            store.setQuietHours(it)
+    SettingsCategory(
+        key = "app",
+        title = stringResource(R.string.setup_category_app),
+        icon = Icons.Rounded.Settings,
+    ) {
+        PixelCard {
+            SectionTitle(stringResource(R.string.setup_appearance_title))
+            ToggleRow(stringResource(R.string.setup_wallpaper_colours), dynamicColor) {
+                store.setDynamicColor(it)
+            }
         }
-        if (quietEnabled) {
-            ToggleRow(stringResource(R.string.setup_quiet_by_day), quietByDay, onChange = store::setQuietByDay)
-            if (quietByDay) {
-                Caption(stringResource(R.string.setup_quiet_by_day_note))
-                val dayNames = java.text.DateFormatSymbols.getInstance().weekdays
-                quietDays.forEachIndexed { day, window ->
-                    val calendarDay = (day + 1) % 7 + 1
-                    ToggleRow(dayNames[calendarDay], window.enabled) {
-                        store.setQuietDay(day, window.copy(enabled = it))
+
+        PixelCard {
+            SectionTitle(stringResource(R.string.setup_privacy_policy_title))
+            Caption(stringResource(R.string.setup_privacy_policy_body))
+            TextButton(onClick = { openExternalUrl(ctx, PRIVACY_POLICY_URL) }) {
+                ButtonLabel(stringResource(R.string.setup_privacy_policy_open))
+            }
+        }
+
+        if (BuildConfig.UPDATE_CHECK) PixelCard {
+            SectionTitle(
+                stringResource(R.string.setup_updates_title),
+                trailing = {
+                    Caption(
+                        stringResource(
+                            R.string.setup_updates_installed,
+                            BuildConfig.VERSION_NAME,
+                        )
+                    )
+                },
+            )
+            when {
+                checkingForUpdates -> Caption(stringResource(R.string.setup_updates_checking))
+                updateResult == null -> Caption(stringResource(R.string.setup_updates_body))
+                updateResult is UpdateCheckResult.Available -> Caption(
+                    stringResource(
+                        R.string.setup_updates_available,
+                        (updateResult as UpdateCheckResult.Available).release.versionName,
+                    )
+                )
+                updateResult is UpdateCheckResult.Current ->
+                    Caption(stringResource(R.string.setup_updates_current))
+                updateResult is UpdateCheckResult.NoPublishedRelease ->
+                    Caption(stringResource(R.string.setup_updates_none))
+                else -> Caption(stringResource(R.string.setup_updates_failed))
+            }
+
+            val available = updateResult as? UpdateCheckResult.Available
+            if (available != null && !checkingForUpdates) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Button(onClick = { openExternalUrl(ctx, available.release.pageUrl) }) {
+                        ButtonLabel(stringResource(R.string.setup_updates_view_release))
                     }
-                    if (window.enabled) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            FilledTonalButton(
-                                onClick = { pickTime(ctx, window.startMin) { store.setQuietDay(day, window.copy(startMin = it)) } },
-                                modifier = Modifier.weight(1f),
-                            ) { ButtonLabel(stringResource(R.string.setup_quiet_from, clock(window.startMin))) }
-                            FilledTonalButton(
-                                onClick = { pickTime(ctx, window.endMin) { store.setQuietDay(day, window.copy(endMin = it)) } },
-                                modifier = Modifier.weight(1f),
-                            ) { ButtonLabel(stringResource(R.string.setup_quiet_until, clock(window.endMin))) }
-                        }
+                    TextButton(onClick = checkForUpdates) {
+                        ButtonLabel(stringResource(R.string.setup_updates_check_again))
                     }
                 }
             } else {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    FilledTonalButton(
-                        onClick = { pickTime(ctx, quietStart) { store.setQuietHours(true, startMin = it) } },
-                        modifier = Modifier.weight(1f),
-                    ) { ButtonLabel(stringResource(R.string.setup_quiet_from, clock(quietStart))) }
-                    FilledTonalButton(
-                        onClick = { pickTime(ctx, quietEnd) { store.setQuietHours(true, endMin = it) } },
-                        modifier = Modifier.weight(1f),
-                    ) { ButtonLabel(stringResource(R.string.setup_quiet_until, clock(quietEnd))) }
+                FilledTonalButton(
+                    onClick = checkForUpdates,
+                    enabled = !checkingForUpdates,
+                ) {
+                    ButtonLabel(
+                        stringResource(
+                            if (checkingForUpdates) R.string.setup_updates_checking
+                            else R.string.setup_updates_check,
+                        )
+                    )
                 }
             }
-            ToggleRow(stringResource(R.string.setup_quiet_dim), quietDim) { store.setQuietDim(it) }
-            if (quietDim) {
-                PixelSlider(
-                    stringResource(R.string.setup_dim_to),
-                    quietDimPct.toFloat(),
-                    2f..40f,
-                    { store.setQuietDim(true, it.toInt()) },
-                ) { stringResource(R.string.setup_percent, it.toInt()) }
-            }
         }
-        ToggleRow(stringResource(R.string.setup_respect_dnd), respectDnd) { store.setRespectDnd(it) }
-        ToggleRow(stringResource(R.string.setup_pause_saver), saverGuard) { store.setSaverGuard(it) }
-        ToggleRow(stringResource(R.string.setup_pause_low_battery), batteryGuard) {
-            store.setBatteryGuard(it)
-        }
-        if (batteryGuard) {
+
+        DistributionUpdateCard()
+
+        PixelCard {
+            SectionTitle(stringResource(R.string.setup_priority_title))
+            Caption(stringResource(R.string.setup_priority_body))
             PixelSlider(
-                stringResource(R.string.setup_pause_below),
-                batteryMinPct.toFloat(),
-                Limits.BATTERY_MIN_PCT.toFloat()..Limits.BATTERY_MAX_PCT.toFloat(),
-                { store.setBatteryGuard(true, it.toInt()) },
-            ) { stringResource(R.string.setup_percent, it.toInt()) }
-            Caption(stringResource(R.string.setup_battery_note))
+                stringResource(R.string.setup_priority_label),
+                priority.toFloat(),
+                -10f..10f,
+                { store.setPriority(it.toInt()) },
+            ) { it.toInt().toString() }
         }
     }
-
-    DeviceSignalsSection(store)
 
     if (confirmingFaceDown) {
         FaceDownConsentDialog(
@@ -450,327 +831,6 @@ fun SetupScreen(store: Store) {
             },
             onDismiss = { confirmingFaceDown = false },
         )
-    }
-
-    val rootPresent = rootState in setOf(
-        RootBackend.State.AVAILABLE,
-        RootBackend.State.REQUESTING,
-        RootBackend.State.STARTING,
-        RootBackend.State.RUNNING,
-    )
-    val rendererConnected = store.isRendererConnectedForUi(status)
-    if (rootPresent) {
-        PixelCard(tone = 2) {
-            SectionTitle(
-                stringResource(R.string.setup_root_title),
-                trailing = {
-                    LivePill(
-                        stringResource(
-                            if (rootState == RootBackend.State.RUNNING)
-                                R.string.setup_root_active else R.string.setup_root_available
-                        ),
-                        ok = rootState == RootBackend.State.RUNNING && rendererConnected,
-                    )
-                },
-            )
-            Caption(
-                stringResource(
-                    when (rootState) {
-                        RootBackend.State.AVAILABLE -> if (masterEnabled && !rendererConnected)
-                            R.string.setup_root_disconnected_body else R.string.setup_root_available_body
-                        RootBackend.State.REQUESTING -> R.string.setup_root_requesting_body
-                        RootBackend.State.STARTING -> R.string.setup_root_starting_body
-                        else -> R.string.setup_root_active_body
-                    }
-                )
-            )
-            if (rootState == RootBackend.State.AVAILABLE) {
-                store.root.errorText()?.let { Caption(it) }
-            }
-            if (rootRetryVisible(rootState, rendererConnected)) {
-                Caption(stringResource(R.string.setup_led_cleanup_renderer_unavailable))
-                TextButton(onClick = store::retryRoot) {
-                    ButtonLabel(stringResource(R.string.setup_root_retry))
-                }
-            }
-        }
-    } else {
-        PixelCard(tone = 2) {
-            SectionTitle(stringResource(R.string.setup_privileged_title))
-            Caption(stringResource(R.string.setup_privileged_body))
-            val selectable = listOf(Transport.AUTO, Transport.SHIZUKU, Transport.ADB)
-            val transportLabels = selectable.associateWith { stringResource(it.labelRes) }
-            SegmentedSelector(
-                options = selectable,
-                selected = transport.takeIf { it in selectable } ?: Transport.AUTO,
-                label = { transportLabels.getValue(it) },
-                onSelect = { store.setTransport(it) },
-            )
-            if (transport == Transport.AUTO) Caption(stringResource(R.string.setup_transport_auto_note))
-            if (rootState == RootBackend.State.DENIED || rootState == RootBackend.State.ERROR) {
-                Caption(
-                    store.root.errorText()
-                        ?: stringResource(R.string.setup_root_error_body)
-                )
-                TextButton(onClick = store::retryRoot) {
-                    ButtonLabel(stringResource(R.string.setup_root_retry))
-                }
-            }
-        }
-
-        AnimatedContent(
-            targetState = transport,
-            transitionSpec = { fadeIn(tween(180)).togetherWith(fadeOut(tween(120))) },
-            label = "transportCards",
-        ) { t ->
-            Column {
-                if (t != Transport.ADB) ShizukuCard(store, shizukuState)
-                if (t != Transport.SHIZUKU) AdbCard(ctx)
-            }
-        }
-    }
-
-    PixelCard {
-        ToggleRow(stringResource(R.string.shizuku_recovery_setting), notifyShizukuLoss,
-            onChange = store::setNotifyShizukuLoss)
-        Caption(stringResource(R.string.shizuku_recovery_help))
-    }
-
-    PixelCard {
-        SectionTitle(
-            stringResource(R.string.setup_notif_title),
-            trailing = {
-                LivePill(
-                    stringResource(
-                        if (notifAccess) R.string.setup_state_granted else R.string.setup_state_needed
-                    ),
-                    notifAccess,
-                )
-            },
-        )
-        Caption(stringResource(R.string.setup_notif_body))
-        FilledTonalButton(
-            onClick = { confirmingNotificationAccess = true },
-        ) { ButtonLabel(stringResource(R.string.setup_open_notif_access)) }
-        Caption(stringResource(R.string.setup_inspector_body))
-        TextButton(onClick = { inspecting = true }) {
-            ButtonLabel(stringResource(R.string.setup_inspector_button))
-        }
-        // The chat picker's convenience comes from a list of real contact names held on the device,
-        // so there has to be a way to be rid of it without uninstalling. Rules keep their own copy of
-        // the name they match on, so clearing this list leaves working rules working.
-        Caption(
-            if (conversations.isEmpty()) {
-                stringResource(R.string.setup_chats_none)
-            } else {
-                stringResource(R.string.setup_chats_remembered, conversations.size)
-            }
-        )
-        if (conversations.isNotEmpty()) {
-            TextButton(onClick = { forgetting = true }) {
-                ButtonLabel(stringResource(R.string.setup_forget_chats_button))
-            }
-        }
-    }
-
-    PixelCard {
-        SectionTitle(
-            stringResource(R.string.setup_usage_title),
-            trailing = {
-                LivePill(
-                    stringResource(
-                        if (usageAccess) R.string.setup_state_granted else R.string.setup_state_optional
-                    ),
-                    usageAccess,
-                )
-            },
-        )
-        Caption(stringResource(R.string.setup_usage_body))
-        FilledTonalButton(onClick = { ctx.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) }) {
-            ButtonLabel(stringResource(R.string.setup_open_usage_access))
-        }
-    }
-
-    PixelCard {
-        SectionTitle(stringResource(R.string.setup_appearance_title))
-        ToggleRow(stringResource(R.string.setup_wallpaper_colours), dynamicColor) {
-            store.setDynamicColor(it)
-        }
-    }
-
-    PixelCard {
-        SectionTitle(stringResource(R.string.setup_privacy_policy_title))
-        Caption(stringResource(R.string.setup_privacy_policy_body))
-        TextButton(onClick = { openExternalUrl(ctx, PRIVACY_POLICY_URL) }) {
-            ButtonLabel(stringResource(R.string.setup_privacy_policy_open))
-        }
-    }
-
-    if (BuildConfig.UPDATE_CHECK) PixelCard {
-        SectionTitle(
-            stringResource(R.string.setup_updates_title),
-            trailing = {
-                Caption(
-                    stringResource(
-                        R.string.setup_updates_installed,
-                        BuildConfig.VERSION_NAME,
-                    )
-                )
-            },
-        )
-        when {
-            checkingForUpdates -> Caption(stringResource(R.string.setup_updates_checking))
-            updateResult == null -> Caption(stringResource(R.string.setup_updates_body))
-            updateResult is UpdateCheckResult.Available -> Caption(
-                stringResource(
-                    R.string.setup_updates_available,
-                    (updateResult as UpdateCheckResult.Available).release.versionName,
-                )
-            )
-            updateResult is UpdateCheckResult.Current ->
-                Caption(stringResource(R.string.setup_updates_current))
-            updateResult is UpdateCheckResult.NoPublishedRelease ->
-                Caption(stringResource(R.string.setup_updates_none))
-            else -> Caption(stringResource(R.string.setup_updates_failed))
-        }
-
-        val available = updateResult as? UpdateCheckResult.Available
-        if (available != null && !checkingForUpdates) {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Button(onClick = { openExternalUrl(ctx, available.release.pageUrl) }) {
-                    ButtonLabel(stringResource(R.string.setup_updates_view_release))
-                }
-                TextButton(onClick = checkForUpdates) {
-                    ButtonLabel(stringResource(R.string.setup_updates_check_again))
-                }
-            }
-        } else {
-            FilledTonalButton(
-                onClick = checkForUpdates,
-                enabled = !checkingForUpdates,
-            ) {
-                ButtonLabel(
-                    stringResource(
-                        if (checkingForUpdates) R.string.setup_updates_checking
-                        else R.string.setup_updates_check,
-                    )
-                )
-            }
-        }
-    }
-
-    DistributionUpdateCard()
-
-    PixelCard {
-        SectionTitle(stringResource(R.string.setup_test_title))
-        Caption(stringResource(R.string.setup_test_body))
-        selfTestWarning?.let { Caption(it) }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            FilledTonalButton(
-                onClick = postSelfTest,
-                enabled = selfTestCountdown == 0,
-                modifier = Modifier.weight(1f),
-            ) {
-                ButtonLabel(stringResource(R.string.setup_test_button))
-            }
-            TextButton(
-                onClick = {
-                    // State changes synchronously, so a second queued tap cannot launch another job
-                    // before Compose has redrawn the disabled button.
-                    if (selfTestCountdown != 0) return@TextButton
-                    val warning = testWarning(true)
-                    selfTestWarning = warning
-                    if (warning != null) {
-                        Toast.makeText(ctx.applicationContext, warning, Toast.LENGTH_LONG).show()
-                        return@TextButton
-                    }
-                    selfTestCountdown = 5
-                    updateScope.launch {
-                        try {
-                            for (remaining in 5 downTo 1) {
-                                selfTestCountdown = remaining
-                                delay(1_000)
-                            }
-                            postSelfTest()
-                        } finally {
-                            selfTestCountdown = 0
-                        }
-                    }
-                },
-                enabled = selfTestCountdown == 0,
-                modifier = Modifier.weight(1f),
-            ) {
-                ButtonLabel(
-                    if (selfTestCountdown > 0) {
-                        stringResource(R.string.setup_test_countdown, selfTestCountdown)
-                    } else {
-                        stringResource(R.string.setup_test_delay_button)
-                    }
-                )
-            }
-        }
-    }
-
-    PixelCard(tone = 2) {
-        SectionTitle(stringResource(R.string.setup_led_diagnostics_title))
-        Caption(stringResource(R.string.setup_led_diagnostics_body))
-        FilledTonalButton(
-            onClick = {
-                updateScope.launch {
-                    val lifecycle = store.lifecycleDiagnostics()
-                    val root = store.root.diagnostics()
-                    val payload = withContext(Dispatchers.IO) {
-                        val snapshot = store.freshRendererStatusSnapshot()
-                        RendererDiagnostics.format(
-                            status = snapshot.status,
-                            selectedTransport = snapshot.selectedTransport,
-                            activeTransport = snapshot.activeTransport,
-                            appVersionName = BuildConfig.VERSION_NAME,
-                            appVersionCode = BuildConfig.VERSION_CODE.toLong(),
-                            deviceModel = Build.MODEL,
-                            buildId = Build.ID,
-                            sdkInt = Build.VERSION.SDK_INT,
-                            capturedAtEpochMs = snapshot.capturedAtEpochMs,
-                            root = root,
-                            lifecycle = lifecycle,
-                        )
-                    }
-                    copy(ctx, payload, R.string.setup_led_diagnostics_copied)
-                }
-            },
-        ) {
-            ButtonLabel(stringResource(R.string.setup_led_diagnostics_copy))
-        }
-        Caption(stringResource(R.string.setup_led_cleanup_retry_body))
-        if (!status.alive || status.rendererStale) {
-            Caption(stringResource(R.string.setup_led_cleanup_renderer_unavailable))
-        }
-        FilledTonalButton(
-            onClick = { store.retryLedCleanup() },
-            enabled = store.isLedCleanupRetryEnabled(
-                masterEnabled = masterEnabled,
-                status = status,
-                requestPending = manualCleanupPending,
-            ),
-        ) {
-            ButtonLabel(
-                stringResource(
-                    if (manualCleanupInProgress) R.string.setup_led_cleanup_retry_pending
-                    else R.string.setup_led_cleanup_retry,
-                )
-            )
-        }
-    }
-
-    PixelCard {
-        SectionTitle(stringResource(R.string.setup_priority_title))
-        Caption(stringResource(R.string.setup_priority_body))
-        PixelSlider(
-            stringResource(R.string.setup_priority_label),
-            priority.toFloat(),
-            -10f..10f,
-            { store.setPriority(it.toInt()) },
-        ) { it.toInt().toString() }
     }
 
     if (inspecting) {
@@ -861,6 +921,9 @@ private fun ShizukuCard(store: Store, state: ShizukuBackend.State) {
                                 ButtonLabel(stringResource(R.string.shizuku_check_again))
                             }
                         }
+                        TextButton(onClick = { restartApp(ctx) }) {
+                            ButtonLabel(stringResource(R.string.shizuku_restart_app))
+                        }
                     }
 
                     ShizukuBackend.State.NEEDS_PERMISSION -> {
@@ -893,6 +956,9 @@ private fun ShizukuCard(store: Store, state: ShizukuBackend.State) {
                             TextButton(onClick = { openShizuku(ctx) }) {
                                 ButtonLabel(stringResource(R.string.shizuku_open))
                             }
+                        }
+                        TextButton(onClick = { restartApp(ctx) }) {
+                            ButtonLabel(stringResource(R.string.shizuku_restart_app))
                         }
                     }
                 }
@@ -956,6 +1022,19 @@ private fun openShizuku(ctx: Context) {
     if (launch != null) ctx.startActivity(launch) else openShizukuListing(ctx)
 }
 
+/**
+ * Shizuku hands its binder to an app only when the app's process starts, and a manager that
+ * restarted no longer accepts the old one. A fresh process is the one fix the app can't do by
+ * itself, so this relaunches HiLight's task and ends the current process. The privileged renderer
+ * runs in its own process and is rediscovered on start; no Shizuku renderer is bound in the states
+ * that show this button.
+ */
+private fun restartApp(ctx: Context) {
+    val launch = ctx.packageManager.getLaunchIntentForPackage(ctx.packageName) ?: return
+    ctx.startActivity(Intent.makeRestartActivityTask(launch.component))
+    exitProcess(0)
+}
+
 private fun openShizukuListing(ctx: Context) {
     val uri = Uri.parse("https://shizuku.rikka.app/")
     runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, uri)) }
@@ -1007,4 +1086,58 @@ private fun hasNotificationAccess(ctx: Context): Boolean {
     val flat = Settings.Secure.getString(ctx.contentResolver, "enabled_notification_listeners")
         ?: return false
     return flat.contains(ctx.packageName)
+}
+
+/**
+ * One collapsible group of Setup cards (issue #73). Only the title, an optional status pill and a
+ * chevron are shown while collapsed; the expanded state survives tab switches and rotation.
+ */
+@Composable
+private fun SettingsCategory(
+    key: String,
+    title: String,
+    icon: ImageVector,
+    initiallyExpanded: Boolean = false,
+    trailing: (@Composable () -> Unit)? = null,
+    content: @Composable () -> Unit,
+) {
+    var expanded by rememberSaveable(key) { mutableStateOf(initiallyExpanded) }
+    // Open again only when the section starts needing attention (for example the renderer
+    // disconnects). Saved with the section, so returning to the tab keeps a deliberate collapse.
+    var neededAttention by rememberSaveable(key) { mutableStateOf(initiallyExpanded) }
+    LaunchedEffect(initiallyExpanded) {
+        if (initiallyExpanded && !neededAttention) expanded = true
+        neededAttention = initiallyExpanded
+    }
+    val chevron by animateFloatAsState(if (expanded) 180f else 0f, label = "chevron-$key")
+    val state = stringResource(
+        if (expanded) R.string.setup_category_expanded else R.string.setup_category_collapsed
+    )
+    PixelCard(
+        tone = 3,
+        onClick = { expanded = !expanded },
+    ) {
+        // The card's click merges its children, so the state lives here to be read with the title.
+        Row(
+            Modifier.fillMaxWidth().semantics { stateDescription = state; role = Role.Button },
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(22.dp))
+            Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            trailing?.invoke()
+            Icon(
+                Icons.Rounded.ExpandMore,
+                contentDescription = null,
+                modifier = Modifier.rotate(chevron),
+            )
+        }
+    }
+    AnimatedVisibility(
+        visible = expanded,
+        enter = expandVertically(tween(220)) + fadeIn(tween(180)),
+        exit = shrinkVertically(tween(180)) + fadeOut(tween(120)),
+    ) {
+        Column { content() }
+    }
 }

@@ -12,6 +12,13 @@
     <string name="live_status_testing">Testing · %1$s</string>
     <string name="live_status_on">HiLight · %1$s</string>
     <string name="live_status_system">HiLight is with the system</string>
+    <!-- The switch is on but no renderer is connected; tapping opens Setup. -->
+    <string name="live_status_not_connected">Not connected</string>
+    <string name="live_status_open_setup">Open Setup</string>
+    <!-- A guard holds the array dark. %1$s is a suppression reason (strings_common.xml). -->
+    <string name="live_status_paused">Paused · %1$s</string>
+    <!-- The duty-cycle guard is resting the array. -->
+    <string name="live_status_resting">HiLight · resting</string>
 
     <!-- The line under the hero. %1$s is the model name, or "this device" on a phone HiLight has no
          drawing for. -->
@@ -27,17 +34,17 @@
     <!-- Why the array is dark while the switch is on. These are the full explanations; the two-word
          forms the tile shows are suppression_* in strings_common.xml. -->
     <string name="live_suppressed_quiet_hours">Quiet hours: the array stays dark until your window ends.</string>
-    <string name="live_suppressed_low_battery">Battery is low, so the array is paused. Charging resumes it.</string>
+    <string name="live_suppressed_low_battery">Paused for low battery until you charge.</string>
     <string name="live_suppressed_power_saver">Battery Saver is on, so the array is paused.</string>
     <string name="live_suppressed_screen_on">Set to light only while the screen is off.</string>
-    <string name="live_suppressed_not_face_down">Waiting for the phone to be face down. The LED array stays fully off.</string>
+    <string name="live_suppressed_not_face_down">Off until the phone is face down.</string>
 
     <!-- The safety limits, said out loud so that a dark array never reads as a fault. In the
          countdown %1$d is the seconds left and %2$d the percentage of the duty allowance spent. The
          seconds unit is written into the line rather than taken from duration_seconds, which sets it
          off with a space this line does not want. -->
     <string name="live_safety_resting">Resting to protect the LEDs — they have been lit too much recently.</string>
-    <string name="live_safety_timed_out">Auto-off reached. Change the style or flip the switch to light it again.</string>
+    <string name="live_safety_timed_out">Auto-off reached; flip the switch or change the style to light it again.</string>
     <string name="live_safety_countdown">Auto-off in %1$ds · duty used %2$d%%</string>
 
     <!-- Renderer diagnostics under the countdown. %1$d is the process id, %2$s one of the two
@@ -49,14 +56,13 @@
     <!-- One-tap effects. The tiles borrow the pattern names from strings_common.xml, except that a
          third of a row is too narrow for "Random colours". -->
     <string name="live_tests_title">Try an effect</string>
-    <string name="live_tests_caption">Fires for four seconds on the real LEDs, then returns to your style.</string>
     <string name="live_test_random">Random</string>
 
     <!-- The rules list. %1$d is how many rules are on. In the per-rule line %1$s is the colour or
          pattern and %2$s is what sets the rule off. -->
     <string name="live_rules_title">App rules</string>
     <string name="live_rules_on_count">%1$d on</string>
-    <string name="live_rules_empty">Nothing yet. Add per-app colours in the Apps tab.</string>
+    <string name="live_rules_empty">Add per-app colours in the Apps tab.</string>
     <string name="live_rule_summary">%1$s · %2$s</string>
     <string name="live_rule_random">random</string>
     <string name="live_rule_notify">notify</string>

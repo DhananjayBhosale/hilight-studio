@@ -202,7 +202,8 @@ fun PixelTile(
             // clip first: an unclipped ripple paints a rectangle outside the tile's rounded shape
             .clip(MaterialTheme.shapes.medium)
             .background(container)
-            .clickable(interactionSource = interaction, indication = ripple()) {
+            // A greyed tile must not act: the Live tests stayed tappable with HiLight switched off.
+            .clickable(enabled = enabled, interactionSource = interaction, indication = ripple()) {
                 haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                 onClick()
             }

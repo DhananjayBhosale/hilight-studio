@@ -79,6 +79,8 @@ public final class Engine {
     private JSONObject state = new JSONObject();
     private JSONObject alert;
     private long alertId = -1;
+    /** The current alert's renewal stamp; a new stamp on the same id extends it in place. */
+    private long alertRenewal = 0;
     private boolean lastFrameWasAlert;
     private boolean renderingPrivacy;
     private String renderedPrivacyRule;
@@ -277,16 +279,31 @@ public final class Engine {
                 renderer.reset();
             } else {
                 long id = a.optLong("id", -1);
+                long renewal = a.optLong("renewal", 0);
+                long asked = a.optLong("durationMs", 4000);
+                // an open-ended alert (a "while this app is open" hold) still gets the global cap
+                long dur = asked <= 0 ? ambientTimeoutMs : Math.min(asked, ALERT_MAX_MS);
                 if (id != alertId) {
                     alertId = id;
+                    alertRenewal = renewal;
                     alert = a;
-                    long asked = a.optLong("durationMs", 4000);
-                    // an open-ended alert (a "while this app is open" hold) still gets the global cap
-                    long dur = asked <= 0 ? ambientTimeoutMs : Math.min(asked, ALERT_MAX_MS);
                     gate.startAlert(elapsedRealtime, dur);
                     renderer.reset();
                     Log.i("alert " + id + " " + a.optString("pattern", "pulse") + " for " + dur + "ms"
                             + (dur != asked ? " (asked " + asked + ", capped)" : ""));
+                } else if (renewal != alertRenewal) {
+                    // Same alert, same look, asked to keep going (an incoming call that is still
+                    // ringing). Extend it without resetting the animation clock, or every renewal
+                    // would visibly restart the effect mid-cycle.
+                    alertRenewal = renewal;
+                    if (alert == null) {
+                        alert = a;
+                        gate.startAlert(elapsedRealtime, dur);
+                        renderer.reset();
+                    } else if (gate.renewAlert(elapsedRealtime, dur)) {
+                        alert = a;
+                        renderer.reset();
+                    }
                 }
             }
             appliedStateRevision = o.optLong("stateRevision", appliedStateRevision);

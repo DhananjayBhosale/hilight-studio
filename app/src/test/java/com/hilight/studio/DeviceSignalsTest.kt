@@ -14,6 +14,72 @@ class DeviceSignalsTest {
         assertEquals(Pattern.BLINK, settings.chargingPattern)
     }
 
+    @Test fun callSignalKeepsOriginalPulseUntilAStyleIsChosen() {
+        val settings = DeviceSignalSettings(callColor = 0xFF00FF00.toInt())
+        assertEquals(Pattern.PULSE, settings.callPattern)
+        val look = callSignalLook(settings)
+        assertEquals(Pattern.PULSE, look.pattern)
+        assertEquals(settings.callColor, look.color)
+        assertEquals(1000, look.speedMs)
+        assertEquals(Pattern.PULSE, callPatternOf(null))
+        assertEquals(Pattern.PULSE, callPatternOf("future-style"))
+        listOf(Pattern.OFF, Pattern.CUSTOM, Pattern.GRADIENT).forEach {
+            assertEquals(Pattern.PULSE, callPatternOf(it.key))
+        }
+    }
+
+    @Test fun selectedCallAnimationsReachRenderer() {
+        callPatterns.forEach { pattern ->
+            val settings = DeviceSignalSettings(callPattern = pattern, callColor = 0xFFFF0000.toInt())
+            val look = callSignalLook(settings)
+            assertEquals(pattern, callPatternOf(pattern.key))
+            assertEquals(pattern.key, look.toJson().getString("mode"))
+            assertEquals(settings.callColor, look.color)
+            assertTrue(look.speedMs in 600..DeviceSignals.SIGNAL_DURATION_MS)
+        }
+    }
+
+    @Test fun ringingCallRenewsItsAlertInsteadOfRestartingTheAnimation() {
+        val look = callSignalLook(DeviceSignalSettings(callPattern = Pattern.WAVE))
+        val first = Bridge.lookAlertJson(100, look, 2500, AlertSource.NOTIFICATION)
+        val refresh = Bridge.lookAlertJson(2100, look, 2500, AlertSource.NOTIFICATION)
+        val renewed = requireNotNull(Bridge.renewedAlertJson(first, refresh, 2100))
+        assertEquals("the renderer keys restarts on the id", 100, renewed.getLong("id"))
+        assertEquals(2100, renewed.getLong("renewal"))
+        assertEquals(2500, renewed.getInt("durationMs"))
+
+        val restyled = Bridge.lookAlertJson(
+            2100, callSignalLook(DeviceSignalSettings(callPattern = Pattern.PULSE)), 2500,
+            AlertSource.NOTIFICATION,
+        )
+        assertNull("a changed look must start a fresh alert", Bridge.renewedAlertJson(first, restyled, 2100))
+    }
+
+    @Test fun batteryLevelColorRunsFromRedThroughAmberToGreen() {
+        assertEquals(0xFFFF0000.toInt(), batteryLevelColor(0))
+        assertEquals(0xFFFFFF00.toInt(), batteryLevelColor(50))
+        assertEquals(0xFF00FF00.toInt(), batteryLevelColor(100))
+        assertEquals(batteryLevelColor(0), batteryLevelColor(-5))
+        assertEquals(batteryLevelColor(100), batteryLevelColor(140))
+        // gradual: red falls and green rises monotonically
+        (0..99).forEach { p ->
+            val a = batteryLevelColor(p); val b = batteryLevelColor(p + 1)
+            assertTrue((b shr 8 and 255) >= (a shr 8 and 255))
+            assertTrue((b shr 16 and 255) <= (a shr 16 and 255))
+        }
+    }
+
+    @Test fun chargingColorFollowsLevelForStyleAndGaugeButFullStaysChargedColor() {
+        val settings = DeviceSignalSettings(chargingColorByLevel = true, chargingPattern = Pattern.BREATHE, fullPercent = 90)
+        assertEquals(batteryLevelColor(30), chargingSignalLook(settings, 30).color)
+        assertEquals(Pattern.BREATHE, chargingSignalLook(settings, 30).pattern)
+        assertEquals(settings.chargedColor, chargingSignalLook(settings, 95).color)
+        val gaugeFirstLed = chargingGaugeLook(settings.copy(chargingGauge = true), 30).perLed.first()
+        assertEquals(batteryLevelColor(30), gaugeFirstLed)
+        // off by default: existing installs keep their chosen charging color
+        assertEquals(DeviceSignalSettings().chargingColor, chargingSignalLook(DeviceSignalSettings(), 30).color)
+    }
+
     @Test fun chargingStyleKeysRestoreSafelyAcrossUpgrades() {
         assertEquals(Pattern.BLINK, chargingPatternOf(null))
         assertEquals(Pattern.BLINK, chargingPatternOf("future-style"))

@@ -200,13 +200,21 @@ object Bridge {
             val age = if (monotonic) nowElapsedMs - good.heartbeatElapsedRealtimeMs
                 else nowMs - good.timestampMs
             if (monotonic && age < 0) previousBootIdentities.add(good.identity())
+            val alive = good.identity() !in previousBootIdentities &&
+                age in (if (monotonic) 0L else -5_000L)..STATUS_STALE_AFTER_MS
+            // A negative monotonic age only catches a boot that hasn't yet reached the old uptime.
+            // An expired heartbeat whose wall time predates this boot's start is from an earlier
+            // boot too. Wall time can jump forward, so this never overrides a live heartbeat.
+            val bootWallMs = nowElapsedMs?.let { nowMs - it }
+            val previousBoot = good.identity() in previousBootIdentities || (!alive &&
+                bootWallMs != null && good.timestampMs < bootWallMs - PREVIOUS_BOOT_MARGIN_MS)
             return good.status.copy(
                 // The helper writes once a second. A torn read cannot erase its identity; only an
                 // explicitly old heartbeat crosses this dead threshold.
                 // A future elapsed timestamp can be left over from a previous boot. Retain its
                 // identity for exact stopping, but never accept it as a live renderer.
-                alive = good.identity() !in previousBootIdentities &&
-                    age in (if (monotonic) 0L else -5_000L)..STATUS_STALE_AFTER_MS,
+                alive = alive,
+                fromPreviousBoot = previousBoot,
                 ageMs = age,
                 // Cached fields remain useful for fencing, but they do not turn a torn *fresh* read
                 // into a new process-identity proof. Store performs a bounded reread before acting.
@@ -355,6 +363,8 @@ object Bridge {
 
         companion object {
             private const val STATUS_STALE_AFTER_MS = 4_000L
+            /** Tolerates small wall-clock corrections; a reboot leaves a far larger gap. */
+            private const val PREVIOUS_BOOT_MARGIN_MS = 2_000L
             private const val MAX_FORGOTTEN_IDENTITIES = 64
             private const val ROOT_UID = 0
             private const val SHELL_UID = 2000
@@ -435,6 +445,22 @@ object Bridge {
             put("durationMs", durationMs)
             put("source", source.key)
         }
+
+    /**
+     * [current] with a fresh expiry when [next] shows the same look, else null. The renderer
+     * extends an alert whose id stays the same and whose renewal stamp changes, keeping its
+     * animation phase.
+     */
+    fun renewedAlertJson(current: JSONObject, next: JSONObject, renewal: Long): JSONObject? {
+        fun look(o: JSONObject) = JSONObject(o.toString()).apply {
+            remove("id"); remove("durationMs"); remove("renewal")
+        }.toString()
+        if (look(current) != look(next)) return null
+        return JSONObject(current.toString()).apply {
+            put("durationMs", next.optInt("durationMs"))
+            put("renewal", renewal)
+        }
+    }
 
     /** Monotonic-ish alert ids so the renderer can tell a new alert from a re-push. */
     fun nextAlertId(): Long = SystemClock.elapsedRealtime()

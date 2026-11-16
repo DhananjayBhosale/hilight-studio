@@ -10,9 +10,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.math.roundToInt
 
 @Composable
-fun DeviceSignalsSection(store: Store) {
+fun DeviceSignalsSection(store: Store, showTitle: Boolean = true) {
     val settings by store.deviceSignals.settings.collectAsStateWithLifecycle()
-    SectionTitle(stringResource(R.string.device_signals_title))
+    if (showTitle) SectionTitle(stringResource(R.string.device_signals_title))
     PixelCard {
         Text(stringResource(R.string.device_signals_description), style = MaterialTheme.typography.bodySmall)
         ToggleRow(stringResource(R.string.device_signals_charging), settings.chargingEnabled) {
@@ -32,7 +32,12 @@ fun DeviceSignalsSection(store: Store) {
                 )
             }
             if (settings.chargingGauge || settings.chargingPattern != Pattern.RAINBOW) {
-                ColorPicker(settings.chargingColor, { color -> store.deviceSignals.updateSettings { it.copy(chargingColor = color) } }, stringResource(R.string.device_signals_charging_color))
+                ToggleRow(stringResource(R.string.device_signals_charging_by_level), settings.chargingColorByLevel) {
+                    store.deviceSignals.updateSettings { s -> s.copy(chargingColorByLevel = it) }
+                }
+                if (!settings.chargingColorByLevel) {
+                    ColorPicker(settings.chargingColor, { color -> store.deviceSignals.updateSettings { it.copy(chargingColor = color) } }, stringResource(R.string.device_signals_charging_color))
+                }
             }
             ColorPicker(settings.chargedColor, { color -> store.deviceSignals.updateSettings { it.copy(chargedColor = color) } }, stringResource(R.string.device_signals_charged_color))
             Text(stringResource(R.string.device_signals_full_percent, settings.fullPercent))
@@ -52,7 +57,15 @@ fun DeviceSignalsSection(store: Store) {
         }
         if (settings.callsEnabled) {
             Text(stringResource(R.string.device_signals_calls_description), style = MaterialTheme.typography.bodySmall)
-            ColorPicker(settings.callColor, { color -> store.deviceSignals.updateSettings { it.copy(callColor = color) } })
+            Text(stringResource(R.string.device_signals_call_style))
+            PatternCarousel(
+                selected = settings.callPattern,
+                options = callPatterns,
+                onSelect = { pattern -> store.deviceSignals.updateSettings { it.copy(callPattern = pattern) } },
+            )
+            if (settings.callPattern != Pattern.RAINBOW) {
+                ColorPicker(settings.callColor, { color -> store.deviceSignals.updateSettings { it.copy(callColor = color) } })
+            }
         }
     }
 }

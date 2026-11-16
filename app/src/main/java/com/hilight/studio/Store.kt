@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.Locale
 
 /** Exact renderer-produced fence required before another privileged process may drive the LEDs. */
 internal fun HelperStatus.provesReleasedRevision(
@@ -1520,8 +1521,13 @@ class Store private constructor(private val app: Context) {
         // Background indicators must not cut short a message or a deliberate preview.
         if (activeAlert != null && activeAlertOwner != owner) return false
         val duration = durationMs.coerceIn(250, Limits.RULE_MAX_MS)
+        val next = Bridge.lookAlertJson(Bridge.nextAlertId(), look, duration, AlertSource.NOTIFICATION)
+        // A signal refreshed while it plays (a ringing call) is renewed, not restarted: a new id
+        // would reset the animation every refresh, visibly for effects whose period doesn't divide it.
+        val renewed = activeAlert?.takeIf { activeAlertOwner == owner }
+            ?.let { Bridge.renewedAlertJson(it, next, Bridge.nextAlertId()) }
         holdAlert(
-            Bridge.lookAlertJson(Bridge.nextAlertId(), look, duration, AlertSource.NOTIFICATION),
+            renewed ?: next,
             duration, arm = false, preview = null, source = AlertSource.NOTIFICATION,
             owner = owner,
         )
@@ -2920,6 +2926,7 @@ class Store private constructor(private val app: Context) {
     }
 
     fun refreshStatus() {
+        root.recheckPresenceIfUnavailable()
         if (shizuku.unresolvedIncompatibleRenderer.value ||
             (_transport.value != Transport.ADB &&
                 root.state.value != RootBackend.State.RUNNING)
@@ -2966,6 +2973,23 @@ class Store private constructor(private val app: Context) {
             isRendererConnectedForUi(_status.value), shizuku.state.value,
             rootTransition || root.state.value in setOf(RootBackend.State.CHECKING,
                 RootBackend.State.REQUESTING, RootBackend.State.STARTING))
+    }
+
+    /** Main-thread guard state for diagnostics; booleans and fixed guard names only. */
+    fun gateDiagnostics(notificationAccess: Boolean): GateDiagnostics {
+        val guards = guardState()
+        return GateDiagnostics(
+            notificationAccess = notificationAccess,
+            ambientSuppression = guards.suppression()?.name?.lowercase(Locale.ROOT) ?: "none",
+            alertSuppression = guards.alertSuppression()?.name?.lowercase(Locale.ROOT) ?: "none",
+            quietHoursEnabled = guards.quietEnabled,
+            inQuietWindow = guards.inQuietWindow,
+            dndSuppressesSignals = _respectDnd.value && deviceSignals.shouldSuppressForDnd,
+            faceDownOnly = guards.faceDownOnly,
+            faceDown = guards.faceDown,
+            screenOffOnly = guards.screenOffOnly,
+            screenOn = guards.screenOn,
+        )
     }
 
     /** Main-thread lifecycle state; contains no renderer output or user content. */

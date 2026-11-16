@@ -39,6 +39,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.clickable
 
 /**
  * Explains what the safety limits are doing, so a dark array never looks like a fault.
@@ -95,7 +97,7 @@ private fun tileAccent(pattern: Pattern, color: Int): Color = when {
 
 /** Home surface: the phone itself, the master switch, and one-tap effects. */
 @Composable
-fun LiveScreen(store: Store) {
+fun LiveScreen(store: Store, onOpenSetup: () -> Unit = {}) {
     val launchPreview = rememberPreviewLauncher(store)
     val enabled by store.enabled.collectAsStateWithLifecycle()
     val ambient by store.ambient.collectAsStateWithLifecycle()
@@ -104,6 +106,9 @@ fun LiveScreen(store: Store) {
     val suppression by store.suppression.collectAsStateWithLifecycle()
     val previewLook by store.previewLook.collectAsStateWithLifecycle()
 
+    // Testers saw "HiLight · <look>" with nothing lit. The headline now says when no renderer is
+    // connected, or a guard is holding the array dark, instead of following the switch alone.
+    val connected = store.isRendererConnectedForUi(status)
     val profile = rememberDeviceProfile()
     // A real model name is not translated; only the fallback profile has a resource to read.
     val modelName = profile.labelRes?.let { stringResource(it) } ?: profile.label
@@ -114,7 +119,7 @@ fun LiveScreen(store: Store) {
         DeviceHero(
             pattern = if (enabled) shown.pattern else Pattern.OFF,
             cfg = shown,
-            active = enabled && status.alive,
+            active = enabled && connected,
             profile = profile,
         )
         Row(
@@ -122,13 +127,21 @@ fun LiveScreen(store: Store) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            val notConnected = profile.hasHiLight && enabled && !connected
+            val openSetupLabel = stringResource(R.string.live_status_open_setup)
             Text(
                 when {
                     !profile.hasHiLight -> stringResource(R.string.live_status_unavailable)
+                    notConnected -> stringResource(R.string.live_status_not_connected)
                     previewLook != null -> stringResource(
                         R.string.live_status_testing,
                         stringResource(shown.pattern.labelRes),
                     )
+                    enabled && suppression != null -> stringResource(
+                        R.string.live_status_paused,
+                        stringResource(suppression!!.shortRes),
+                    )
+                    enabled && status.resting -> stringResource(R.string.live_status_resting)
                     enabled -> stringResource(
                         R.string.live_status_on,
                         stringResource(ambient.pattern.labelRes),
@@ -136,10 +149,23 @@ fun LiveScreen(store: Store) {
                     else -> stringResource(R.string.live_status_system)
                 },
                 style = MaterialTheme.typography.titleMedium,
+                color = if (notConnected) MaterialTheme.colorScheme.primary else Color.Unspecified,
                 // Weighted so the status line is the thing that wraps. Unweighted, both children
                 // competed for the row and Japanese — where this line runs half again as long as the
                 // English — squeezed the model name into a two-line sliver against the edge.
-                modifier = Modifier.weight(1f, fill = false),
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .then(
+                        if (notConnected) {
+                            Modifier.clickable(
+                                onClickLabel = openSetupLabel,
+                                role = Role.Button,
+                                onClick = onOpenSetup,
+                            )
+                        } else {
+                            Modifier
+                        }
+                    ),
             )
             Spacer(Modifier.width(8.dp))
             Caption(modelName)
@@ -148,7 +174,7 @@ fun LiveScreen(store: Store) {
             when {
                 !profile.hasHiLight ->
                     stringResource(R.string.live_hint_no_array, modelName)
-                !status.alive -> stringResource(R.string.live_hint_no_renderer)
+                !connected -> stringResource(R.string.live_hint_no_renderer)
                 enabled -> stringResource(R.string.live_hint_look)
                 else -> stringResource(R.string.live_hint_take_over)
             }
@@ -203,7 +229,6 @@ fun LiveScreen(store: Store) {
 
     PixelCard {
         SectionTitle(stringResource(R.string.live_tests_title))
-        Caption(stringResource(R.string.live_tests_caption))
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             tests.chunked(3).forEach { row ->
                 Row(

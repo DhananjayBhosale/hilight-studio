@@ -38,13 +38,13 @@
          travels with the exported data. 出力 is the same word the chooser title uses, so the promise
          names the very thing being sent. -->
     <!-- "Names, ids and structure only. Message text is never shown here and never exported." -->
-    <string name="inspector_privacy_note">名前と ID、構造だけです。メッセージ本文はここに表示されず、出力にも含まれません。</string>
+    <string name="inspector_privacy_note">名前、ID、構造のみで、メッセージ本文は表示も出力もされません。</string>
 
     <!-- How many notifications are listed. %1$d is the number of notifications. -->
     <!-- "The last notification HiLight saw." -->
     <string name="inspector_seen_one">HiLight が最後に検知した通知です。</string>
     <!-- "The last %1$d notifications HiLight saw, newest first." -->
-    <string name="inspector_seen_many">HiLight が最後に検知した %1$d 件の通知です。新しい順に並んでいます。</string>
+    <string name="inspector_seen_many">HiLight が最後に検知した %1$d 件の通知を、新しい順に表示します。</string>
 
     <!-- The export. The human-readable `note` value inside the JSON. %1$s is inspector_privacy_note. -->
     <!-- "HiLight notification inspector, newest first. %1$s" -->
@@ -58,10 +58,10 @@
     <!-- "Nothing seen yet" — a title, so no full stop -->
     <string name="inspector_empty_title">まだ何も検知していません</string>
     <!-- "Notifications appear here as they arrive, so leave this open — or reopen it once one has landed." -->
-    <string name="inspector_empty_body">通知は届いた時点でここに表示されます。この画面を開いたままにしておくか、通知が届いてから開き直してください。</string>
+    <string name="inspector_empty_body">通知は届いた時点でここに表示されます。</string>
     <!-- "Nothing is seen at all without notification access. The list is kept in memory only, so it
          empties whenever HiLight stops." -->
-    <string name="inspector_empty_access">通知へのアクセスがないと、通知はまったく検知されません。一覧はメモリ上にだけ保持されるため、HiLight が停止するたびに空になります。</string>
+    <string name="inspector_empty_access">通知へのアクセスが必要で、一覧は HiLight が停止すると消去されます。</string>
 
     <!-- The pill on each card. Three states, kept plainly distinct: only the first names a fault, and
          あり/なし are parallel so the middle case reads as a fact about the app, not a failure. -->
@@ -92,13 +92,13 @@
     <!-- What the fields above mean, said only where it is true -->
     <!-- "This notification could not be read, so the fields below are missing rather than absent. That
          is a fault worth reporting with this output attached." -->
-    <string name="inspector_read_failed_note">この通知は読み取れませんでした。以下の項目は、アプリが値を設定しなかったのではなく、読み取りに失敗して欠けています。この出力を添えて報告する価値のある不具合です。</string>
+    <string name="inspector_read_failed_note">この通知は読み取れなかったため、この出力を添えて報告してください。</string>
     <!-- "Group summary, which HiLight ignores so a chat cannot fire twice." -->
-    <string name="inspector_group_summary">グループ通知のまとめです。同じチャットで 2 回点灯しないよう、HiLight は無視します。</string>
+    <string name="inspector_group_summary">同じチャットで 2 回点灯しないよう、HiLight が無視するグループのまとめ通知です。</string>
     <!-- "This app gave no name to match on, so no per-chat rule can be written from it. A rule for the
          whole app still works." — 連絡先別ルール throughout, one name for one feature.
          chat rather than a person -->
-    <string name="inspector_no_name_note">このアプリは一致に使える名前を渡していないため、この通知から連絡先別ルールを作ることはできません。アプリ全体のルールならそのまま使えます。</string>
+    <string name="inspector_no_name_note">このアプリはチャット名を渡さないため、アプリ全体のルールのみ一致します。</string>
 
     <!-- The foreground watcher's ongoing notification, and the channel it sits on. Both are read in
          the system notification settings and the shade, so they are as short as Android's own. -->

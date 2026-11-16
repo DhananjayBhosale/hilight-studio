@@ -45,6 +45,7 @@ internal object RootProcess {
                     val phase = output.toString("UTF-8").lineSequence().lastOrNull {
                         it == "HiLight cleanup: checking source identity" ||
                             it == "HiLight cleanup: waiting for renderer exit" ||
+                            it == "HiLight cleanup: forcing renderer exit" ||
                             it == "HiLight cleanup: scanning remaining renderers"
                     }
                     throw CommandTimeout("command timed out after ${timeoutSeconds}s" +

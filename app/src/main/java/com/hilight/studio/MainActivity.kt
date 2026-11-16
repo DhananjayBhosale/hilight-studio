@@ -42,6 +42,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -128,6 +129,9 @@ private fun App(store: Store, startInSetup: Boolean = false) {
         }
     }
 
+    // Play builds offer the supporter choice once after an update; GitHub builds show nothing.
+    SupportPromptOnUpdate()
+
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
@@ -183,6 +187,9 @@ private fun App(store: Store, startInSetup: Boolean = false) {
             }
         },
     ) { pad ->
+        // AnimatedContent disposes the tab it leaves. Keep each tab's saved UI state (Setup's
+        // open sections, scroll position) so coming back finds it as it was (#73).
+        val tabStates = rememberSaveableStateHolder()
         // tabs slide in the direction of travel, like the system's pagers
         AnimatedContent(
             targetState = tab,
@@ -197,18 +204,20 @@ private fun App(store: Store, startInSetup: Boolean = false) {
             label = "tab",
             modifier = Modifier.padding(pad),
         ) { current ->
-            Column(
-                Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState()),
-            ) {
-                when (current) {
-                    Tab.LIVE -> LiveScreen(store)
-                    Tab.AMBIENT -> AmbientScreen(store)
-                    Tab.APPS -> AppRulesScreen(store)
-                    Tab.SETUP -> SetupScreen(store)
+            tabStates.SaveableStateProvider(current.name) {
+                Column(
+                    Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    when (current) {
+                        Tab.LIVE -> LiveScreen(store, onOpenSetup = { tabIndex = Tab.SETUP.ordinal })
+                        Tab.AMBIENT -> AmbientScreen(store)
+                        Tab.APPS -> AppRulesScreen(store)
+                        Tab.SETUP -> SetupScreen(store)
+                    }
+                    Spacer(Modifier.height(28.dp))
                 }
-                Spacer(Modifier.height(28.dp))
             }
         }
     }

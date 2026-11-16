@@ -117,6 +117,36 @@ class BridgeManualCleanupTest {
     }
 
     @Test
+    fun `expired heartbeat written before this boot is recognised even past the old uptime`() {
+        // Issue #19: the last boot ran 50 s; this boot has been up 100 s, so the monotonic age is
+        // positive and only the wall clock shows the heartbeat predates this boot.
+        val heartbeat = currentHeartbeat(timestampMs = 1_000_000L)
+            .put("heartbeatElapsedRealtimeMs", 50_000L)
+            .toString()
+        val status = Bridge.BridgeStatusCache().read(heartbeat, 1_200_000L, 100_000L)
+
+        assertFalse(status.alive)
+        assertTrue(status.fromPreviousBoot)
+        assertEquals(4321, status.pid)
+    }
+
+    @Test
+    fun `heartbeat from this boot is never taken for a previous boot`() {
+        val cache = Bridge.BridgeStatusCache()
+        val heartbeat = currentHeartbeat(timestampMs = 1_150_000L)
+            .put("heartbeatElapsedRealtimeMs", 50_000L)
+            .toString()
+        // Boot began at wall 1_100_000; the renderer then stopped writing (expired, not alive).
+        val expired = cache.read(heartbeat, 1_200_000L, 100_000L)
+        assertFalse(expired.alive)
+        assertFalse(expired.fromPreviousBoot)
+        // A forward wall-clock jump never marks a live heartbeat as previous-boot.
+        val jumped = cache.read(heartbeat, 9_000_000_000L, 50_500L)
+        assertTrue(jumped.alive)
+        assertFalse(jumped.fromPreviousBoot)
+    }
+
+    @Test
     fun `retry root can recover expired cached ownership after status writer dies mid write`() {
         val cache = Bridge.BridgeStatusCache()
         val heartbeat = currentHeartbeat(timestampMs = 10_000L)

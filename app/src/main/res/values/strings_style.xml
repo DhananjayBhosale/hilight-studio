@@ -29,7 +29,7 @@
 
     <!-- Per-LED colours. %1$d is an LED's position in the array, counted from the flash. -->
     <string name="style_per_led_colours">Per-LED colours</string>
-    <string name="style_per_led_hint">LED 1 sits closest to the flash. Tap one, then pick its colour.</string>
+    <string name="style_per_led_hint">LED 1 is next to the flash.</string>
     <string name="style_led_number">LED %1$d</string>
     <string name="style_rotate_around_array">Rotate around array</string>
     <!-- The rotate slider's badge when it is turned right down, so rotation is disabled -->
