@@ -17,6 +17,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONObject
 import rikka.shizuku.Shizuku
+import java.util.Locale
+import java.util.concurrent.Callable
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 private val SHIZUKU_COMPLETE_STATUS_FIELDS = arrayOf(
     "pid",
@@ -73,6 +81,31 @@ internal fun retainedShizukuStatus(
 }
 
 internal enum class ShizukuPeekAction { WAIT_FOR_CALLBACK, CREATE_ONCE, FENCE }
+
+internal enum class ShizukuPermission { GRANTED, DENIED, UNAVAILABLE }
+
+/**
+ * Shizuku's permission check is a binder call into the manager. When this app holds a binder the
+ * manager no longer counts as attached (Shizuku restarted, or attach failed), the manager throws
+ * IllegalStateException across the binder ("Not an attached client"). Uncaught on the main thread
+ * that crashed the app (Play vitals, 1.0.18-rc.1). Treat any runtime failure as UNAVAILABLE.
+ */
+internal fun shizukuPermission(check: () -> Int): ShizukuPermission = try {
+    if (check() == PackageManager.PERMISSION_GRANTED) ShizukuPermission.GRANTED
+    else ShizukuPermission.DENIED
+} catch (_: RuntimeException) {
+    ShizukuPermission.UNAVAILABLE
+}
+
+/** Fixed token for a Shizuku error string; never the free-text exception message. */
+internal fun shizukuErrorCode(errorRes: Int?): String = when (errorRes) {
+    null -> "none"
+    R.string.shizuku_error_too_old -> "too_old"
+    R.string.shizuku_error_dead_binder -> "dead_binder"
+    R.string.shizuku_error_renderer_incompatible -> "renderer_incompatible"
+    R.string.shizuku_error_not_attached -> "not_attached"
+    else -> "other"
+}
 
 /** Main-thread reconnect work is cancelled by a newer disconnect, handoff or bind intent. */
 internal class ShizukuReconnectQueue(private val post: (() -> Unit) -> Unit) {
@@ -252,6 +285,36 @@ class AdbBackend(private val ctx: Context) : Backend {
 }
 
 /**
+ * Runs a blocking call on [executor] and waits at most [timeoutMs] for it. While a call for the same
+ * [key][run] is still running, the caller is told at once that it is late, so a stuck binder costs
+ * one timeout rather than one per poll. A call for a different key (a rebound service) is never held
+ * up by an old stuck one; [executor] must be able to run them side by side.
+ */
+internal class BoundedCall<T>(private val executor: ExecutorService, private val timeoutMs: Long) {
+    private var inFlight: Future<T>? = null
+    private var inFlightKey: Any? = null
+
+    /** The call's outcome, or null when it didn't finish in time or an earlier call still runs. */
+    fun run(key: Any? = null, block: () -> T): Result<T>? {
+        val future = synchronized(this) {
+            if (inFlight?.isDone == false && inFlightKey == key) return null
+            inFlightKey = key
+            executor.submit(Callable(block)).also { inFlight = it }
+        }
+        return try {
+            Result.success(future.get(timeoutMs, TimeUnit.MILLISECONDS))
+        } catch (_: TimeoutException) {
+            null
+        } catch (e: ExecutionException) {
+            Result.failure(e.cause ?: e)
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+            null
+        }
+    }
+}
+
+/**
  * Talks to [HiLightUserService], which Shizuku launches into a shell-UID process.
  *
  * Shizuku itself is started once per boot by the user, either from on-device wireless debugging (no
@@ -317,6 +380,18 @@ class ShizukuBackend(private val ctx: Context) : Backend {
     /** A partial status cannot erase the last complete sample for the same exact binder. */
     private var lastCompleteStatusBinder: IBinder? = null
     private var lastCompleteStatus: JSONObject? = null
+
+    /**
+     * Status polling runs on the main thread, and a renderer settling a black clear answers only
+     * after its engine lock frees. Reading off-thread with a bound keeps a slow or stuck renderer
+     * from freezing the app.
+     */
+    private val statusRead = BoundedCall<String>(
+        Executors.newCachedThreadPool { r ->
+            Thread(r, "hilight-shizuku-status").apply { isDaemon = true }
+        },
+        STATUS_READ_TIMEOUT_MS,
+    )
 
     /**
      * A rejected daemon may still own a visible framework session until its binder is confirmed
@@ -570,11 +645,42 @@ class ShizukuBackend(private val ctx: Context) : Backend {
             lastErrorRes = R.string.shizuku_error_too_old
             return
         }
-        if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
-            _state.value = State.NEEDS_PERMISSION
-            return
+        when (shizukuPermission(Shizuku::checkSelfPermission)) {
+            ShizukuPermission.GRANTED -> bind()
+            ShizukuPermission.DENIED -> _state.value = State.NEEDS_PERMISSION
+            ShizukuPermission.UNAVAILABLE -> markNotAttached()
         }
-        bind()
+    }
+
+    /**
+     * Shizuku is running but refuses this process. Not CONNECTING: that would block every later
+     * refresh. No ownership fence either: nothing was bound, so nothing can be left running.
+     */
+    private fun markNotAttached() {
+        Log.w(TAG, "Shizuku is running but rejected this app's binder calls")
+        lastError = null
+        lastErrorRes = R.string.shizuku_error_not_attached
+        _state.value = State.FAILED
+    }
+
+    /** Fixed-vocabulary Shizuku snapshot for copied LED diagnostics. */
+    fun diagnostics(): ShizukuConnectionDiagnostics {
+        val alive = runCatching { Shizuku.pingBinder() }.getOrDefault(false)
+        val version = if (alive) runCatching { Shizuku.getVersion() }.getOrDefault(-1) else -1
+        val permission = if (alive && version >= MIN_SHIZUKU_SERVER_VERSION) {
+            shizukuPermission(Shizuku::checkSelfPermission).name.lowercase(Locale.ROOT)
+        } else {
+            "unknown"
+        }
+        return ShizukuConnectionDiagnostics(
+            state = _state.value,
+            installed = isInstalled(),
+            managerAlive = alive,
+            serverVersion = version,
+            permission = permission,
+            fenced = _unresolvedIncompatibleRenderer.value,
+            error = shizukuErrorCode(lastErrorRes),
+        )
     }
 
     /** Asks Shizuku for access; the user confirms in Shizuku's own dialog. */
@@ -591,8 +697,12 @@ class ShizukuBackend(private val ctx: Context) : Backend {
             lastErrorRes = R.string.shizuku_error_too_old
             return
         }
-        if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) bind()
-        else Shizuku.requestPermission(PERMISSION_REQUEST)
+        when (shizukuPermission(Shizuku::checkSelfPermission)) {
+            ShizukuPermission.GRANTED -> bind()
+            ShizukuPermission.DENIED -> runCatching { Shizuku.requestPermission(PERMISSION_REQUEST) }
+                .onFailure { markNotAttached() }
+            ShizukuPermission.UNAVAILABLE -> markNotAttached()
+        }
     }
 
     private fun bind() {
@@ -1408,7 +1518,9 @@ class ShizukuBackend(private val ctx: Context) : Backend {
         val s = service ?: incompatibleService ?: return HelperStatus(alive = false)
         val binder = s.asBinder()
         val binderAlive = binder.pingBinder()
-        val liveStatus = runCatching { JSONObject(s.status()) }.getOrNull()
+        val read = statusRead.run(binder) { s.status() }
+            ?: return lateStatus(s, binder, binderAlive)
+        val liveStatus = read.mapCatching { JSONObject(it) }.getOrNull()
         val o = if (s === service) {
             val previous = lastCompleteStatus.takeIf { lastCompleteStatusBinder == binder }
             val retained = retainedShizukuStatus(liveStatus, previous)
@@ -1426,6 +1538,19 @@ class ShizukuBackend(private val ctx: Context) : Backend {
         return if (o == null) {
             HelperStatus(alive = binderAlive, identityResolved = false, owner = "shizuku")
         } else helperStatusFromJson(o, binderAlive)
+    }
+
+    /**
+     * The renderer didn't answer in time. Report its last known status as unresolved: the UI and
+     * every fence treat the renderer as unconfirmed until it answers again.
+     */
+    private fun lateStatus(s: IHiLightService, binder: IBinder, binderAlive: Boolean): HelperStatus {
+        val cached = if (s === service) {
+            lastCompleteStatus.takeIf { lastCompleteStatusBinder == binder }
+        } else incompatibleStatus
+        Log.w(TAG, "Renderer status read timed out")
+        return cached?.let { helperStatusFromJson(it, binderAlive).copy(identityResolved = false) }
+            ?: HelperStatus(alive = binderAlive, identityResolved = false, owner = "shizuku")
     }
 
     private fun helperStatusFromJson(o: JSONObject, binderAlive: Boolean): HelperStatus =
@@ -1508,6 +1633,8 @@ class ShizukuBackend(private val ctx: Context) : Backend {
         const val PERMISSION_REQUEST = 4242
         internal const val MIN_SHIZUKU_SERVER_VERSION = 12
         internal const val PEEK_CALLBACK_TIMEOUT_MS = 4_000L
+        /** Well above one black-clear settle step (250 ms), far below an ANR. */
+        internal const val STATUS_READ_TIMEOUT_MS = 1_000L
         internal const val STARTUP_CALLBACK_TIMEOUT_MS = 15_000L
         internal const val REMOVE_CONFIRM_TIMEOUT_MS = 12_000L
         /** Engine stop is bounded at four seconds; Store's handoff remains the outer fence. */

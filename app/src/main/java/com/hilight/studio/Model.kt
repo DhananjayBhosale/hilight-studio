@@ -447,6 +447,8 @@ data class HelperStatus(
     val rendererInstanceId: String = "",
     /** False only when the latest file-bridge read could not prove a complete process identity. */
     val identityResolved: Boolean = true,
+    /** The heartbeat was written before this boot, so its process cannot still be running. */
+    val fromPreviousBoot: Boolean = false,
     val ledCount: Int = 0,
     val sessionOpen: Boolean = false,
     /** the renderer still owes the framework a two-step black clear */

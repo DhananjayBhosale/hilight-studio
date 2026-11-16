@@ -18,9 +18,17 @@
 
     <!-- Auto-off. The trailing readout and the slider badge both come from the shared duration
          strings, so only the prose is here. -->
+    <string name="setup_category_connection">Connection and permissions</string>
+    <string name="setup_category_lighting">When lights show</string>
+    <string name="setup_category_troubleshooting">Testing and diagnostics</string>
+    <string name="setup_category_app">App</string>
+    <string name="setup_category_connected">Ready</string>
+    <string name="setup_category_needs_attention">Needs attention</string>
+    <string name="setup_category_expanded">Expanded</string>
+    <string name="setup_category_collapsed">Collapsed</string>
     <string name="setup_auto_off_title">Auto-off</string>
-    <string name="setup_auto_off_body">The always-on look switches itself off after this. App rules still work.</string>
-    <string name="setup_auto_off_protection">Hardware protection is always on: brightness eases down after 10s of unbroken light, and the array rests if it has been lit for more than half of the last 10 minutes.</string>
+    <string name="setup_auto_off_body">App rules still work after the always-on look switches off.</string>
+    <string name="setup_auto_off_protection">Brightness eases down after 10 s of light, and the array rests if lit for over half of 10 minutes.</string>
     <string name="setup_stay_on_for">Stay on for</string>
 
     <!-- The two-step warning shown before the array may stay lit for minutes at a time. The first
@@ -45,14 +53,14 @@
     <string name="setup_pause_saver">Pause in Battery Saver</string>
     <string name="setup_pause_low_battery">Pause on low battery</string>
     <string name="setup_pause_below">Pause below</string>
-    <string name="setup_battery_note">Ignored while charging. Battery Saver pauses it either way.</string>
+    <string name="setup_battery_note">Ignored while charging; Battery Saver always pauses HiLight.</string>
 
     <!-- Slider badge for the two percentage sliders above. -->
     <string name="setup_percent">%1$d%%</string>
 
     <!-- Privileged access. The three transport names themselves are in strings_common.xml. -->
     <string name="setup_privileged_title">Privileged access</string>
-    <string name="setup_privileged_body">The renderer needs shell-UID privileges. Choose how it starts.</string>
+    <string name="setup_privileged_body">Choose how the renderer starts.</string>
     <string name="setup_transport_auto_note">Prefers Shizuku, falls back to ADB.</string>
 
     <!-- The Shizuku card. Its title reuses transport_shizuku: the card is named after the transport.
@@ -66,10 +74,11 @@
     <string name="shizuku_reattach_note">After Shizuku restarts (or a reboot), reopen this app once to reattach.</string>
     <string name="shizuku_not_installed_body">No computer needed — start it via Wireless debugging.</string>
     <string name="shizuku_get">Get Shizuku</string>
-    <string name="shizuku_not_running_body">Start it under Wireless debugging. Needed again after each reboot.</string>
+    <string name="shizuku_not_running_body">Start it under Wireless debugging after each reboot.</string>
     <string name="shizuku_open">Open Shizuku</string>
     <string name="shizuku_check_again">Check again</string>
-    <string name="shizuku_needs_permission_body">Running. Approve this app to use it.</string>
+    <string name="shizuku_restart_app">Restart app</string>
+    <string name="shizuku_needs_permission_body">Shizuku is running, so approve this app.</string>
     <string name="shizuku_request_access">Request access</string>
     <string name="shizuku_connected_body">Renderer running in Shizuku\'s shell-UID process.</string>
     <string name="shizuku_disconnect">Disconnect</string>
@@ -78,7 +87,8 @@
          which is not translated. -->
     <string name="shizuku_error_dead_binder">service returned a dead binder</string>
     <string name="shizuku_error_too_old">Shizuku is too old; v12 or newer is required</string>
-    <string name="shizuku_error_renderer_incompatible">The renderer did not match this app. Restart Shizuku and try again.</string>
+    <string name="shizuku_error_renderer_incompatible">The renderer didn\'t match this app, so restart Shizuku.</string>
+    <string name="shizuku_error_not_attached">Shizuku didn\'t accept HiLight, so restart the app.</string>
     <string name="shizuku_unreachable">Could not reach Shizuku.</string>
     <string name="shizuku_retry">Retry</string>
     <!-- Said when there is no browser to open the Shizuku listing in. -->
@@ -87,13 +97,13 @@
     <!-- The ADB card. Its title is the tool, not the transport, so it is not transport_adb. The
          combined command shown between these captions is a literal in code. -->
     <string name="adb_title">ADB</string>
-    <string name="adb_body">Run the one copied command with the phone plugged in. Nothing to push. Re-run after a reboot. It stops old renderers, waits for confirmed exit, then starts one new helper.</string>
-    <string name="adb_shells_note">Works in Terminal on macOS and Linux, and in PowerShell. In Windows Command Prompt, copy the cmd.exe version instead — it has no single quotes.</string>
+    <string name="adb_body">Run the copied command with the phone plugged in, and again after each reboot.</string>
+    <string name="adb_shells_note">For Windows Command Prompt, copy the cmd.exe version.</string>
     <string name="adb_copy">Copy</string>
     <string name="adb_copy_cmd">Copy for cmd.exe</string>
     <string name="adb_copied">Command copied</string>
     <string name="adb_copied_cmd">cmd.exe version copied</string>
-    <string name="adb_verify_note">The command normally prints nothing because the helper runs in the background and writes to its log. The array response or helper log confirms startup.</string>
+    <string name="adb_verify_note">The command prints nothing; the lights or the helper log confirm it started.</string>
     <string name="adb_send">Send to computer</string>
     <!-- Title of the system share sheet the command is handed to. -->
     <string name="adb_share_title">Send command</string>
@@ -104,16 +114,16 @@
     <string name="setup_state_needed">needed</string>
     <string name="setup_notif_body">Lets rules see which app notified you.</string>
     <string name="setup_open_notif_access">Open notification access</string>
-    <string name="setup_inspector_body">Shows what HiLight reads from each notification. No message text.</string>
+    <string name="setup_inspector_body">Shows what HiLight reads from each notification, without message text.</string>
     <string name="setup_inspector_button">Notification inspector</string>
 
     <!-- The remembered chat names, which exist so per-contact rules need no typing. Said two ways
          because an empty list has nothing to count. -->
-    <string name="setup_chats_none">No chats remembered yet. Chats are listed here so per-contact rules need no typing.</string>
-    <string name="setup_chats_remembered">%1$d chat names remembered on this device, so per-contact rules need no typing. Existing rules keep working if you clear them.</string>
+    <string name="setup_chats_none">No chats remembered yet.</string>
+    <string name="setup_chats_remembered">%1$d chats remembered on this device.</string>
     <string name="setup_forget_chats_button">Forget remembered chats</string>
     <string name="setup_forget_chats_title">Forget remembered chats?</string>
-    <string name="setup_forget_chats_body">The list the per-contact picker offers is cleared. Rules you have already made keep working, and chats are remembered again as messages arrive.</string>
+    <string name="setup_forget_chats_body">Clears the picker\'s list, and your rules keep working.</string>
     <string name="setup_forget_chats_confirm">Forget them</string>
     <string name="setup_forget_chats_dismiss">Keep them</string>
 
@@ -138,28 +148,28 @@
     <string name="setup_updates_check_again">Check again</string>
     <string name="setup_updates_current">You are up to date.</string>
     <string name="setup_updates_none">No published releases were found.</string>
-    <string name="setup_updates_failed">Could not check for updates. Check your connection and try again.</string>
+    <string name="setup_updates_failed">Couldn\'t check for updates.</string>
 
     <!-- The self test posts a real notification from this app, so the channel name is seen in the
          system's own notification settings as well. -->
     <string name="setup_test_title">End-to-end test</string>
-    <string name="setup_test_body">Posts a notification from this app. Add a rule for HiLight Studio first.</string>
+    <string name="setup_test_body">Add a rule for HiLight Studio first.</string>
     <string name="setup_test_button">Post test notification</string>
     <string name="setup_test_delay_button">Post in 5 seconds</string>
     <string name="setup_test_countdown">Posting in %1$ds…</string>
-    <string name="setup_test_blocked_hilight_off">HiLight is off. Turn it on before posting a test notification.</string>
+    <string name="setup_test_blocked_hilight_off">Turn HiLight on first.</string>
     <string name="setup_selftest_channel">Self test</string>
     <string name="setup_selftest_title">HiLight self test</string>
     <string name="setup_selftest_body">If a rule exists for this app, the LEDs just fired</string>
 
     <!-- Privacy-safe renderer evidence for stuck-LED reports. -->
     <string name="setup_led_diagnostics_title">LED diagnostics</string>
-    <string name="setup_led_diagnostics_body">Copies renderer and session lifecycle data for a bug report. It excludes notification content, package names, accounts, device serial and Android ID, and logcat.</string>
+    <string name="setup_led_diagnostics_body">Copies renderer data for a bug report, without notifications, accounts or device IDs.</string>
     <string name="setup_led_diagnostics_copy">Copy LED diagnostics</string>
     <string name="setup_led_diagnostics_copied">LED diagnostics copied</string>
     <string name="setup_led_cleanup_retry">Retry LED cleanup</string>
     <string name="setup_led_cleanup_retry_pending">Cleanup retry in progress…</string>
-    <string name="setup_led_cleanup_retry_body">Sends three black-only cleanup passes. It does not flash colors or confirm that the physical LED switched off. Available only while HiLight is off and the renderer is idle.</string>
+    <string name="setup_led_cleanup_retry_body">Sends three black-only passes while HiLight is off.</string>
     <string name="setup_led_cleanup_renderer_unavailable">Reconnect Shizuku, restart the ADB helper, or start the root renderer to enable cleanup.</string>
 
     <!-- Session priority. The badge shows the bare number, which is formatted in code. -->
@@ -170,11 +180,11 @@
     <string name="setup_root_title">Privileged access</string>
     <string name="setup_root_available">Root available</string>
     <string name="setup_root_active">Root active</string>
-    <string name="setup_root_available_body">HiLight found root. Turn HiLight on and approve the one-time request from your root manager. No Shizuku or ADB setup is needed.</string>
+    <string name="setup_root_available_body">Turn HiLight on and approve the root request.</string>
     <string name="setup_root_requesting_body">Waiting for your root manager’s approval.</string>
     <string name="setup_root_starting_body">Starting the HiLight renderer with root access.</string>
-    <string name="setup_root_active_body">HiLight is using root directly. No Shizuku or ADB setup is needed.</string>
-    <string name="setup_root_error_body">Root could not be started. You can retry or use another setup method.</string>
+    <string name="setup_root_active_body">Using root directly.</string>
+    <string name="setup_root_error_body">Root couldn\'t start, so retry or use another method.</string>
     <string name="setup_root_retry">Retry root</string>
 
 </resources>

@@ -42,6 +42,27 @@ internal fun rootStateAfterExactStopFailure(
     current: RootBackend.State,
 ): RootBackend.State = if (sourceOwner == "root") RootBackend.State.ERROR else current
 
+/** Throttled re-check of su presence; never replaces a start failure the user must see. */
+internal fun shouldRecheckRootPresence(
+    state: RootBackend.State,
+    presenceErrored: Boolean,
+    sinceLastCheckMs: Long,
+): Boolean =
+    (state == RootBackend.State.UNAVAILABLE || (state == RootBackend.State.ERROR && presenceErrored)) &&
+        sinceLastCheckMs >= ROOT_PRESENCE_RECHECK_MS
+
+internal const val ROOT_PRESENCE_RECHECK_MS = 5_000L
+
+/** A failed exact-stop command, keeping its [RootCommand] exit code for diagnostics. */
+internal class RootStopFailed(val code: Int, context: String) :
+    IllegalStateException("$context: ${RootCommand.stopFailure(code)}")
+
+internal fun rootStopFailureCode(code: Int): RootFailureCode = when (code) {
+    RootCommand.STOP_RENDERER_STUCK -> RootFailureCode.RENDERER_STUCK
+    RootCommand.STOP_OTHER_RENDERER -> RootFailureCode.OTHER_RENDERER_RUNNING
+    else -> RootFailureCode.COMMAND_FAILED
+}
+
 /** A fresh cached heartbeat also protects a live helper during a torn status-file read. */
 internal fun rootHeartbeatBlocksRecovery(status: HelperStatus): Boolean =
     status.alive
@@ -60,6 +81,9 @@ class RootBackend(private val ctx: Context) : Backend {
     @Volatile private var ownedInstanceId = ""
     @Volatile private var starting = false
     @Volatile private var checkingPresence = false
+    @Volatile private var lastPresenceCheckMs = Long.MIN_VALUE / 2
+    // ERROR from the su presence check itself (not from a failed start) is safe to re-check.
+    @Volatile private var presenceErrored = false
     @Volatile private var lastError: String? = null
     // Retain the last attempt across presence checks; reset only on a new attempt or success.
     @Volatile private var attempt = RootAttemptDiagnostics()
@@ -86,9 +110,21 @@ class RootBackend(private val ctx: Context) : Backend {
 
     fun errorText(): String? = lastError
 
+    /**
+     * Re-checks for su while root is unavailable. su can appear after this process started: the
+     * root manager grants HiLight later, or finishes mounting after a reboot or app update. A
+     * once-per-process check left root unavailable until a hard app restart.
+     */
+    fun recheckPresenceIfUnavailable(nowMs: Long = SystemClock.elapsedRealtime()) {
+        if (shouldRecheckRootPresence(_state.value, presenceErrored, nowMs - lastPresenceCheckMs)) {
+            refreshPresence()
+        }
+    }
+
     fun refreshPresence() {
         if (starting || checkingPresence) return
         checkingPresence = true
+        lastPresenceCheckMs = SystemClock.elapsedRealtime()
         Thread({
             try {
                 if (_state.value == State.RUNNING) {
@@ -108,7 +144,7 @@ class RootBackend(private val ctx: Context) : Backend {
                 update(if (available) State.AVAILABLE else State.UNAVAILABLE)
             } catch (t: Throwable) {
                 lastError = t.message ?: t.javaClass.simpleName
-                update(State.ERROR)
+                update(State.ERROR, fromPresenceCheck = true)
             } finally {
                 checkingPresence = false
             }
@@ -173,6 +209,7 @@ class RootBackend(private val ctx: Context) : Backend {
             } catch (t: Throwable) {
                 attempt = attempt.copy(failure = when {
                     t is RootProcess.CommandTimeout -> RootFailureCode.TIMEOUT
+                    t is RootStopFailed -> rootStopFailureCode(t.code)
                     attempt.phase == RootStartupPhase.READINESS -> RootFailureCode.READINESS_FAILED
                     attempt.phase in setOf(RootStartupPhase.CLEANUP, RootStartupPhase.LAUNCH) -> RootFailureCode.COMMAND_FAILED
                     else -> RootFailureCode.UNKNOWN
@@ -315,13 +352,21 @@ class RootBackend(private val ctx: Context) : Backend {
                 // resolve that exact PID instead of treating heartbeat expiry as release proof.
                 val pid = status.pid.takeIf { it > 0 } ?: observedPid
                 val owner = status.owner.takeIf { it == "adb" || it == "root" } ?: observedOwner
+                if (status.fromPreviousBoot && observedPid <= 0) {
+                    // Issue #19: after every reboot the status file still named the last boot's
+                    // renderer, and stopping it through su timed out under KernelSU. Nothing from
+                    // a previous boot can be running; a live renderer still holds the singleton
+                    // lock, so a wrong guess fails to start rather than running two renderers.
+                    Bridge.forgetStatusInstance(status.rendererInstanceId)
+                    return
+                }
                 if (pid > 0 && (owner == "adb" || owner == "root")) {
                     val stopped = runSu(
                         RootCommand.stop(pid, owner, status.rendererInstanceId),
                         PROCESS_EXIT_TIMEOUT_SECONDS,
                     )
                     if (stopped.code != 0) {
-                        throw IllegalStateException("stale heartbeat pid did not match renderer")
+                        throw RootStopFailed(stopped.code, "expired renderer")
                     }
                     Bridge.forgetStatusInstance(status.rendererInstanceId)
                     return
@@ -346,7 +391,7 @@ class RootBackend(private val ctx: Context) : Backend {
                     PROCESS_EXIT_TIMEOUT_SECONDS,
                 )
                 if (stopped.code != 0) {
-                    throw IllegalStateException("could not stop stale ${status.owner} renderer")
+                    throw RootStopFailed(stopped.code, "stale ${status.owner} renderer")
                 }
                 Bridge.forgetStatusInstance(status.rendererInstanceId)
                 return
@@ -357,7 +402,7 @@ class RootBackend(private val ctx: Context) : Backend {
                     PROCESS_EXIT_TIMEOUT_SECONDS,
                 )
                 if (stopped.code != 0) {
-                    throw IllegalStateException("fatal renderer ownership could not be terminated")
+                    throw RootStopFailed(stopped.code, "fatal ${status.owner} renderer")
                 }
                 Bridge.forgetStatusInstance(status.rendererInstanceId)
                 return
@@ -368,7 +413,7 @@ class RootBackend(private val ctx: Context) : Backend {
                     PROCESS_EXIT_TIMEOUT_SECONDS,
                 )
                 if (stopped.code != 0) {
-                    throw IllegalStateException("could not stop released ${status.owner} renderer")
+                    throw RootStopFailed(stopped.code, "released ${status.owner} renderer")
                 }
                 Bridge.forgetStatusInstance(status.rendererInstanceId)
                 return
@@ -378,7 +423,8 @@ class RootBackend(private val ctx: Context) : Backend {
         throw IllegalStateException("existing renderer did not release before root takeover")
     }
 
-    private fun update(state: State) {
+    private fun update(state: State, fromPresenceCheck: Boolean = false) {
+        presenceErrored = fromPresenceCheck && state == State.ERROR
         _state.value = state
         main.post { onStateChanged?.invoke() }
     }
@@ -391,7 +437,9 @@ class RootBackend(private val ctx: Context) : Backend {
 
     companion object {
         private const val RELEASE_TIMEOUT_MS = 12_000L
-        private const val PROCESS_EXIT_TIMEOUT_SECONDS = 9L
+        // RootCommand.stop bounds its own wait (TERM, then KILL) to about eight seconds before
+        // the read-only scan. This outer limit only catches a stuck su or shell.
+        private const val PROCESS_EXIT_TIMEOUT_SECONDS = 15L
         private const val COLD_STATUS_SAMPLES = 3
         private const val COLD_STATUS_SAMPLE_INTERVAL_MS = 150L
     }

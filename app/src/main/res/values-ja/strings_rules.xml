@@ -95,7 +95,7 @@
     <string name="rules_include_groups">グループでの発言も対象にする</string>
     <!-- "Left off, only their own chat lights this colour, so the group chatter they are part of stays
          dark." -->
-    <string name="rules_include_groups_hint">オフのままにすると、その相手との個別チャットだけがこの色で点灯し、参加しているグループチャットは消灯したままになります。</string>
+    <string name="rules_include_groups_hint">オフの場合、個別チャットだけが点灯し、グループチャットは点灯しません。</string>
     <!-- "Only if it mentions (optional)" — the field's own label, so 「この語」 is the word typed into it -->
     <string name="rules_keyword_label">この語を含む場合のみ（任意）</string>
     <!-- "Only when the screen is off" -->
@@ -129,7 +129,7 @@
     <!-- Last thing read before Save, when the edit would land on top of another rule -->
     <!-- "An existing rule for this app already covers that, and saving will replace its settings with
          these." -->
-    <string name="rules_replace_warning">このアプリには同じ対象の既存のルールがすでにあり、保存するとその設定がこの内容に置き換わります。</string>
+    <string name="rules_replace_warning">保存すると、同じ対象の既存ルールが置き換わります。</string>
 
     <!--
         What a per-chat rule matches on, and the repair for a chat id that has gone stale.
@@ -143,14 +143,14 @@
     <string name="rules_match_by_id">チャット ID で一致するため、チャットの名前が変わっても一致し続けます。</string>
     <!-- "The stored chat id is dropped when you save, and a fresh one is learned the next time that
          chat messages." -->
-    <string name="rules_match_id_dropped">保存すると保存済みのチャット ID を削除し、そのチャットから次にメッセージが届いたときに新しい ID を取得します。</string>
+    <string name="rules_match_id_dropped">保存するとチャット ID を削除し、次のメッセージで新しい ID を取得します。</string>
     <!-- "Matched by name, so renaming the chat in %1$s can stop it matching." -->
     <string name="rules_match_by_name">名前で一致するため、%1$s でチャットの名前を変更すると一致しなくなることがあります。</string>
     <!-- "Re-learn this chat" -->
     <string name="rules_relearn_chat">このチャットを再取得</string>
     <!-- "Forgets the stored chat id and matches on the name instead, taking up the new id the next time
          that chat messages — the repair for an id changed by a reinstall or a restored backup." -->
-    <string name="rules_relearn_hint">保存済みのチャット ID を削除して名前で一致するようにし、そのチャットから次にメッセージが届いたときに新しい ID を取得します。再インストールやバックアップの復元で ID が変わった場合の修復手段です。</string>
+    <string name="rules_relearn_hint">再インストールや復元でチャット ID が変わったときに使います。</string>
 
     <!-- Whole app or one chat, asked before the editor opens. %1$s is the app. -->
     <!-- "What should this rule cover?" -->
@@ -162,7 +162,7 @@
     <!-- "One contact or chat" -->
     <string name="chat_scope_one_chat">特定の連絡先またはチャット</string>
     <!-- "A colour for them alone, chosen from the chats HiLight has seen." -->
-    <string name="chat_scope_one_chat_hint">その相手だけに色を設定します。HiLight が検出したチャットから選べます。</string>
+    <string name="chat_scope_one_chat_hint">HiLight が検出したチャットから選んだ相手だけに色を設定します。</string>
 
     <!-- The chat picker. %1$s is the app throughout. "Seen" is 検出した rather than 見た, and stays
          distinct from the setup screen's 記憶した, which is what the list does with them afterwards. -->
@@ -173,7 +173,7 @@
     <!-- "Chats HiLight has seen, newest first." -->
     <string name="chat_seen_list_header">HiLight が検出したチャットを新しい順に表示しています。</string>
     <!-- "No chats to list yet: HiLight has not seen a message from %1$s." -->
-    <string name="chat_no_chats_yet">表示できるチャットはまだありません。HiLight は %1$s からのメッセージを検出していません。</string>
+    <string name="chat_no_chats_yet">HiLight は %1$s からのメッセージをまだ検出していないため、表示できるチャットはありません。</string>
     <!-- "Group" — a pill beside a chat name, so there is no shorter form to take -->
     <string name="chat_badge_group">グループ</string>
     <!-- "Last message %1$s" -->
@@ -184,12 +184,12 @@
     <string name="chat_learn_next">次のメッセージから取得</string>
     <!-- "The surest way. The name comes from a real notification, so it is exactly what HiLight
          compares against later." -->
-    <string name="chat_learn_next_hint">最も確実な方法です。実際の通知から名前を取得するため、HiLight が後で比較する文字列とまったく同じになります。</string>
+    <string name="chat_learn_next_hint">最も確実で、実際の通知の名前を使います。</string>
     <!-- "Pick from contacts" -->
     <string name="chat_pick_contact">連絡先から選択</string>
     <!-- "Opens the system picker, so HiLight reads only the contact you tap and never your address
          book. If the app shows a different name for them, the rule can miss." -->
-    <string name="chat_pick_contact_hint">システムの選択画面を開きます。HiLight はタップした連絡先だけを読み取り、アドレス帳全体を読み取ることはありません。アプリ側で別の名前が表示されている場合、ルールが一致しないことがあります。</string>
+    <string name="chat_pick_contact_hint">タップした連絡先だけを読み取りますが、アプリでの表示名が違うと一致しません。</string>
 
     <!-- Waiting for a message to arrive, and the chat that arrived. %1$s is the app, then the chat. -->
     <!-- "Listening" — a pill, and the sentence under it says what is being waited for -->
@@ -221,16 +221,16 @@
     <string name="chat_no_access_title">HiLight はまだ次のメッセージを待てません。</string>
     <!-- "Without notification access HiLight sees no notifications at all, and Android withdraws that
          access on its own once an app has gone unused for a while." -->
-    <string name="chat_no_access_body">通知へのアクセスがないと、HiLight は通知をまったく受け取れません。また Android は、アプリが一定期間使われないとこのアクセスを自動的に取り消します。</string>
+    <string name="chat_no_access_body">通知へのアクセスがないと、HiLight は通知を受け取れません。</string>
     <!-- "Open notification access" -->
     <string name="chat_open_notification_access">通知へのアクセスを開く</string>
 
     <!-- Told when a chat or a contact cannot be turned into a rule at all -->
     <!-- "That contact had no name to read. Try one of the other two ways." -->
-    <string name="chat_contact_no_name">その連絡先から読み取れる名前がありませんでした。他の 2 つの方法を試してください。</string>
+    <string name="chat_contact_no_name">その連絡先には名前がないため、別の方法を試してください。</string>
     <!-- "That chat has no name HiLight can compare and no stable id either, so a rule for it could
          never fire. A rule for the whole app still works." -->
-    <string name="chat_unusable">そのチャットには HiLight が比較できる名前も固定のチャット ID もないため、ルールを作っても発動しません。アプリ全体を対象にするルールなら動作します。</string>
+    <string name="chat_unusable">このチャットには一致に使える名前も ID もないため、アプリ全体のルールのみ使えます。</string>
 
     <!--
         How long ago a chat last spoke, or a rule last matched.
@@ -271,7 +271,7 @@
     <!-- プライバシー アクティビティ ルール -->
     <string name="privacy_section_title">プライバシー アクティビティ</string>
     <string name="privacy_intro">Android がマイクまたはカメラの使用中を示している間、HiLight を動作させます。</string>
-    <string name="privacy_default_summary">初期設定では 10 秒点灯、10 秒休止を繰り返し、使用が終了した時点または最大 1 分で停止します。アニメーション、色、時間は変更できます。</string>
+    <string name="privacy_default_summary">初期設定は 10 秒点灯、10 秒休止、最大 1 分です。</string>
     <string name="privacy_add">プライバシー アクティビティを追加</string>
     <string name="privacy_add_for_app">このアプリのプライバシー アクティビティを追加</string>
     <string name="privacy_choose_activity">アクティビティを選択</string>
@@ -282,7 +282,7 @@
     <string name="privacy_microphone_hint">アプリが音声を録音している間に通知します。</string>
     <string name="privacy_camera_hint">アプリがカメラを使用している間に通知します。</string>
     <string name="privacy_card_summary">%1$s点灯 · %2$s休止</string>
-    <string name="privacy_observation_note">HiLight は権限付きレンダラーで Android の使用中シグナルを監視します。録音や映像の内容は読み取りません。</string>
+    <string name="privacy_observation_note">HiLight は Android のプライバシー表示を利用し、録音や映像は読み取りません。</string>
     <string name="privacy_light_time">点灯時間</string>
     <string name="privacy_allow_long_light">30 秒を超える点灯を許可</string>
     <string name="privacy_long_warn_first_title">30 秒より長く点灯しますか</string>
@@ -291,24 +291,24 @@
     <string name="privacy_long_warn_second_body">このハードウェアでの長時間の連続使用は検証されていません。最大 1 分の制限は引き続き適用されます。</string>
     <string name="privacy_cooldown">休止時間</string>
     <string name="privacy_cooldown_recommendation">10〜20 秒の休止を推奨します。</string>
-    <string name="privacy_cooldown_short_warning">10 秒未満では LED アレイの休止が短すぎます。10〜20 秒を推奨します。</string>
+    <string name="privacy_cooldown_short_warning">10 秒未満の休止は短すぎるため、10〜20 秒を推奨します。</string>
     <string name="privacy_replace_warning">保存すると、このアクティビティとアプリの既存のルールが置き換えられます。</string>
 
-    <string name="privacy_one_minute_cap">カメラまたはマイクの使用が終了するとすぐに停止し、連続使用は最大 1 分で停止します。動画の録画前に、撮影画面を開いただけで反応する場合があります。録画ボタンの操作は検出しません。</string>
+    <string name="privacy_one_minute_cap">使用終了時または 1 分後に停止し、録画前の撮影画面でも反応することがあります。</string>
     <string name="rules_export">ルールを書き出す</string>
     <string name="rules_import">ルールを読み込む</string>
     <string name="rules_backup_privacy">このファイルにはルールに保存されたアプリ名、連絡先・チャット名、チャットID、キーワード条件が含まれます。通知履歴は含まれません。個人情報として保管してください。書き出しますか？</string>
     <string name="rules_backup_exported">ルールを書き出しました。ファイルを安全に保管してください。</string>
-    <string name="rules_backup_failed">バックアップを完了できませんでした。対応する1 MB以下のルールファイルか確認してください。既存のルールは上書きされません。同じIDで設定が異なる場合は先に解決してください。</string>
+    <string name="rules_backup_failed">バックアップに失敗したため、競合のない 1 MB 以下のルールファイルか確認してください。</string>
     <string name="rules_import_confirm">%1$d件のルールを読み込みますか？既存のルールは変更されません。同一のルールはスキップされ、競合がある場合は読み込みを中止します。有効状態と一致条件も復元されます。</string>
     <string name="rules_import_done">%1$d件を追加し、既存の%2$d件をスキップしました。</string>
     <string name="rules_group">%1$s · %2$d件のルール</string>
     <string name="rules_move_up">上へ</string>
     <string name="rules_move_down">下へ</string>
-    <string name="rules_priority_hint">同じアプリに複数のルールを追加して並べ替えられます。会話、キーワード、アプリ全体の順で一致を確認し、同じ優先度では上のルールを使用します。</string>
+    <string name="rules_priority_hint">会話、キーワード、アプリ全体の順に一致し、同じ順位では上のルールが優先されます。</string>
     <string name="rules_app_color">アプリアイコンの色を使う</string>
-    <string name="rules_app_color_hint">通知元アプリのアイコンの色を使います。取得できない場合は保存した色を使います。手動で色を選ぶと無効になります。</string>
-    <string name="rules_repeat_sleep_hint">スリープ中はAndroidによりリマインダーが遅れる場合があります。アプリの動作再開時に期限を過ぎたリマインダーを1回再生します。遅れた分をまとめて再生することはありません。</string>
-    <string name="rules_repeat_pulse_hint">リマインダーの点灯時間です。消灯時間を80%以上確保するため、長い点灯では最短間隔も長くなります。</string>
+    <string name="rules_app_color_hint">アプリのアイコンの色を使い、取得できない場合は保存した色を使います。</string>
+    <string name="rules_repeat_sleep_hint">スリープ中はリマインダーが遅れることがありますが、遅れた分をまとめて再生することはありません。</string>
+    <string name="rules_repeat_pulse_hint">点灯が長いほど最短間隔も長くなり、80% 以上の時間は消灯します。</string>
     <string name="rules_keyword_summary">テキストに含む: %1$s</string>
 </resources>

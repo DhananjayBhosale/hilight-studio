@@ -12,7 +12,7 @@ import java.util.Locale
  * names, accounts, stable device identifiers, and logs are never inputs to this formatter.
  */
 object RendererDiagnostics {
-    const val SCHEMA_VERSION = 3
+    const val SCHEMA_VERSION = 4
 
     fun format(
         status: HelperStatus,
@@ -27,6 +27,8 @@ object RendererDiagnostics {
         capturedAtElapsedRealtimeMs: Long = SystemClock.elapsedRealtime(),
         root: RootConnectionDiagnostics? = null,
         lifecycle: LifecycleDiagnostics? = null,
+        shizuku: ShizukuConnectionDiagnostics? = null,
+        gates: GateDiagnostics? = null,
     ): String = JSONObject().apply {
         put("schemaVersion", SCHEMA_VERSION)
         put("capturedAtEpochMs", capturedAtEpochMs)
@@ -49,6 +51,31 @@ object RendererDiagnostics {
                 put("starting", snapshot.starting)
                 put("phase", snapshot.attempt.phase.name.lowercase(Locale.ROOT))
                 put("failure", snapshot.attempt.failure.name.lowercase(Locale.ROOT))
+            })
+        }
+        shizuku?.let { snapshot ->
+            put("shizuku", JSONObject().apply {
+                put("state", snapshot.state.name.lowercase(Locale.ROOT))
+                put("installed", snapshot.installed)
+                put("managerAlive", snapshot.managerAlive)
+                put("serverVersion", snapshot.serverVersion)
+                put("permission", safeEnum(snapshot.permission, SHIZUKU_PERMISSIONS))
+                put("fenced", snapshot.fenced)
+                put("error", safeEnum(snapshot.error, SHIZUKU_ERRORS))
+            })
+        }
+        gates?.let { snapshot ->
+            put("gates", JSONObject().apply {
+                put("notificationAccess", snapshot.notificationAccess)
+                put("ambientSuppression", safeEnum(snapshot.ambientSuppression, SUPPRESSIONS))
+                put("alertSuppression", safeEnum(snapshot.alertSuppression, SUPPRESSIONS))
+                put("quietHoursEnabled", snapshot.quietHoursEnabled)
+                put("inQuietWindow", snapshot.inQuietWindow)
+                put("dndSuppressesSignals", snapshot.dndSuppressesSignals)
+                put("faceDownOnly", snapshot.faceDownOnly)
+                put("faceDown", snapshot.faceDown)
+                put("screenOffOnly", snapshot.screenOffOnly)
+                put("screenOn", snapshot.screenOn)
             })
         }
         lifecycle?.let { snapshot ->
@@ -178,4 +205,10 @@ object RendererDiagnostics {
     )
 
     private val CLEAR_CYCLE_SOURCES = setOf("automatic", "manual")
+    private val SHIZUKU_PERMISSIONS = setOf("granted", "denied", "unavailable", "unknown")
+    private val SHIZUKU_ERRORS =
+        setOf("none", "too_old", "dead_binder", "renderer_incompatible", "not_attached", "other")
+    private val SUPPRESSIONS = Suppression.entries.mapTo(mutableSetOf("none")) {
+        it.name.lowercase(Locale.ROOT)
+    }
 }

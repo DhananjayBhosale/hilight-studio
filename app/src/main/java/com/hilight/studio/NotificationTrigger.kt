@@ -317,7 +317,7 @@ class NotificationTrigger : NotificationListenerService() {
         if (signalOwner != owner) signalOwner?.let(store::cancelOwnedAlert)
         signalOwner = owner
         if (owner != null) {
-            store.showDeviceSignal(owner, Ambient(pattern = Pattern.PULSE, color = settings.callColor, speedMs = 1000), 2500)
+            store.showDeviceSignal(owner, callSignalLook(settings), 2500)
         }
 
         if (!locked()) {

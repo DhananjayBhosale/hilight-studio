@@ -69,7 +69,7 @@
     <!-- Shared first-use warning and live sensor states for both face-down entry points. -->
     <string name="face_down_notice_title">Needs testing — use with care</string>
     <string name="face_down_notice_body">Phone position sensors behave differently across devices. While this option is in use, HiLight shows a low-priority notification so it can keep checking the phone’s position. If the sensor is unavailable or its reading becomes stale, HiLight stays fully off.</string>
-    <string name="face_down_caution">Needs testing — use with care. HiLight shows a low-priority notification while it watches the phone’s position.</string>
+    <string name="face_down_caution">Experimental: HiLight shows a small notification while it watches the phone\'s position.</string>
     <string name="face_down_no_sensor">No suitable position sensor is available, so this option cannot be enabled.</string>
     <string name="face_down_status_label">Phone position</string>
     <string name="face_down_state_inactive">inactive</string>

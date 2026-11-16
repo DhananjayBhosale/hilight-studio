@@ -24,7 +24,7 @@
 
     <!-- Shown at the top of the dialog, and passed into inspector_export_note so the same promise
          travels with the exported data. Changing one changes both, which is the point. -->
-    <string name="inspector_privacy_note">Names, ids and structure only. Message text is never shown here and never exported.</string>
+    <string name="inspector_privacy_note">Names, ids and structure only; message text is never shown or exported.</string>
 
     <!-- How many notifications are listed. Two forms rather than a plural, because the singular
          drops the count and the ordering clause entirely. %1$d is the number of notifications. -->
@@ -40,8 +40,8 @@
 
     <!-- Before any notification has arrived -->
     <string name="inspector_empty_title">Nothing seen yet</string>
-    <string name="inspector_empty_body">Notifications appear here as they arrive, so leave this open — or reopen it once one has landed.</string>
-    <string name="inspector_empty_access">Nothing is seen at all without notification access. The list is kept in memory only, so it empties whenever HiLight stops.</string>
+    <string name="inspector_empty_body">Notifications appear here as they arrive.</string>
+    <string name="inspector_empty_access">Needs notification access, and the list clears when HiLight stops.</string>
 
     <!-- The pill on each card: whether HiLight found a name to match a per-chat rule against. A
          failed read is its own state rather than "no name", because the advice for each is the
@@ -66,9 +66,9 @@
     <string name="inspector_field_messaging_style_not_detected">MessagingStyle: not detected</string>
 
     <!-- What the fields above mean, said only where it is true -->
-    <string name="inspector_read_failed_note">This notification could not be read, so the fields below are missing rather than absent. That is a fault worth reporting with this output attached.</string>
+    <string name="inspector_read_failed_note">This notification couldn\'t be read, so please report it with this output.</string>
     <string name="inspector_group_summary">Group summary, which HiLight ignores so a chat cannot fire twice.</string>
-    <string name="inspector_no_name_note">This app gave no name to match on, so no per-chat rule can be written from it. A rule for the whole app still works.</string>
+    <string name="inspector_no_name_note">This app gives no chat name, so only a whole-app rule can match it.</string>
 
     <!-- The foreground watcher's ongoing notification, and the channel it sits on. The channel name
          is the label a person reads in the system notification settings, so it is translated; the

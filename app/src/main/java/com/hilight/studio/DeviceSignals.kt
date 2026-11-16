@@ -20,10 +20,13 @@ data class DeviceSignalSettings(
     val fullPercent: Int = 100,
     val chargingGauge: Boolean = false,
     val chargingPattern: Pattern = Pattern.BLINK,
+    /** Charging color moves from red at empty to green at full instead of [chargingColor]. */
+    val chargingColorByLevel: Boolean = false,
     val dndEnabled: Boolean = false,
     val dndColor: Int = 0xFF7C4DFF.toInt(),
     val callsEnabled: Boolean = false,
     val callColor: Int = 0xFF00E676.toInt(),
+    val callPattern: Pattern = Pattern.PULSE,
 )
 
 /** Single-color effects and rainbow need no extra palette or per-LED editor. */
@@ -36,9 +39,44 @@ internal val chargingPatterns = listOf(
 internal fun chargingPatternOf(key: String?): Pattern =
     chargingPatterns.firstOrNull { it.key == key } ?: Pattern.BLINK
 
+/** Calls offer the same single-color effects. Unknown or missing keys keep the original Pulse. */
+internal val callPatterns = chargingPatterns
+
+internal fun callPatternOf(key: String?): Pattern =
+    callPatterns.firstOrNull { it.key == key } ?: Pattern.PULSE
+
+internal fun callSignalLook(settings: DeviceSignalSettings): Ambient {
+    val pattern = callPatternOf(settings.callPattern.key)
+    return Ambient(
+        pattern = pattern,
+        color = settings.callColor,
+        speedMs = when (pattern) {
+            Pattern.PULSE -> 1000
+            Pattern.HEARTBEAT -> 1200
+            Pattern.RAINBOW -> 2000
+            else -> 600
+        },
+    )
+}
+
+/**
+ * Battery-level color: hue runs from red (0%) through amber to green (100%), fully saturated, so
+ * the array shows how far charging has come (tester request 2026-10-13).
+ */
+internal fun batteryLevelColor(percent: Int): Int {
+    val hue = 120f * percent.coerceIn(0, 100) / 100f
+    val red = if (hue <= 60f) 255 else (255 * (120f - hue) / 60f).toInt()
+    val green = if (hue >= 60f) 255 else (255 * hue / 60f).toInt()
+    return (0xFF shl 24) or (red shl 16) or (green shl 8)
+}
+
+/** The color shown while charging and below the full threshold. */
+internal fun chargingColorAt(settings: DeviceSignalSettings, percent: Int): Int =
+    if (settings.chargingColorByLevel) batteryLevelColor(percent) else settings.chargingColor
+
 internal fun chargingSignalLook(settings: DeviceSignalSettings, percent: Int): Ambient = Ambient(
     pattern = if (percent >= settings.fullPercent) Pattern.SOLID else chargingPatternOf(settings.chargingPattern.key),
-    color = if (percent >= settings.fullPercent) settings.chargedColor else settings.chargingColor,
+    color = if (percent >= settings.fullPercent) settings.chargedColor else chargingColorAt(settings, percent),
     speedMs = when (settings.chargingPattern) {
         Pattern.HEARTBEAT -> 1200
         Pattern.RAINBOW -> 2000
@@ -49,7 +87,7 @@ internal fun chargingSignalLook(settings: DeviceSignalSettings, percent: Int): A
 /** A static, finite bar; the existing renderer handles the normal brightness/duty limits. */
 internal fun chargingGaugeLook(settings: DeviceSignalSettings, percent: Int): Ambient {
     val level = percent.coerceIn(0, 100)
-    val color = if (level >= settings.fullPercent) settings.chargedColor else settings.chargingColor
+    val color = if (level >= settings.fullPercent) settings.chargedColor else chargingColorAt(settings, level)
     return Ambient(pattern = Pattern.CUSTOM, perLed = List(LED_COUNT) { index ->
         val fraction = (level * LED_COUNT / 100f - index).coerceIn(0f, 1f)
         fun channel(shift: Int) = (((color ushr shift) and 255) * fraction).toInt()
@@ -107,10 +145,12 @@ class DeviceSignals(
         fullPercent = prefs.getInt("signals.fullPercent", 100).coerceIn(1, 100),
         chargingGauge = prefs.getBoolean("signals.chargingGauge", false),
         chargingPattern = chargingPatternOf(prefs.getString("signals.chargingPattern", null)),
+        chargingColorByLevel = prefs.getBoolean("signals.chargingColorByLevel", false),
         dndEnabled = prefs.getBoolean("signals.dndEnabled", false),
         dndColor = prefs.getInt("signals.dndColor", 0xFF7C4DFF.toInt()),
         callsEnabled = prefs.getBoolean("signals.callsEnabled", false),
         callColor = prefs.getInt("signals.callColor", 0xFF00E676.toInt()),
+        callPattern = callPatternOf(prefs.getString("signals.callPattern", null)),
     ))
     val settings: StateFlow<DeviceSignalSettings> = mutableSettings.asStateFlow()
     private var masterEnabled = false
@@ -164,6 +204,7 @@ class DeviceSignals(
         val next = proposed.copy(
             fullPercent = proposed.fullPercent.coerceIn(1, 100),
             chargingPattern = chargingPatternOf(proposed.chargingPattern.key),
+            callPattern = callPatternOf(proposed.callPattern.key),
         )
         if (old == next) return
         prefs.edit()
@@ -173,10 +214,12 @@ class DeviceSignals(
             .putInt("signals.fullPercent", next.fullPercent)
             .putBoolean("signals.chargingGauge", next.chargingGauge)
             .putString("signals.chargingPattern", next.chargingPattern.key)
+            .putBoolean("signals.chargingColorByLevel", next.chargingColorByLevel)
             .putBoolean("signals.dndEnabled", next.dndEnabled)
             .putInt("signals.dndColor", next.dndColor)
             .putBoolean("signals.callsEnabled", next.callsEnabled)
             .putInt("signals.callColor", next.callColor)
+            .putString("signals.callPattern", next.callPattern.key)
             .apply()
         mutableSettings.value = next
         if (!next.dndEnabled) cancel(OWNER_DND)
@@ -184,7 +227,8 @@ class DeviceSignals(
         syncBatteryRegistration()
         if (old.chargingColor != next.chargingColor || old.chargedColor != next.chargedColor ||
             old.fullPercent != next.fullPercent || old.chargingGauge != next.chargingGauge ||
-            old.chargingPattern != next.chargingPattern) {
+            old.chargingPattern != next.chargingPattern ||
+            old.chargingColorByLevel != next.chargingColorByLevel) {
             stopCharging()
             if (next.chargingGauge) {
                 if (masterEnabled && next.chargingEnabled && plugged && batteryPercent >= 0) {

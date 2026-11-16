@@ -41,6 +41,22 @@ final class OutputGate {
     }
 
     /**
+     * Moves a running alert's end to {@code durationMs} after now without restarting it, so an
+     * animation that is renewed while it plays (an incoming call) keeps its phase. An alert that
+     * has already expired, even if no frame has observed it yet, starts again instead.
+     *
+     * @return true when the alert restarted, so the caller must reset the animation too
+     */
+    boolean renewAlert(long elapsedRealtime, long durationMs) {
+        if (!alertHeld || elapsedRealtime >= alertEnd) {
+            startAlert(elapsedRealtime, durationMs);
+            return true;
+        }
+        alertEnd = deadlineAfter(elapsedRealtime, durationMs);
+        return false;
+    }
+
+    /**
      * Drops the alert layer.
      *
      * The alert had the LEDs lit, so the blank latch no longer describes the hardware. Clearing it

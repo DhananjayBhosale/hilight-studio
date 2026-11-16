@@ -76,18 +76,44 @@ renderer only after its identity, PID, owner, released state revision, closed se
 cleanup, and idle privacy state all match. A denied or failed request leaves output off and exposes
 the Shizuku/ADB fallbacks.
 
-Root cleanup retains its nine-second command deadline and exact process-identity checks. Its final
-process scan reads NUL-delimited arguments with Android shell builtins instead of spawning `tr` for
-every process. Empty command lines still use the executable check, and another surviving helper
-still blocks takeover. Timeout errors identify whether cleanup was checking identity, waiting for
-exit, or scanning for remaining renderers; they do not include arbitrary root-command output.
+Root cleanup keeps exact process-identity checks. The exact old renderer gets `SIGTERM` and about
+five seconds to run its shutdown cleanup. If the same process identity is still there, it gets
+`SIGKILL` and about three more seconds; process death releases its binder session, and the new
+renderer's startup cleanup clears any panel state left behind. A zombie counts as exited, including
+one already waiting to be reaped when cleanup starts, and so does a recorded PID now reused by a
+kernel thread (empty command line, no executable). Any other live process whose command line can't
+be read still fails closed. These waits use wall-clock budgets (`$SECONDS`), not iteration counts.
+The outer 15-second limit covers everything: `su` startup, the identity checks, both waits and the
+final scan, which are not themselves bounded by `$SECONDS`.
+
+The final process scan reads NUL-delimited arguments with Android shell builtins instead of spawning
+`tr` for every process. An empty command line is checked against its executable only when
+`/proc/<pid>/exe` exists, so kernel threads never fork `readlink`. Another surviving helper still
+blocks takeover. The stop command exits 41 when the old renderer's identity cannot be read, 42 when
+it would not exit even after `SIGKILL`, and 43 when another helper is still running (codes chosen so
+a denied `su` or a shell error can't be mistaken for them); diagnostics report
+these as `command_failed`, `renderer_stuck` and `other_renderer_running`. Timeout errors identify
+whether cleanup was checking identity, waiting for exit, forcing exit, or scanning for remaining
+renderers; they do not include arbitrary root-command output.
+
+The status file survives a reboot, so after every reboot it still names the last boot's renderer.
+Root takeover no longer runs the stop command for it: a heartbeat whose monotonic time is ahead of
+this boot's uptime, or which expired and was written before this boot started (wall clock, with a
+two-second margin), is from a previous boot and its process cannot be running. The identity is
+forgotten without calling `su`. If that guess were ever wrong, the live renderer still holds the
+singleton lock, so the new one fails to start instead of running alongside it. For issue #19
+(KernelSU, "cleanup" timeout after every reboot) this removes the stop command from the failing path
+entirely; the earlier per-process forks in its scan were the likely cause of the timeout, which is not
+yet confirmed on an affected phone.
 
 **Shizuku transport (no computer).** Shizuku v12 or newer launches `HiLightUserService` into a
 shell-UID process (`daemon(true)`, so it outlives the UI) and the app holds a real binder to it. State
-is pushed straight in, no polling. The app first peeks at the existing user-service version so it does
+is pushed straight in. The app's status poll reads the renderer off the main thread and waits at most
+1 s; a renderer that answers late counts as unconfirmed until it answers again, so a busy engine lock
+can't freeze the app. The app first peeks at the existing user-service version so it does
 not invoke a mismatched AIDL interface. Before visible/current state replay, the current source
-requires renderer contract 1, implementation revision 5, status schema 6, clear algorithm 1, app
-version code 11, and composite Shizuku service version 1105. A mismatch may receive only a minimal
+requires renderer contract 1, implementation revision 9, status schema 6, clear algorithm 1, app
+version code 11, and composite Shizuku service version 1109. A mismatch may receive only a minimal
 disabled state to hold output dark; it is removed and rebound once, and every other transport remains
 fenced until the rejected binder is confirmed disconnected. Verified running as `shell` uid 2000.
 
@@ -128,6 +154,11 @@ Output layering, highest first:
 2. an active microphone or camera privacy rule
 3. an infinite "while this app is open" override
 4. the always-on ambient look
+
+A new alert id restarts the animation. An incoming-call signal is re-sent every couple of seconds
+while the phone rings; when its look is unchanged the app keeps the id and changes only a `renewal`
+stamp, and the renderer moves the alert's end without resetting its animation clock, so effects
+whose period doesn't divide the refresh interval don't jump.
 
 During a privacy-rule cooldown the renderer blanks the LEDs and closes its light session instead of
 falling through to a lower layer. Turning control off does the same, handing HiLight back to Android.

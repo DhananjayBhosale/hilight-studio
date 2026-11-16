@@ -112,4 +112,34 @@ public final class OutputGateTest {
         assertEquals(OutputGate.Layer.BLANK, gate.next(TIMEOUT + 200));
         assertEquals(OutputGate.Layer.IDLE, gate.next(TIMEOUT + 233));
     }
+
+    @Test
+    public void renewingARunningAlertExtendsItWithoutRestartingItsClock() {
+        OutputGate gate = new OutputGate();
+        gate.startAlert(1_000, 2_500);
+        assertFalse(gate.renewAlert(3_000, 2_500));
+        // the animation keeps its phase: elapsed time still counts from the first start
+        assertEquals(2_500, gate.alertElapsed(3_500));
+        assertEquals(OutputGate.Layer.ALERT, gate.next(5_499));
+        assertEquals(OutputGate.Layer.BLANK, gate.next(5_500));
+    }
+
+    @Test
+    public void renewingAnExpiredAlertStartsItAgain() {
+        OutputGate gate = new OutputGate();
+        gate.startAlert(0, 1_000);
+        assertEquals(OutputGate.Layer.BLANK, gate.next(1_000));
+        assertTrue(gate.renewAlert(4_000, 1_000));
+        assertEquals(0, gate.alertElapsed(4_000));
+        assertEquals(OutputGate.Layer.ALERT, gate.next(4_999));
+    }
+
+    @Test
+    public void aLateRenewalBeforeAnyFrameSawTheExpiryStillRestartsTheClock() {
+        OutputGate gate = new OutputGate();
+        gate.startAlert(0, 1_000);
+        // no next() between expiry and renewal: the gate still holds the alert
+        assertTrue(gate.renewAlert(4_000, 1_000));
+        assertEquals(0, gate.alertElapsed(4_000));
+    }
 }

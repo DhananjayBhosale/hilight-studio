@@ -26,11 +26,19 @@
     <!-- "HiLight is with the system" — the phone's own effects have the array, which is the normal
          resting state and not a fault, so the Japanese names the system as the one in control -->
     <string name="live_status_system">HiLight はシステムが制御中</string>
+    <!-- "Not connected" -->
+    <string name="live_status_not_connected">未接続</string>
+    <!-- "Open Setup" (accessibility action label) -->
+    <string name="live_status_open_setup">設定を開く</string>
+    <!-- "Paused · %1$s" -->
+    <string name="live_status_paused">一時停止中 · %1$s</string>
+    <!-- "HiLight · resting" -->
+    <string name="live_status_resting">HiLight · 休止中</string>
 
     <!-- The line under the hero. %1$s is the model name, or "this device" on a phone HiLight has no
          drawing for. A space is kept after the placeholder, as in strings_main.xml. -->
     <!-- "%1$s has no HiLight array — the feature is Pro-only." -->
-    <string name="live_hint_no_array">%1$s に HiLight の LED アレイはありません。Pro モデル専用の機能です。</string>
+    <string name="live_hint_no_array">%1$s には HiLight の LED アレイがないため、Pro モデル専用の機能です。</string>
     <!-- "Connect a renderer in Setup to drive the array." -->
     <string name="live_hint_no_renderer">LED アレイを制御するには、設定タブでレンダラーを接続してください。</string>
     <!-- "Turn the phone over to see it for real." -->
@@ -47,24 +55,24 @@
     <!-- Why the array is dark while the switch is on. These are the full explanations; the two-word
          forms the tile shows are suppression_* in strings_common.xml. -->
     <!-- "Quiet hours: the array stays dark until your window ends." -->
-    <string name="live_suppressed_quiet_hours">サイレント時間です。設定した時間帯が終わるまで LED アレイは消灯したままです。</string>
+    <string name="live_suppressed_quiet_hours">サイレント時間のため、設定した時間帯が終わるまで LED アレイは消灯します。</string>
     <!-- "Battery is low, so the array is paused. Charging resumes it." -->
-    <string name="live_suppressed_low_battery">電池残量が少ないため、LED アレイを一時停止しています。充電すると再開します。</string>
+    <string name="live_suppressed_low_battery">電池残量が少ないため、充電するまで一時停止しています。</string>
     <!-- "Battery Saver is on, so the array is paused." -->
     <string name="live_suppressed_power_saver">バッテリーセーバーがオンのため、LED アレイを一時停止しています。</string>
     <!-- "Set to light only while the screen is off." -->
     <string name="live_suppressed_screen_on">画面消灯時のみ点灯する設定になっています。</string>
     <!-- "Waiting for the phone to be face down. The LED array stays fully off." -->
-    <string name="live_suppressed_not_face_down">端末が伏せられるまで待機中です。LED アレイは完全に消灯したままです。</string>
+    <string name="live_suppressed_not_face_down">端末を伏せるまで消灯しています。</string>
 
     <!-- The safety limits, said out loud so that a dark array never reads as a fault. In the
          countdown %1$d is the seconds left and %2$d the percentage of the duty allowance spent. The
          seconds unit is written into the line rather than taken from duration_seconds, and it sits
          tight against the number there exactly as duration_seconds does. -->
     <!-- "Resting to protect the LEDs — they have been lit too much recently." -->
-    <string name="live_safety_resting">LED を保護するため休止しています。直近の点灯時間が長すぎました。</string>
+    <string name="live_safety_resting">直近の点灯時間が長すぎたため、LED を保護するため休止しています。</string>
     <!-- "Auto-off reached. Change the style or flip the switch to light it again." -->
-    <string name="live_safety_timed_out">自動オフに達しました。もう一度点灯するには、スタイルを変えるかスイッチを切り替えてください。</string>
+    <string name="live_safety_timed_out">自動オフになったため、スイッチかスタイルを切り替えると再点灯します。</string>
     <!-- "Auto-off in %1$ds · duty used %2$d%%" — "used" is left implied: the line has to stay on one
          row next to the pid caption -->
     <string name="live_safety_countdown">自動オフまで %1$d秒 · 点灯時間 %2$d%%</string>
@@ -83,7 +91,6 @@
     <!-- "Try an effect" — エフェクト rather than 効果, which reads as "benefit" for a light -->
     <string name="live_tests_title">エフェクトを試す</string>
     <!-- "Fires for four seconds on the real LEDs, then returns to your style." -->
-    <string name="live_tests_caption">実際の LED で 4 秒間点灯してから、元のスタイルに戻ります。</string>
     <!-- "Random" — the tile is a third of a row wide, so the 色 of pattern_random is dropped -->
     <string name="live_test_random">ランダム</string>
 
@@ -95,7 +102,7 @@
     <!-- "%1$d on" -->
     <string name="live_rules_on_count">%1$d 件オン</string>
     <!-- "Nothing yet. Add per-app colours in the Apps tab." -->
-    <string name="live_rules_empty">まだありません。アプリタブでアプリ別の色を追加できます。</string>
+    <string name="live_rules_empty">アプリタブでアプリ別の色を追加できます。</string>
     <!-- "%1$s · %2$s" -->
     <string name="live_rule_summary">%1$s · %2$s</string>
     <!-- "random" -->

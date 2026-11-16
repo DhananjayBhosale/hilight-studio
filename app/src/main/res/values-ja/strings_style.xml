@@ -17,7 +17,7 @@
     <!-- "Always-on style" -->
     <string name="style_always_on_style">常時点灯スタイル</string>
     <!-- "Control is off — turn it on in Live to see this on the hardware." — Live is the tab name -->
-    <string name="style_control_off_warning">制御はオフです。実機で確認するには、ライブタブでオンにしてください。</string>
+    <string name="style_control_off_warning">制御はオフのため、実機で確認するにはライブタブでオンにしてください。</string>
 
     <!-- Random colours -->
     <!-- "Change every" — slider label, read together with the badge beside it -->
@@ -39,7 +39,7 @@
     <!-- "Per-LED colours" -->
     <string name="style_per_led_colours">LED ごとの色</string>
     <!-- "LED 1 sits closest to the flash. Tap one, then pick its colour." -->
-    <string name="style_per_led_hint">LED 1 がフラッシュに最も近い位置です。1 つをタップして色を選んでください。</string>
+    <string name="style_per_led_hint">LED 1 はフラッシュの隣です。</string>
     <!-- "LED %1$d" — both halves stay as they are, so this is the source string -->
     <string name="style_led_number">LED %1$d</string>
     <!-- "Rotate around array" -->

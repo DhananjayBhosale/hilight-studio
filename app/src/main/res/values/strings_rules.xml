@@ -55,7 +55,7 @@
     <string name="rules_random_colour_each_time">Random colour each time</string>
     <string name="rules_chat_is_group">This chat is a group, so anything posted in it fires the rule.</string>
     <string name="rules_include_groups">Also when they post in a group</string>
-    <string name="rules_include_groups_hint">Left off, only their own chat lights this colour, so the group chatter they are part of stays dark.</string>
+    <string name="rules_include_groups_hint">When off, only their own chat lights up, not group chats.</string>
     <string name="rules_keyword_label">Only if it mentions (optional)</string>
     <string name="rules_only_screen_off">Only when the screen is off</string>
     <string name="rules_only_face_down">Only when the phone is face down</string>
@@ -72,15 +72,15 @@
     <string name="rules_duration_warn_second_body">A busy app can fire often, so the LEDs may end up lit most of the time. You can turn this back down at any time.</string>
 
     <!-- Last thing read before Save, when the edit would land on top of another rule -->
-    <string name="rules_replace_warning">An existing rule for this app already covers that, and saving will replace its settings with these.</string>
+    <string name="rules_replace_warning">Saving replaces an existing rule for the same target.</string>
 
     <!-- What a per-chat rule matches on, and the repair for a chat id that has gone stale. %1$s in
          rules_match_by_name is the app whose chat could be renamed. -->
     <string name="rules_match_by_id">Matched by chat id, which survives the chat being renamed.</string>
-    <string name="rules_match_id_dropped">The stored chat id is dropped when you save, and a fresh one is learned the next time that chat messages.</string>
+    <string name="rules_match_id_dropped">Saving drops the stored chat id; a new one is learned from the next message.</string>
     <string name="rules_match_by_name">Matched by name, so renaming the chat in %1$s can stop it matching.</string>
     <string name="rules_relearn_chat">Re-learn this chat</string>
-    <string name="rules_relearn_hint">Forgets the stored chat id and matches on the name instead, taking up the new id the next time that chat messages — the repair for an id changed by a reinstall or a restored backup.</string>
+    <string name="rules_relearn_hint">Use this when a reinstall or restore changed the chat id.</string>
 
     <!-- Whole app or one chat, asked before the editor opens. %1$s is the app. -->
     <string name="chat_scope_title">What should this rule cover?</string>
@@ -99,9 +99,9 @@
 
     <!-- The two paths that work before anything has been learned -->
     <string name="chat_learn_next">Learn the next message</string>
-    <string name="chat_learn_next_hint">The surest way. The name comes from a real notification, so it is exactly what HiLight compares against later.</string>
+    <string name="chat_learn_next_hint">Most reliable: uses the name from a real notification.</string>
     <string name="chat_pick_contact">Pick from contacts</string>
-    <string name="chat_pick_contact_hint">Opens the system picker, so HiLight reads only the contact you tap and never your address book. If the app shows a different name for them, the rule can miss.</string>
+    <string name="chat_pick_contact_hint">Reads only the contact you tap, and misses if the app shows another name.</string>
 
     <!-- Waiting for a message to arrive, and the chat that arrived. %1$s is the app, then the chat. -->
     <string name="chat_listening">Listening</string>
@@ -119,12 +119,12 @@
          dialog could do, so it says the opposite plainly. -->
     <string name="chat_not_listening">Not listening</string>
     <string name="chat_no_access_title">HiLight cannot watch for the next message yet.</string>
-    <string name="chat_no_access_body">Without notification access HiLight sees no notifications at all, and Android withdraws that access on its own once an app has gone unused for a while.</string>
+    <string name="chat_no_access_body">HiLight sees no notifications without notification access.</string>
     <string name="chat_open_notification_access">Open notification access</string>
 
     <!-- Told when a chat or a contact cannot be turned into a rule at all -->
-    <string name="chat_contact_no_name">That contact had no name to read. Try one of the other two ways.</string>
-    <string name="chat_unusable">That chat has no name HiLight can compare and no stable id either, so a rule for it could never fire. A rule for the whole app still works.</string>
+    <string name="chat_contact_no_name">That contact has no name, so try another way.</string>
+    <string name="chat_unusable">This chat has no name or id to match, so only a whole-app rule works.</string>
 
     <!--
         How long ago a chat last spoke, or a rule last matched.
@@ -166,7 +166,7 @@
     <!-- Privacy activity rules -->
     <string name="privacy_section_title">Privacy activity</string>
     <string name="privacy_intro">Use HiLight while Android reports that the microphone or camera is active.</string>
-    <string name="privacy_default_summary">Default: light for 10 seconds, rest for 10 seconds, and stop after 1 minute or sooner when use ends. You can change the animation, colour and timing.</string>
+    <string name="privacy_default_summary">Default: 10 s on, 10 s rest, for at most 1 minute.</string>
     <string name="privacy_add">Add privacy activity</string>
     <string name="privacy_add_for_app">Add privacy activity for this app</string>
     <string name="privacy_choose_activity">Choose an activity</string>
@@ -177,7 +177,7 @@
     <string name="privacy_microphone_hint">Signals while an app is recording audio.</string>
     <string name="privacy_camera_hint">Signals while an app is using the camera.</string>
     <string name="privacy_card_summary">%1$s light · %2$s rest</string>
-    <string name="privacy_observation_note">HiLight observes Android’s active privacy signal in the privileged renderer. It does not read recordings.</string>
+    <string name="privacy_observation_note">HiLight uses Android\'s privacy indicator and never reads recordings.</string>
     <string name="privacy_light_time">Light time</string>
     <string name="privacy_allow_long_light">Allow more than 30 seconds</string>
     <string name="privacy_long_warn_first_title">Light longer than 30 seconds?</string>
@@ -186,24 +186,24 @@
     <string name="privacy_long_warn_second_body">Long continuous use has not been tested on this hardware. The one-minute episode limit still applies.</string>
     <string name="privacy_cooldown">Rest time</string>
     <string name="privacy_cooldown_recommendation">A 10 to 20 second rest is recommended.</string>
-    <string name="privacy_cooldown_short_warning">Less than 10 seconds gives the array very little rest. A 10 to 20 second rest is recommended.</string>
+    <string name="privacy_cooldown_short_warning">A rest under 10 seconds is too short; 10 to 20 seconds is recommended.</string>
     <string name="privacy_replace_warning">Saving will replace the existing rule for this activity and app.</string>
 
-    <string name="privacy_one_minute_cap">Stops immediately when camera or microphone use ends, and after at most 1 minute of uninterrupted use. Activity may start in the viewfinder before video recording. This does not detect the Record button.</string>
+    <string name="privacy_one_minute_cap">Stops when use ends or after 1 minute, and may react to the viewfinder before recording starts.</string>
     <string name="rules_export">Export rules</string>
     <string name="rules_import">Import rules</string>
     <string name="rules_backup_privacy">This file includes app names, contact or chat names, chat IDs, and keyword filters saved in your rules. It does not include notification history. Keep it private. Export this information?</string>
     <string name="rules_backup_exported">Rules exported. Keep the file private.</string>
-    <string name="rules_backup_failed">Could not complete the backup operation. Check that the file is a supported rule backup under 1 MB. Import never overwrites a saved rule; conflicting rules must be resolved first.</string>
+    <string name="rules_backup_failed">Backup failed; use a rule file under 1 MB with no conflicting rules.</string>
     <string name="rules_import_confirm">Import %1$d rules? Existing rules stay unchanged. Identical rules are skipped; conflicting rules cancel the import. Imported rules keep their enabled state and matching conditions.</string>
     <string name="rules_import_done">Added %1$d rules. Skipped %2$d existing rules.</string>
     <string name="rules_group">%1$s · %2$d rules</string>
     <string name="rules_move_up">Move up</string>
     <string name="rules_move_down">Move down</string>
-    <string name="rules_priority_hint">Add several rules for one app and move them up or down. Conversation matches come first, then matching text rules, then the app fallback. Within each level, the first matching rule wins.</string>
+    <string name="rules_priority_hint">Chat rules match first, then text rules, then the app rule, and the top one wins.</string>
     <string name="rules_app_color">Use app icon color</string>
-    <string name="rules_app_color_hint">Uses the notifying app’s icon color. If unavailable, your saved color is used. Choosing a color manually turns this off.</string>
-    <string name="rules_repeat_sleep_hint">Android may delay reminders while asleep. When Android wakes the app, one overdue reminder can play; missed reminders never pile up.</string>
-    <string name="rules_repeat_pulse_hint">Reminder pulse length. The minimum interval increases with longer pulses to keep at least 80% of the time dark.</string>
+    <string name="rules_app_color_hint">Uses the app\'s icon color, or your saved color if there is none.</string>
+    <string name="rules_repeat_sleep_hint">Reminders may be late while the phone sleeps, and missed ones never pile up.</string>
+    <string name="rules_repeat_pulse_hint">Longer pulses need a longer interval, so the array stays dark at least 80% of the time.</string>
     <string name="rules_keyword_summary">Text contains: %1$s</string>
 </resources>

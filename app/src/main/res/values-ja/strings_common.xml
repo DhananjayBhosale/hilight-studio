@@ -65,9 +65,9 @@
 
     <!-- What one cycle of each pattern means -->
     <!-- "One full breath: dim up to full, back down." -->
-    <string name="cycle_breathe">ひと呼吸分です。暗い状態から最大まで明るくなり、また暗くなります。</string>
+    <string name="cycle_breathe">暗い状態から最大まで明るくなり、また暗くなるひと呼吸分です。</string>
     <!-- "One on-off pair — lit for the first half." -->
-    <string name="cycle_blink">点灯と消灯の 1 組です。前半が点灯です。</string>
+    <string name="cycle_blink">前半が点灯する、点灯と消灯の 1 組です。</string>
     <!-- "One flash: snap to full, then fade away." -->
     <string name="cycle_pulse">1 回の閃光です。一気に最大まで明るくなり、そのまま消えていきます。</string>
     <!-- "One lap of a single lit LED around all eight." -->
@@ -110,7 +110,7 @@
     <!-- Shared first-use warning and live sensor states for both face-down entry points. -->
     <string name="face_down_notice_title">テストが必要です — 注意して使用してください</string>
     <string name="face_down_notice_body">端末によって位置センサーの動作が異なります。このオプションの使用中は、端末の向きを確認し続けるため、HiLight の低優先度の通知が表示されます。センサーを使用できない場合や読み取りが古くなった場合、HiLight は完全に消灯したままです。</string>
-    <string name="face_down_caution">テストが必要です — 注意して使用してください。端末の向きを監視している間は、HiLight の低優先度の通知が表示されます。</string>
+    <string name="face_down_caution">試験的な機能で、端末の向きを監視している間は HiLight の低優先度の通知が表示されます。</string>
     <string name="face_down_no_sensor">使用できる位置センサーがないため、このオプションは有効にできません。</string>
     <string name="face_down_status_label">端末の向き</string>
     <string name="face_down_state_inactive">停止中</string>
